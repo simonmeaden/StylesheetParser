@@ -63,9 +63,17 @@ ParserState::Errors ParserState::errors() const
    return m_errors;
 }
 
+void ParserState::setError(ParserState::Error error) {
+  m_errors |= error;
+}
+
+void ParserState::unsetError(ParserState::Error error) {
+  m_errors = m_errors & (~error);
+}
+
 int ParserState::pos() const
 {
-   return m_pos;
+  return m_pos;
 }
 
 void ParserState::setPos(int pos)

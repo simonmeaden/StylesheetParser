@@ -41,6 +41,10 @@ class StylesheetEdit : public QTextEdit
 
       void setNormalFormat(QColor color, QFont::Weight weight=QFont::Normal);
       void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
+      void setWidgetFormat(QColor color, QFont::Weight weight=QFont::Normal);
+      void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
+      void setPseudoStateFormat(QColor color, QFont::Weight weight=QFont::Normal);
+      void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
       void setNameFormat(QColor color, QFont::Weight weight=QFont::Normal);
       void setNameFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
       void setValueFormat(QColor color, QFont::Weight weight=QFont::Normal);
@@ -48,7 +52,8 @@ class StylesheetEdit : public QTextEdit
 
    private:
       QList<Node*>* m_nodes;
-      QTextCharFormat m_baseFormat, m_nameFormat, m_valueFormat;
+      QTextCharFormat m_baseFormat, m_widgetFormat, m_nameFormat, m_valueFormat,
+        m_pseudoStateFormat;
    };
 
 public:

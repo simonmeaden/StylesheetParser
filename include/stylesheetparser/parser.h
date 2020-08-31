@@ -42,15 +42,15 @@ public:
 private:
    QList<Node*>* m_nodes;
 
-   int skipBlanks(const QString& text, int pos);
-//   ParserState* parseNameBraceOrNameValue(const QString& text, int pos, bool &hasStartBrace);
-//   ParserState* parseNameValue(const QString& text, int pos, bool &hasStartBrace);
-//   ParserState* getName(const QString& text, int pos);
-//   ParserState *parseValue(const QString& text, int pos, bool &hasStartBrace);
-//   ParserState* getValue(const QString& text, int pos);
+   void skipBlanks(const QString& text, int& pos);
+   bool isWhiteSpace(QChar c);
+
+   Node* findName(const QString& text, int& pos, int& braceCount);
+   Node* findSubControl(const QString& text, int& pos);
+   Node* findPseudoState(const QString& text, int& pos);
+
    void deleteNodes();
 
-   void findName(const QString& text, int pos);
 };
 
 } // end of StylesheetParser

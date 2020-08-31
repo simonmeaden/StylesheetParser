@@ -35,8 +35,17 @@ QWidget* MainWindow::initGui()
    f->setLayout(layout);
 
    QString text =
-      " color: red;\n background: green;\n";
-//   "QTabWidget {\n color: red;\n background: green;\n }\n";
+//     "\n\r\t";
+//   for (auto c : text) {
+//     if (c.isSpace()) {
+//       qWarning() <<(c=="\t" ? "tab " : c=="\n" ? "NewLine " : c == "\r" ? "Return " : "") <<"is a space";
+//     } else {
+//       qWarning() <<(c=="\t" ? "tab " : c=="\n" ? "NewLine " : c == "\r" ? "Return " : "") <<"not a space";
+//     }
+//   }
+//      " color: red;\n background: green;\n";
+//     "QTabWidget {\n color: red;\n background: green;\n }\n";
+   "  QTabWidget:active {\n}";
 
    m_editor = new StylesheetEdit(this);
    m_editor->setText(text);

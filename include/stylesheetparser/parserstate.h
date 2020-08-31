@@ -31,12 +31,14 @@ public:
    enum Error
    {
       NoError = 0x1,
-      BlankText = 0x2,
-      WronglyPositionedSpace = 0x4,
-      IncorrectlyTerminatedName = 0x8,
-      MismatchedBraceCount = 0x10,
-      MissingEndBrace = 0x20,
-      MissingStartBrace = 0x40,
+      FatalError = 0x2,
+      NonFatalError = 0x4,
+      BlankText = 0x10,
+      WronglyPositionedSpace = 0x20,
+      IncorrectlyTerminatedName = 0x40,
+      MismatchedBraceCount = 0x80,
+      MissingEndBrace = 0x100,
+      MissingStartBrace = 0x200,
    };
    Q_DECLARE_FLAGS(Errors, Error)
    Q_FLAG(Errors)
@@ -58,12 +60,8 @@ public:
    void setValue(const QString& value);
 
    Errors errors() const;
-   void setError(Error error) {
-     m_errors |= error;
-   }
-   void unsetError(Error error) {
-     m_errors = m_errors & (~error);
-   }
+   void setError(Error error);
+   void unsetError(Error error);
 
    int pos() const;
    void setPos(int pos);

@@ -1,0 +1,10 @@
+get_filename_component(SMWIDGETS_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${SMWIDGETS_CMAKE_DIR})
+
+if(NOT TARGET qyamlcpp)
+    include("${SMWIDGETS_CMAKE_DIR}/sm_widgetsTargets.cmake")
+endif()
+
+set(SMWIDGETS_lIBRARIES sm_widgets)

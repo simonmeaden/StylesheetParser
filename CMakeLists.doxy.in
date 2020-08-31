@@ -1,0 +1,42 @@
+# DOxygen stuff
+if (NOT LIBRARIES_BUILD AND CMAKE_BUILD_TYPE STREQUAL Release)
+   # standalone package, otherwise the libraries build will create a common set.
+   # but only for the release builds
+   set(DOXYGEN_GENERATE_HTML YES)
+   set(DOXYGEN_GENERATE_MAN NO)
+   set(DOXYGEN_GENERATE_QHP YES)
+   set(DOXYGEN_PROJECT_NAME "SM Library")
+   set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../docs)
+   set(DOXYGEN_QHP_NAMESPACE uk.org.smelecomp)
+   set(DOXYGEN_QCH_FILE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../docs/help/SM_Widgets.qch)
+   set(DOXYGEN_QHG_LOCATION "/opt/Qt/5.15.0/gcc_64/bin/qhelpgenerator")
+   set(DOXYGEN_QHP_VIRTUAL_FOLDER "sm_widgets-0.1")
+   set(DOXYGEN_GENERATE_TAGFILE sm_widgets.tags)
+   set(DOXYGEN_TAGFILES
+      "qtcore.tags=/opt/Qt/Docs/Qt-5.15.0/qtcore"
+      "qtgui.tags=/opt/Qt/Docs/Qt-5.15.0/qtgui"
+      "qtwidgets.tags=/opt/Qt/Docs/Qt-5.15.0/qtwidgets")
+   set(DOXYGEN_EXCLUDE_PATTERNS
+      */googletest-src/*   # This eliminates googletest from documentation
+      */*autogen/*         # This eliminates moc generated files from documentation
+   )
+   set(DOXYGEN_PREDEFINED DOXYGEN_WORKING)
+   set(DOXYGEN_ALIASES
+      ${DOXYGEN_ALIASES}
+      "accessor=\\par Access functions:^^"
+      "prop=\\par Property:^^"
+      "notifier=\\par Notifier signal:^^"
+      "license=\\par License : ^^"
+      #     "license{1}=\\par License : ^^"
+      "reimplements=\\par Reimplements : ^^"
+      "from=\\par From : "
+      "notprop=\\par Notifier for "
+   )
+
+   include(FindDoxygen)
+   doxygen_add_docs(
+      docs
+      USE_STAMP_FILE
+      COMMENT "Generate HTML documentation"
+      )
+endif()

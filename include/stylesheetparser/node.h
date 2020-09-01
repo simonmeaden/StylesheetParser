@@ -31,40 +31,64 @@ namespace StylesheetParser {
 
 class Node : public QObject
 {
-public:
-   explicit Node(int start, QObject* parent);
 
-   virtual int start() const;
-   virtual int end() const;
-   virtual int length() const;
+public:
+  enum Type
+  {
+    NodeType,
+    StringNodeType,
+    CharNodeType,
+    ColonNodeType,
+    NameType,
+    ValueType,
+    WidgetType,
+    SubControlType,
+    SubControlMarkerType,
+    PseudoStateType,
+    PseudoStateMarkerType,
+    SemiColonNodeType,
+    StartBraceNodeType,
+    EndBraceNodeType,
+    NewlineNodeType,
+  };
+  explicit Node(int start, QObject* parent, Type type = NodeType);
+
+  virtual int start() const;
+  virtual int end() const;
+  virtual int length() const;
+
+  Type type() const;
 
 protected:
-   int m_start;
+  int m_start;
+  Type m_type;
 };
 
 class StringNode : public Node
 {
 public:
-   explicit StringNode(const QString& value, int start, QObject* parent);
+  explicit StringNode(const QString& value, int start, QObject* parent, Type type = StringNodeType);
 
-   QString value() const;
-   int end() const override;
-   int length() const override;
+  QString value() const;
+  int end() const override;
+  int length() const override;
 
 protected:
-   QString m_value;
+  QString m_value;
 };
 
 class NameNode : public StringNode
 {
+  Q_OBJECT
 public:
-   explicit NameNode(const QString& name, int start, QObject* parent);
+  explicit NameNode(const QString& name, int start, QObject* parent, Type type = NameType);
 };
 
 class ValueNode : public StringNode
 {
+  Q_OBJECT
 public:
-   explicit ValueNode(const QString& name, int start, QObject* parent);
+  explicit ValueNode(const QString& name, int start, QObject* parent, Type type = ValueType);
 };
 
 //class NameValueNode : public Node
@@ -84,107 +108,130 @@ public:
 
 class WidgetNode : public StringNode
 {
+  Q_OBJECT
 public:
-   explicit WidgetNode(const QString &name, int start, QObject* parent);
+  explicit WidgetNode(const QString& name, int start, QObject* parent, Type type = WidgetType);
 
-   QStringList widgets() const;
-   static bool contains(const QString& widget) {
-      return m_widgets.contains(widget);
-   }
-   void addWidget(const QString& widget) {
-      if (!m_widgets.contains(widget)) {
-         m_widgets.append(widget);
-      }
-   }
-   void removeWidget(const QString& widget) {
-     m_widgets.removeAll(widget);
-   }
+  QStringList widgets() const;
+  static bool contains(const QString& widget) {
+    return m_widgets.contains(widget);
+  }
+  void addWidget(const QString& widget) {
+    if (!m_widgets.contains(widget)) {
+      m_widgets.append(widget);
+    }
+  }
+  void removeWidget(const QString& widget) {
+    m_widgets.removeAll(widget);
+  }
 
 protected:
-   static QStringList m_widgets;
+  static QStringList m_widgets;
 
-   static QStringList initialiseList();
+  static QStringList initialiseList();
 
 };
 
 class SubControlNode : public WidgetNode
 {
+  Q_OBJECT
 public:
-   explicit SubControlNode(const QString& name, int start, QObject* parent);
+  explicit SubControlNode(const QString& name, int start, QObject* parent, Type type = SubControlType);
 
-   void addSubControl(const QString& control, const QString& widget);
-   void addSubControl(const QString& control, QStringList& widgets);
-   void removeSubControl(const QString& control);
+  void addSubControl(const QString& control, const QString& widget);
+  void addSubControl(const QString& control, QStringList& widgets);
+  void removeSubControl(const QString& control);
 
-   static bool contains(const QString& name);
+  static bool contains(const QString& name);
 
-   QStringList possibleWidgets() const;
+  QStringList possibleWidgets() const;
 
 protected:
-   QStringList m_possibleWidgets;
+  QStringList m_possibleWidgets;
 
-   static QMap<QString, QStringList> m_subControls;
+  static QMap<QString, QStringList> m_subControls;
 
-   static QStringList addControls(int count, ...);
-   static QMap<QString, QStringList> initialiseMap();
+  static QStringList addControls(int count, ...);
+  static QMap<QString, QStringList> initialiseMap();
 };
 
 class PseudoStateNode : public WidgetNode
 {
+  Q_OBJECT
 public:
-   explicit PseudoStateNode(const QString& name, int start, QObject* parent);
+  explicit PseudoStateNode(const QString& name, int start, QObject* parent, Type type = PseudoStateType);
 
-   void addPseudoState(const QString& state);
-   void removePseudoState(const QString& state);
+  void addPseudoState(const QString& state);
+  void removePseudoState(const QString& state);
 
-   static bool contains(const QString& state);
+  static bool contains(const QString& state);
 
 protected:
-   static QStringList m_pseudoStates;
+  static QStringList m_pseudoStates;
 
-   static QStringList initialiseList();
+  static QStringList initialiseList();
 };
 
-class CharMode : public Node
+class CharNode : public Node
 {
+  Q_OBJECT
 public:
-   explicit CharMode(int start, QObject* parent);
+  explicit CharNode(int start, QObject* parent, Type type =CharNodeType);
 
-   int end() const override;
-   int length() const override;
+  int end() const override;
+  int length() const override;
 };
 
-class ColonNode : public CharMode
+class ColonNode : public CharNode
 {
+  Q_OBJECT
 public:
-   explicit ColonNode(int start, QObject* parent);
+  explicit ColonNode(int start, QObject* parent, Type type = ColonNodeType);
 };
 
-class DoubleColonNode : public Node
+class PseudoStateMarkerNode : public ColonNode
 {
+  Q_OBJECT
 public:
-   explicit DoubleColonNode(int start, QObject* parent);
-
-   int end() const override;
-   int length() const override;
+  explicit PseudoStateMarkerNode(int start, QObject* parent, Type type = PseudoStateMarkerType);
 };
 
-class SemiColonNode : public CharMode
+class SubControlMarkerNode : public CharNode
 {
+  Q_OBJECT
 public:
-   explicit SemiColonNode(int start, QObject* parent);
+  explicit SubControlMarkerNode(int start, QObject* parent, Type type = SubControlMarkerType);
+
+  int end() const override;
+  int length() const override;
 };
 
-class StartBraceNode : public CharMode
+class SemiColonNode : public CharNode
 {
+  Q_OBJECT
 public:
-   explicit StartBraceNode(int start, QObject* parent);
+  explicit SemiColonNode(int start, QObject* parent, Type type = SemiColonNodeType);
 };
 
-class EndBraceNode : public CharMode
+class NewlineNode : public CharNode
 {
+  Q_OBJECT
 public:
-   explicit EndBraceNode(int start, QObject* parent);
+  explicit NewlineNode(int start, QObject* parent, Type type = NewlineNodeType);
+};
+
+class StartBraceNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit StartBraceNode(int start, QObject* parent, Type type = StartBraceNodeType);
+};
+
+class EndBraceNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit EndBraceNode(int start, QObject* parent, Type type = EndBraceNodeType);
 };
 
 } // end of StylesheetParser

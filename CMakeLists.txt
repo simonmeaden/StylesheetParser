@@ -59,6 +59,7 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parserstate.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/node.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheetedit.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheethighlighter.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
 
       $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
@@ -66,6 +67,7 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/stylesheetparser/parserstate.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/node.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetedit.h>
+      $<INSTALL_INTERFACE:include/stylesheetparser/stylesheethighlighter.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
 
    PRIVATE
@@ -74,6 +76,7 @@ target_sources(tst_parser
       src/parserstate.cpp
       src/node.cpp
       src/stylesheetedit.cpp
+      src/stylesheethighlighter.cpp
       src/mainwindow.cpp
 
    )

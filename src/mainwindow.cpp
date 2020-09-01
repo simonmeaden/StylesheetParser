@@ -45,7 +45,7 @@ QWidget* MainWindow::initGui()
 //   }
 //      " color: red;\n background: green;\n";
 //     "QTabWidget {\n color: red;\n background: green;\n }\n";
-   "  QTabWidget:active {\n}";
+   "  QTabWidget:active {\n}\n\n  QTabWidget::branch {\n}\n\n  QTabWidget::branch {\n}";
 
    m_editor = new StylesheetEdit(this);
    m_editor->setText(text);

@@ -26,219 +26,233 @@
 namespace StylesheetParser {
 
 Parser::Parser(QObject* parent)
-   : QObject(parent)
-   , m_nodes(new QList<Node*>())
+  : QObject(parent)
+  , m_nodes(new QList<Node*>())
 {}
 
 void Parser::deleteNodes()
 {
-   qDeleteAll(m_nodes->begin(), m_nodes->end());
-   m_nodes->clear();
+  qDeleteAll(m_nodes->begin(), m_nodes->end());
+  m_nodes->clear();
 }
 
 Parser::~Parser()
 {
-   deleteNodes();
-   delete m_nodes;
+  deleteNodes();
+  delete m_nodes;
 }
 
 ParserState* Parser::parse(const QString& text)
 {
-   ParserState::Errors errors = ParserState::NoError;
-   int braceCount = 0;
-   int pos = 0;
-   Node* node = nullptr;
+  ParserState::Errors errors = ParserState::NoError;
+  int braceCount = 0;
+  int pos = 0;
+  Node* node = nullptr;
 
-   skipBlanks(text, pos);
+  // mark all newline chars for use later.
+  // capture newline chars as skipBlanks() skips over thwm.
+  for (int p = pos; p < text.length(); p++) {
+    QChar c = text.at(p);
 
-   for (; pos < text.length(); pos++) {
-      QChar c = text.at(pos);
+    if (c == '\n') {
+      node = new NewlineNode(p, this);
+      m_nodes->append(node);
+    }
+  }
 
-      if (c.isLetter()) {
-         if (braceCount == 0) {
-            // must be either a class name OR a style without OR an error
-            node = findName(text, pos, braceCount);
+  for (; pos < text.length(); pos++) {
+    QChar c = text.at(pos);
+
+    if (c == '\n') {
+      // capture newline char before skipBlanks() skips over it.
+      node = new NewlineNode(pos, this);
+      m_nodes->append(node);
+    }
+
+    skipBlanks(text, pos);
+    c = text.at(pos);
+
+    if (c.isLetter()) {
+      if (braceCount == 0) {
+        // must be either a class name OR a style without OR an error
+        node = findName(text, pos, braceCount);
+        m_nodes->append(node);
+      }
+
+    } else if (c == '{') {
+      braceCount++;
+      // must be either a class name OR a style without OR an error
+      node = new StartBraceNode(pos, this);
+      m_nodes->append(node);
+
+    } else if (c == "}") {
+      braceCount--;
+      node = new EndBraceNode(pos, this);
+      m_nodes->append(node);
+
+    } else if (c == ':') {
+      if (braceCount == 0) {
+        if (pos < text.length() - 1) {
+          if (text.at(pos + 1) == ':') {
+            // :: sub_control
+            node = new SubControlMarkerNode(pos, this);
             m_nodes->append(node);
-         }
+            skipBlanks(text, pos);
+            pos += 2;
+            node = findSubControl(text, pos);
+            m_nodes->append(node);
 
-      } else if (c == '{') {
-         braceCount++;
-         // must be either a class name OR a style without OR an error
-         node = new StartBraceNode(pos, this);
-         m_nodes->append(node);
-         skipBlanks(text, pos);
-
-      } else if (c == "}") {
-         braceCount--;
-         node = new EndBraceNode(pos, this);
-         m_nodes->append(node);
-         skipBlanks(text, pos);
-
-      } else if (c == ':') {
-         if (braceCount == 0) {
-            if (pos < text.length() - 1) {
-               if (text.at(pos + 1) == ':') {
-                  // :: sub_control
-                  node = new DoubleColonNode(pos, this);
-                  m_nodes->append(node);
-                  skipBlanks(text, pos);
-                  pos += 2;
-                  node = findSubControl(text, pos);
-                  m_nodes->append(node);
-                  skipBlanks(text, pos);
-
-               } else {
-                  // : pseudo state
-                  node = new ColonNode(pos, this);
-                  m_nodes->append(node);
-                  skipBlanks(text, pos);
-                  pos++;
-                  node = findPseudoState(text, pos);
-                  m_nodes->append(node);
-                  skipBlanks(text, pos);
-               }
-            }
-         }
-
-      }
-   }
-
-   ParserState* state =  new ParserState(errors, this);
-
-   if (braceCount > 0) {
-      state->unsetError(ParserState::NoError);
-      state->setError(ParserState::MismatchedBraceCount);
-      state->setError(ParserState::MissingEndBrace);
-
-      if (!errors.testFlag(ParserState::FatalError)) {
-         state->setError(ParserState::NonFatalError);
+          } else {
+            // : pseudo state
+            node = new PseudoStateMarkerNode(pos, this);
+            m_nodes->append(node);
+            skipBlanks(text, pos);
+            pos++;
+            node = findPseudoState(text, pos);
+            m_nodes->append(node);
+          }
+        }
       }
 
-   } else if (braceCount < 0) {
-      state->unsetError(ParserState::NoError);
-      state->setError(ParserState::MismatchedBraceCount);
-      state->setError(ParserState::MissingStartBrace);
+    }
+  }
 
-      if (!errors.testFlag(ParserState::FatalError)) {
-         state->setError(ParserState::NonFatalError);
-      }
+  ParserState* state =  new ParserState(errors, this);
 
-   }
+  if (braceCount > 0) {
+    state->unsetError(ParserState::NoError);
+    state->setError(ParserState::MismatchedBraceCount);
+    state->setError(ParserState::MissingEndBrace);
 
-   return state;
+    if (!errors.testFlag(ParserState::FatalError)) {
+      state->setError(ParserState::NonFatalError);
+    }
+
+  } else if (braceCount < 0) {
+    state->unsetError(ParserState::NoError);
+    state->setError(ParserState::MismatchedBraceCount);
+    state->setError(ParserState::MissingStartBrace);
+
+    if (!errors.testFlag(ParserState::FatalError)) {
+      state->setError(ParserState::NonFatalError);
+    }
+
+  }
+
+  return state;
 
 }
 
 Node* Parser::findName(const QString& text, int& pos, int& braceCount)
 {
-   QString name;
-   Node* node = nullptr;
-   int start = pos;
+  QString name;
+  Node* node = nullptr;
+  int start = pos;
 
-   for (; pos < text.length(); pos++) {
-      QChar c = text.at(pos);
+  for (; pos < text.length(); pos++) {
+    QChar c = text.at(pos);
 
-      if (c.isSpace() || c == '{' || c == ':') {
-         if (braceCount == 0) {
-            if (WidgetNode::contains(name)) {
-               node = new WidgetNode(name, start, this);
-               pos--; // step back from the last character
-               break;
+    if (c.isSpace() || c == '{' || c == ':') {
+      if (braceCount == 0) {
+        if (WidgetNode::contains(name)) {
+          node = new WidgetNode(name, start, this);
+          pos--; // step back from the last character
+          break;
 
-            } else {
-               node = new NameNode(name, start, this);
-               pos--; // step back from the last character
-            }
+        } else {
+          node = new NameNode(name, start, this);
+          pos--; // step back from the last character
+        }
 
-            // TODO handle property name.
+        // TODO handle property name.
 
-            break;
+        break;
 
-         } else {
-            // TODO neither widget name or pseudo-state
-         }
-      } else if (c.isLetter()) {
-         name += c;
-         continue;
-
+      } else {
+        // TODO neither widget name or pseudo-state
       }
-   }
+    } else if (c.isLetter()) {
+      name += c;
+      continue;
 
-   if (!node && name.length() > 0) {
-      node = new NameNode(name, start, this);
-   }
+    }
+  }
 
-   return node;
+  if (!node && name.length() > 0) {
+    node = new NameNode(name, start, this);
+  }
+
+  return node;
 }
 
 Node* Parser::findSubControl(const QString& text, int& pos)
 {
-   QString name;
-   Node* node = nullptr;
-   int start = pos;
+  QString name;
+  Node* node = nullptr;
+  int start = pos;
 
-   for (; pos < text.length(); pos++) {
-      QChar c = text.at(pos);
+  for (; pos < text.length(); pos++) {
+    QChar c = text.at(pos);
 
-      if (c.isLetter()) {
-         name += c;
-         continue;
+    if (c.isLetter()) {
+      name += c;
+      continue;
 
-      } else if (c.isSpace() || c == '{') {
-         if (SubControlNode::contains(name)) {
-            node = new SubControlNode(name, start, this);
-            pos--; // step back from the last character
-            break;
-         }
+    } else if (c.isSpace() || c == '{') {
+      if (SubControlNode::contains(name)) {
+        node = new SubControlNode(name, start, this);
+        pos--; // step back from the last characters
+        break;
       }
-   }
+    }
+  }
 
-   return node;
+  return node;
 }
 
 Node* Parser::findPseudoState(const QString& text, int& pos)
 {
-   QString name;
-   Node* node = nullptr;
-   int start = pos;
+  QString name;
+  Node* node = nullptr;
+  int start = pos;
 
-   for (; pos < text.length(); pos++) {
-      QChar c = text.at(pos);
+  for (; pos < text.length(); pos++) {
+    QChar c = text.at(pos);
 
-      if (c.isLetter()) {
-         name += c;
-         continue;
+    if (c.isLetter()) {
+      name += c;
+      continue;
 
-      } else if (c.isSpace() || c == '{') {
-         if (PseudoStateNode::contains(name)) {
-            node = new PseudoStateNode(name, start, this);
-            pos--; // step back from the last character
-            break;
-         }
+    } else if (c.isSpace() || c == '{') {
+      if (PseudoStateNode::contains(name)) {
+        node = new PseudoStateNode(name, start, this);
+        pos--; // step back from the last character
+        break;
       }
-   }
+    }
+  }
 
-   return node;
+  return node;
 }
 
 
 QList<Node*>* Parser::nodes()
 {
-   return m_nodes;
+  return m_nodes;
 }
 
 void Parser::skipBlanks(const QString& text, int& pos)
 {
-   for (; pos < text.length(); pos++) {
-      QChar c = text.at(pos);
+  for (; pos < text.length(); pos++) {
+    QChar c = text.at(pos);
 
-      if (c.isSpace() || c == '\n' || c == '\r' || c == '\t') {
-         continue;
+    if (c.isSpace() || c == '\n' || c == '\r' || c == '\t') {
+      continue;
 
-      } else {
-         break;
-      }
-   }
+    } else {
+      break;
+    }
+  }
 }
 
 

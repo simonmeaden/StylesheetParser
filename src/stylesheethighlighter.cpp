@@ -30,11 +30,14 @@ StylesheetHighligter::StylesheetHighligter(StylesheetEdit* editor)
   setNormalFormat(Qt::black);
   setNameFormat(Qt::blue);
   setWidgetFormat(Qt::blue);
-  setPseudoStateFormat(Qt::cyan);
-  setPseudoStateMarkerFormat(Qt::green);
+  setPseudoStateFormat(Qt::darkCyan);
+  setPseudoStateMarkerFormat(Qt::black);
   setSubControlFormat(Qt::red);
-  setSubControlMarkerFormat(QColor("pink"));
+  setSubControlMarkerFormat(Qt::black);
   setValueFormat(Qt::magenta);
+  setBadValueFormat(Qt::black);
+  setPropertyFormat(Qt::darkYellow);
+  setPropertyMarkerFormat(Qt::black);
 }
 
 void StylesheetHighligter::highlightBlock(const QString& text)
@@ -43,53 +46,76 @@ void StylesheetHighligter::highlightBlock(const QString& text)
     return;
   }
 
+  QTextBlock block = currentBlock();
+  int blockStart = block.position();
+
   for (auto node : *m_nodes) {
-    auto pos = node->start();
-    int length;
+    auto start = node->start() - blockStart;
+    int length = node->length();
     Node::Type type = node->type();
 
     switch (type) {
-    case Node::NewlineNodeType:
+    case Node::NewlineType:
       break;
 
     case Node::PseudoStateType:
-      length = qobject_cast<PseudoStateNode*>(node)->length();
-      setFormat(pos, length, m_pseudoStateFormat);
+      setFormat(start, length, m_pseudoStateFormat);
       break;
 
     case Node::PseudoStateMarkerType:
-      length = qobject_cast<PseudoStateMarkerNode*>(node)->length();
-      setFormat(pos, length, m_pseudoStateMarkerFormat);
+      setFormat(start, length, m_pseudoStateMarkerFormat);
       break;
 
     case Node::SubControlType:
-      length = qobject_cast<SubControlNode*>(node)->length();
-      setFormat(pos, length, m_subControlFormat);
+      setFormat(start, length, m_subControlFormat);
       break;
 
     case Node::SubControlMarkerType:
-      length = qobject_cast<SubControlMarkerNode*>(node)->length();
-      setFormat(pos, length, m_subControlMarkerFormat);
+      setFormat(start, length, m_subControlMarkerFormat);
       break;
 
     case Node::WidgetType:
-      length = qobject_cast<WidgetNode*>(node)->length();
-      setFormat(pos, length, m_widgetFormat);
+      setFormat(start, length, m_widgetFormat);
       break;
 
     case Node::NameType:
-      length = qobject_cast<NameNode*>(node)->length();
-      setFormat(pos, length, m_nameFormat);
+      setFormat(start, length, m_nameFormat);
       break;
 
-    case Node::ValueType:
-      length = qobject_cast<ValueNode*>(node)->value().length();
-      setFormat(pos, length, m_valueFormat);
+    case Node::ValueType: {
+      ValueNode* vNode = qobject_cast<ValueNode*>(node);
+      QStringList values = vNode->values();
+      QList<bool> checks = vNode->checks();
+      QList<int> offsets = vNode->offsets();
+      bool check;
+      QString value;
+      int offset;
+
+      for (int i = 0; i < values.length();i++) {
+        value = values.at(i);
+        check = checks.at(i);
+        offset = offsets.at(i);
+        if (check) {
+          setFormat(start + offset, value.length(), m_valueFormat);
+
+        } else {
+          setFormat(start + offset, value.length(), m_badValueFormat);
+        }
+      }
+
+      break;
+    }
+
+    case Node::PropertyType:
+      setFormat(start, length, m_propertyFormat);
+      break;
+
+    case Node::PropertyMarkerType:
+      setFormat(start, length, m_propertyMarkerFormat);
       break;
 
     default:
-      length = node->length();
-      setFormat(pos, length, m_baseFormat);
+      setFormat(start, length, m_baseFormat);
     }
   }
 }
@@ -176,6 +202,48 @@ void StylesheetHighligter::setValueFormat(Qt::GlobalColor color, QFont::Weight w
 {
   m_valueFormat.setFontWeight(weight);
   m_valueFormat.setForeground(color);
+}
+
+void StylesheetHighligter::setBadValueFormat(QColor color, QFont::Weight weight)
+{
+  m_badValueFormat.setFontWeight(weight);
+  m_badValueFormat.setForeground(color);
+  m_badValueFormat.setFontUnderline(true);
+  m_badValueFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_badValueFormat.setUnderlineColor(QColor("red"));
+}
+
+void StylesheetHighligter::setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_badValueFormat.setFontWeight(weight);
+  m_badValueFormat.setForeground(color);
+  m_badValueFormat.setFontUnderline(true);
+  m_badValueFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_badValueFormat.setUnderlineColor(QColor("red"));
+}
+
+void StylesheetHighligter::setPropertyFormat(QColor color, QFont::Weight weight)
+{
+  m_propertyFormat.setFontWeight(weight);
+  m_propertyFormat.setForeground(color);
+}
+
+void StylesheetHighligter::setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_propertyFormat.setFontWeight(weight);
+  m_propertyFormat.setForeground(color);
+}
+
+void StylesheetHighligter::setPropertyMarkerFormat(QColor color, QFont::Weight weight)
+{
+  m_propertyMarkerFormat.setFontWeight(weight);
+  m_propertyMarkerFormat.setForeground(color);
+}
+
+void StylesheetHighligter::setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_propertyMarkerFormat.setFontWeight(weight);
+  m_propertyMarkerFormat.setForeground(color);
 }
 
 void StylesheetHighligter::setNameFormat(QColor color, QFont::Weight weight)

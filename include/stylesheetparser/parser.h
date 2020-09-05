@@ -26,30 +26,33 @@
 #include "StylesheetParser_global.h"
 #include "parserstate.h"
 #include "node.h"
+#include "datastore.h"
 
 namespace StylesheetParser {
 
 class STYLESHEETPARSER_EXPORT Parser : public QObject
 {
 public:
-   Parser(QObject* parent = nullptr);
-   ~Parser();
+  Parser(QObject* parent = nullptr);
+  ~Parser();
 
-   ParserState* parse(const QString& text);
+  ParserState* parse(const QString& text);
 
-   QList<Node*>* nodes();
+  QList<Node*>* nodes();
 
 private:
-   QList<Node*>* m_nodes;
+  QList<Node*>* m_nodes;
+  DataStore* m_datastore;
+  void skipBlanks(const QString& text, int& pos);
+  bool isWhiteSpace(QChar c);
 
-   void skipBlanks(const QString& text, int& pos);
-   bool isWhiteSpace(QChar c);
+  Node* findName(const QString& text, int& pos, int& braceCount);
+  Node* findSubControl(const QString& text, int& pos);
+  Node* findPseudoState(const QString& text, int& pos);
+  void findPropertyAndValues(const QString& text, int& pos);
+  void findValues(const QString& text, int& pos, PropertyNode *pNode);
 
-   Node* findName(const QString& text, int& pos, int& braceCount);
-   Node* findSubControl(const QString& text, int& pos);
-   Node* findPseudoState(const QString& text, int& pos);
-
-   void deleteNodes();
+  void deleteNodes();
 
 };
 

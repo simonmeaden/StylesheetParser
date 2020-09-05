@@ -46,7 +46,13 @@ QString StylesheetEdit::text()
 
 QList<Node*>* StylesheetEdit::nodes()
 {
-   return m_parser->nodes();
+  return m_parser->nodes();
+}
+
+void StylesheetEdit::showNewlineMarkers(bool show)
+{
+  // TODO show/hide newline markers.
+  // maybe detect position of line end and draw a [NL] box??
 }
 
 void StylesheetEdit::setNormalFormat(QColor color, QFont::Weight weight)
@@ -76,7 +82,77 @@ void StylesheetEdit::setValueFormat(QColor color, QFont::Weight weight)
 
 void StylesheetEdit::setValueFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
-   m_highlighter->setValueFormat(color, weight);
+  m_highlighter->setValueFormat(color, weight);
+}
+
+void StylesheetEdit::setWidgetFormat(QColor color, QFont::Weight weight)
+{
+  m_highlighter->setWidgetFormat(color, weight);
+}
+
+void StylesheetEdit::setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setWidgetFormat(color, weight);
+}
+
+void StylesheetEdit::setPseudoStateFormat(QColor color, QFont::Weight weight)
+{
+ m_highlighter->setPseudoStateFormat(color, weight);
+}
+
+void StylesheetEdit::setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setPseudoStateFormat(color, weight);
+}
+
+void StylesheetEdit::setPseudoStateMarkerFormat(QColor color, QFont::Weight weight)
+{
+  m_highlighter->setPseudoStateMarkerFormat(color, weight);
+}
+
+void StylesheetEdit::setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setPseudoStateMarkerFormat(color, weight);
+}
+
+void StylesheetEdit::setSubControlFormat(QColor color, QFont::Weight weight)
+{
+  m_highlighter->setSubControlFormat(color, weight);
+}
+
+void StylesheetEdit::setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setSubControlFormat(color, weight);
+}
+
+void StylesheetEdit::setSubControlMarkerFormat(QColor color, QFont::Weight weight)
+{
+  m_highlighter->setSubControlMarkerFormat(color, weight);
+}
+
+void StylesheetEdit::setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setSubControlFormat(color, weight);
+}
+
+void StylesheetEdit::setPropertyFormat(QColor color, QFont::Weight weight)
+{
+  m_highlighter->setPropertyFormat(color, weight);
+}
+
+void StylesheetEdit::setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setPropertyFormat(color, weight);
+}
+
+void StylesheetEdit::setPropertyMarkerFormat(QColor color, QFont::Weight weight)
+{
+  m_highlighter->setPropertyMarkerFormat(color, weight);
+}
+
+void StylesheetEdit::setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+{
+  m_highlighter->setPropertyMarkerFormat(color, weight);
 }
 
 

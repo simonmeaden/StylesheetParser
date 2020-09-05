@@ -20,37 +20,42 @@
 #include "stylesheetparser/mainwindow.h"
 
 MainWindow::MainWindow(QWidget* parent)
-   : QMainWindow(parent)
+  : QMainWindow(parent)
 {
-   setCentralWidget(initGui());
-   setGeometry(0, 0, 500, 800);
+  setCentralWidget(initGui());
+  setGeometry(0, 0, 500, 800);
 }
 
 MainWindow::~MainWindow() {}
 
 QWidget* MainWindow::initGui()
 {
-   QFrame* f = new QFrame(this);
-   QGridLayout* layout = new QGridLayout;
-   f->setLayout(layout);
+  QFrame* f = new QFrame(this);
+  QGridLayout* layout = new QGridLayout;
+  f->setLayout(layout);
 
-   QString text =
-//     "\n\r\t";
-//   for (auto c : text) {
-//     if (c.isSpace()) {
-//       qWarning() <<(c=="\t" ? "tab " : c=="\n" ? "NewLine " : c == "\r" ? "Return " : "") <<"is a space";
-//     } else {
-//       qWarning() <<(c=="\t" ? "tab " : c=="\n" ? "NewLine " : c == "\r" ? "Return " : "") <<"not a space";
-//     }
-//   }
-//      " color: red;\n background: green;\n";
-//     "QTabWidget {\n color: red;\n background: green;\n }\n";
-   "  QTabWidget:active {\n}\n\n  QTabWidget::branch {\n}\n\n  QTabWidget::branch {\n}";
+  QString text;
+  //     "\n\r\t";
+  //   for (auto c : text) {
+  //     if (c.isSpace()) {
+  //       qWarning() <<(c=="\t" ? "tab " : c=="\n" ? "NewLine " : c == "\r" ? "Return " : "") <<"is a space";
+  //     } else {
+  //       qWarning() <<(c=="\t" ? "tab " : c=="\n" ? "NewLine " : c == "\r" ? "Return " : "") <<"not a space";
+  //     }
+  //   }
+  //      " color: red;\n background: green;\n";
 
-   m_editor = new StylesheetEdit(this);
-   m_editor->setText(text);
-   m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-   layout->addWidget(m_editor, 0, 0);
+  //  text = "QTabWidget::branch {\n}\n\n"
+  //  text = "QTabWidget::branch {\n}"
+  //  text = "QTabWidget:active { border: 1px solid rd\n }";
+    text = "QTabWidget:active { color: black; border: 1px solid rd\n }";
+//  text = "color: black; border: 1px solid rd\n";
 
-   return f;
+
+  m_editor = new StylesheetEdit(this);
+  m_editor->setText(text);
+  m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  layout->addWidget(m_editor, 0, 0);
+
+  return f;
 }

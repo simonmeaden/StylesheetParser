@@ -52,12 +52,18 @@ public:
   void setNameFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
   void setValueFormat(QColor color, QFont::Weight weight = QFont::Normal);
   void setValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setBadValueFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  void setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
 
 private:
   QList<Node*>* m_nodes;
-  QTextCharFormat m_baseFormat, m_widgetFormat, m_nameFormat, m_valueFormat,
+  QTextCharFormat m_baseFormat, m_widgetFormat, m_nameFormat, m_valueFormat, m_badValueFormat,
                   m_pseudoStateFormat, m_pseudoStateMarkerFormat, m_subControlFormat,
-                  m_subControlMarkerFormat;
+                  m_subControlMarkerFormat, m_propertyFormat, m_propertyMarkerFormat;
 };
 
 } // end of StylesheetParser

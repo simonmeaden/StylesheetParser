@@ -38,12 +38,44 @@ public:
 
    QList<Node*>* nodes();
 
+   void showNewlineMarkers(bool show);
+
+   //! Sets a new color/fontweight pair for the highlighter base format
    void setNormalFormat(QColor color, QFont::Weight weight=QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter base format
    void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter name format
    void setNameFormat(QColor color, QFont::Weight weight=QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter name format
    void setNameFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter value format
    void setValueFormat(QColor color, QFont::Weight weight=QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter value format
    void setValueFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter widget name format
+   void setWidgetFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter widget name format
+   void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter pseudo state format
+   void setPseudoStateFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter pseudo state format
+   void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
+   void setPseudoStateMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
+   void setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter sub control format
+   void setSubControlFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter sub control format
+   void setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
+   void setSubControlMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
+   void setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+   void setPropertyFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+   void setPropertyMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+   void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
 
 private:
    Parser* m_parser;

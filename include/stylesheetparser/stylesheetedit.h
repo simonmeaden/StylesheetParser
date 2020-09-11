@@ -20,23 +20,24 @@
 #ifndef STYLESHEETEDIT_H
 #define STYLESHEETEDIT_H
 
-#include <QTextEdit>
+//#include <QTextEdit>
+#include <QPlainTextEdit>
 
 #include "parser.h"
 #include "stylesheetparser/stylesheethighlighter.h"
 
 namespace StylesheetParser {
 
-class StylesheetEdit : public QTextEdit
+class StylesheetEdit : public /*QPlainTextEdit*/ QTextEdit
 {
 
 public:
    explicit StylesheetEdit(QWidget* parent = nullptr);
 
    void setText(const QString& text);
-   QString text();
+   void setPlainText(const QString& text);
 
-   QList<Node*>* nodes();
+   NodeList *nodes();
 
    void showNewlineMarkers(bool show);
 
@@ -79,7 +80,14 @@ public:
 
 private:
    Parser* m_parser;
-   StylesheetHighligter* m_highlighter;
+   StylesheetHighlighter* m_highlighter;
+   QTextCursor m_cursor;
+   Node* m_node;
+   int m_cursorPos;
+
+   void onTextChanged();
+   void onCursorPositionChanged();
+//   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
 
 };
 

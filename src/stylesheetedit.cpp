@@ -23,28 +23,31 @@ namespace StylesheetParser {
 
 //=== StylesheetEdit ================================================================
 StylesheetEdit::StylesheetEdit(QWidget* parent)
-   : QTextEdit(parent)
-   , m_parser(new Parser(this))
-   , m_highlighter(new StylesheetHighligter(this))
+  : QTextEdit(parent)
+  , m_parser(new Parser(this))
+  , m_highlighter(new StylesheetHighlighter(this))
 {
+  connect(this, &QTextEdit::cursorPositionChanged, this, &StylesheetEdit::onCursorPositionChanged);
+  connect(this, &QTextEdit::textChanged, this, &StylesheetEdit::onTextChanged);
+  //  connect(this->document(), &QTextDocument::contentsChange, this, &StylesheetEdit::onDocumentChanged);
 }
 
 void StylesheetEdit::setText(const QString& text)
 {
-   ParserState* state = m_parser->parse(text);
-   QTextEdit::setText(text);
-
-   if (!state->errors().testFlag(ParserState::NoError)) {
-      // TODO error recovery
-   }
+  setPlainText(text);
 }
 
-QString StylesheetEdit::text()
+void StylesheetEdit::setPlainText(const QString& text)
 {
-   return toPlainText();
+  ParserState* state = m_parser->parse(text);
+  QTextEdit::setPlainText(text);
+
+  if (!state->errors().testFlag(ParserState::NoError)) {
+    // TODO error recovery
+  }
 }
 
-QList<Node*>* StylesheetEdit::nodes()
+NodeList* StylesheetEdit::nodes()
 {
   return m_parser->nodes();
 }
@@ -57,27 +60,28 @@ void StylesheetEdit::showNewlineMarkers(bool show)
 
 void StylesheetEdit::setNormalFormat(QColor color, QFont::Weight weight)
 {
-   m_highlighter->setNormalFormat(color, weight);
+  m_highlighter->setNormalFormat(color, weight);
 }
 
 void StylesheetEdit::setNormalFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
-   m_highlighter->setNormalFormat(color, weight);
+  m_highlighter->setNormalFormat(color, weight);
 }
 
 void StylesheetEdit::setNameFormat(QColor color, QFont::Weight weight)
 {
-   m_highlighter->setNameFormat(color, weight);
+  m_highlighter->setNameFormat(color, weight);
 }
 
 void StylesheetEdit::setNameFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
-   m_highlighter->setNameFormat(color, weight);
+  m_highlighter->setNameFormat(color, weight);
 }
 
 void StylesheetEdit::setValueFormat(QColor color, QFont::Weight weight)
 {
-   m_highlighter->setValueFormat(color, weight);
+  QTextCursor m_cursor;
+  m_highlighter->setValueFormat(color, weight);
 }
 
 void StylesheetEdit::setValueFormat(Qt::GlobalColor color, QFont::Weight weight)
@@ -97,7 +101,7 @@ void StylesheetEdit::setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight
 
 void StylesheetEdit::setPseudoStateFormat(QColor color, QFont::Weight weight)
 {
- m_highlighter->setPseudoStateFormat(color, weight);
+  m_highlighter->setPseudoStateFormat(color, weight);
 }
 
 void StylesheetEdit::setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight)
@@ -154,6 +158,68 @@ void StylesheetEdit::setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weigh
 {
   m_highlighter->setPropertyMarkerFormat(color, weight);
 }
+
+void StylesheetEdit::onTextChanged()
+{
+
+}
+
+void StylesheetEdit::onCursorPositionChanged()
+{
+  m_cursor = textCursor();
+  m_cursorPos = m_cursor.anchor();
+  int start, end, len;
+
+  for (auto basenode : *nodes()) {
+    if (!basenode) {
+      return;
+    }
+
+    Node* node = basenode;
+
+    while (true) {
+      start = node->start();
+      len = node->length();
+      end = start - len;
+
+      if (m_cursorPos >= start && m_cursorPos < end) {
+        m_node = node;
+        break;
+      }
+
+      if (node->next) {
+        node = node->next;
+
+      } else {
+        break;
+      }
+    }
+  }
+}
+
+//void StylesheetEdit::onDocumentChanged(int pos, int charsRemoved, int charsAdded)
+//{
+//  //  int start, end, len;
+//  //  int count =
+//  //  QString text = toPlainText();
+//  //  for (auto basenode : *nodes()) {
+//  //    Node* node = basenode;
+//  //    if (!basenode) return;
+
+//  //    while(true) {
+//  //      start = node->start();
+//  //      len = node->length();
+//  //      end = start ;
+
+//  //      if (pos >= start && pos < end) {
+//  //        QString change = text.mid(pos, count);
+//  //      }
+
+//  //      if (node->next)
+//  //        node = node->next;
+//  //    }
+//  //  }
+//}
 
 
 

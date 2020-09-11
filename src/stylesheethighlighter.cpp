@@ -22,189 +22,249 @@
 
 namespace StylesheetParser {
 
-StylesheetHighligter::StylesheetHighligter(StylesheetEdit* editor)
+StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   : QSyntaxHighlighter(editor)
 {
   m_nodes = editor->nodes();
 
   setNormalFormat(Qt::black);
-  setNameFormat(Qt::blue);
+  setNameFormat(Qt::lightGray);
   setWidgetFormat(Qt::blue);
   setPseudoStateFormat(Qt::darkCyan);
   setPseudoStateMarkerFormat(Qt::black);
   setSubControlFormat(Qt::red);
   setSubControlMarkerFormat(Qt::black);
   setValueFormat(Qt::magenta);
-  setBadValueFormat(Qt::black);
-  setPropertyFormat(Qt::darkYellow);
+  setBadValueFormat(Qt::green);
+  setPropertyFormat(Qt::blue);
   setPropertyMarkerFormat(Qt::black);
 }
 
-void StylesheetHighligter::highlightBlock(const QString& text)
+int StylesheetHighlighter::setNodeEnd(int nodeEnd, int blockEnd)
 {
+  if (blockEnd < nodeEnd) {
+    return blockEnd;
+  }
+
+  return nodeEnd;
+}
+
+int StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
+{
+  if (blockStart > nodeStart) {
+    nodeStart = blockStart;
+  }
+
+  return nodeStart;
+}
+
+void StylesheetHighlighter::highlightBlock(const QString& text)
+{  
   if (text.isEmpty() || m_nodes->isEmpty()) {
     return;
   }
 
   QTextBlock block = currentBlock();
-  int blockStart = block.position();
+  auto blockStart = block.position();
+  auto blockEnd = blockStart + block.length();
 
-  for (auto node : *m_nodes) {
-    auto start = node->start() - blockStart;
-    int length = node->length();
-    Node::Type type = node->type();
+  for (auto basenode : *m_nodes) {
+    if (!basenode) {
+      continue;
+    }
 
-    switch (type) {
-    case Node::NewlineType:
-      break;
+    Node* node = basenode;
 
-    case Node::PseudoStateType:
-      setFormat(start, length, m_pseudoStateFormat);
-      break;
+    while (true) {
+      Node::Type type = node->type();
+      int nodeStart = node->start();
+      int nodeEnd;
+      int length;
 
-    case Node::PseudoStateMarkerType:
-      setFormat(start, length, m_pseudoStateMarkerFormat);
-      break;
+      if (type != Node::ValueType) {
+        nodeEnd = nodeStart + node->length();
+        nodeStart -= blockStart;
+        nodeEnd = nodeStart + node->length();
+        nodeStart = (nodeStart < 0 ? 0 : nodeStart);
+        nodeEnd = (nodeEnd > blockEnd ? blockEnd : nodeEnd);
 
-    case Node::SubControlType:
-      setFormat(start, length, m_subControlFormat);
-      break;
+        length = nodeEnd - nodeStart;
 
-    case Node::SubControlMarkerType:
-      setFormat(start, length, m_subControlMarkerFormat);
-      break;
+        if (length <= 0) {
+          if (!node->next) {
+            break;
+          }
 
-    case Node::WidgetType:
-      setFormat(start, length, m_widgetFormat);
-      break;
-
-    case Node::NameType:
-      setFormat(start, length, m_nameFormat);
-      break;
-
-    case Node::ValueType: {
-      ValueNode* vNode = qobject_cast<ValueNode*>(node);
-      QStringList values = vNode->values();
-      QList<bool> checks = vNode->checks();
-      QList<int> offsets = vNode->offsets();
-      bool check;
-      QString value;
-      int offset;
-
-      for (int i = 0; i < values.length();i++) {
-        value = values.at(i);
-        check = checks.at(i);
-        offset = offsets.at(i);
-        if (check) {
-          setFormat(start + offset, value.length(), m_valueFormat);
-
-        } else {
-          setFormat(start + offset, value.length(), m_badValueFormat);
+          node = node->next;
+          continue;
         }
       }
 
-      break;
-    }
+      switch (type) {
+      case Node::NewlineType:
+        break;
 
-    case Node::PropertyType:
-      setFormat(start, length, m_propertyFormat);
-      break;
+      case Node::PseudoStateType:
+        setFormat(nodeStart, length, m_pseudoStateFormat);
+        break;
 
-    case Node::PropertyMarkerType:
-      setFormat(start, length, m_propertyMarkerFormat);
-      break;
+      case Node::PseudoStateMarkerType:
+        setFormat(nodeStart, length, m_pseudoStateMarkerFormat);
+        break;
 
-    default:
-      setFormat(start, length, m_baseFormat);
+      case Node::SubControlType:
+        setFormat(nodeStart, length, m_subControlFormat);
+        break;
+
+      case Node::SubControlMarkerType:
+        setFormat(nodeStart, length, m_subControlMarkerFormat);
+        break;
+
+      case Node::WidgetType:
+        setFormat(nodeStart, length, m_widgetFormat);
+        break;
+
+      case Node::NameType:
+        setFormat(nodeStart, length, m_nameFormat);
+        break;
+
+      case Node::ValueType: {
+        ValueNode* vNode = qobject_cast<ValueNode*>(node);
+        QStringList values = vNode->values();
+        QList<bool> checks = vNode->checks();
+        QList<int> offsets = vNode->offsets();
+        bool check;
+        QString value;
+        int offset;
+        int start = vNode->start();
+
+        for (int i = 0; i < values.length(); i++) {
+          value = values.at(i);
+          check = checks.at(i);
+          offset = offsets.at(i);
+
+          start = nodeStart - blockStart + offset;//setNodeStart(nodeStart + offset, blockEnd);
+
+          //        auto end = setNodeEnd(nodeStart + offset + length, blockEnd);
+          //        length = end - start;
+
+          if (check) {
+            setFormat(start, value.length(), m_valueFormat);
+
+          } else {
+            setFormat(start, value.length(), m_badValueFormat);
+          }
+        }
+
+        break;
+      }
+
+      case Node::PropertyType:
+        setFormat(nodeStart, length, m_propertyFormat);
+        break;
+
+      case Node::PropertyMarkerType:
+        setFormat(nodeStart, length, m_propertyMarkerFormat);
+        break;
+
+      default:
+        setFormat(nodeStart, length, m_baseFormat);
+      }
+
+      if (!node->next) {
+        break;
+      }
+
+      node = node->next;
     }
   }
 }
 
-void StylesheetHighligter::setNormalFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setNormalFormat(QColor color, QFont::Weight weight)
 {
   m_baseFormat.setFontWeight(weight);
   m_baseFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setNormalFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setNormalFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_baseFormat.setFontWeight(weight);
   m_baseFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setWidgetFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setWidgetFormat(QColor color, QFont::Weight weight)
 {
   m_widgetFormat.setFontWeight(weight);
   m_widgetFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_widgetFormat.setFontWeight(weight);
   m_widgetFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setPseudoStateFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPseudoStateFormat(QColor color, QFont::Weight weight)
 {
   m_pseudoStateFormat.setFontWeight(weight);
   m_pseudoStateFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_pseudoStateFormat.setFontWeight(weight);
   m_pseudoStateFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setPseudoStateMarkerFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPseudoStateMarkerFormat(QColor color, QFont::Weight weight)
 {
   m_pseudoStateMarkerFormat.setFontWeight(weight);
   m_pseudoStateMarkerFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_pseudoStateMarkerFormat.setFontWeight(weight);
   m_pseudoStateMarkerFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setSubControlFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setSubControlFormat(QColor color, QFont::Weight weight)
 {
   m_subControlFormat.setFontWeight(weight);
   m_subControlFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_subControlFormat.setFontWeight(weight);
   m_subControlFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setSubControlMarkerFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setSubControlMarkerFormat(QColor color, QFont::Weight weight)
 {
   m_subControlMarkerFormat.setFontWeight(weight);
   m_subControlMarkerFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_subControlMarkerFormat.setFontWeight(weight);
   m_subControlMarkerFormat.setForeground(color);
 }
 
-void StylesheetParser::StylesheetHighligter::setValueFormat(QColor color, QFont::Weight weight)
+void StylesheetParser::StylesheetHighlighter::setValueFormat(QColor color, QFont::Weight weight)
 {
   m_valueFormat.setFontWeight(weight);
   m_valueFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setValueFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setValueFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_valueFormat.setFontWeight(weight);
   m_valueFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setBadValueFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setBadValueFormat(QColor color, QFont::Weight weight)
 {
   m_badValueFormat.setFontWeight(weight);
   m_badValueFormat.setForeground(color);
@@ -213,7 +273,7 @@ void StylesheetHighligter::setBadValueFormat(QColor color, QFont::Weight weight)
   m_badValueFormat.setUnderlineColor(QColor("red"));
 }
 
-void StylesheetHighligter::setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_badValueFormat.setFontWeight(weight);
   m_badValueFormat.setForeground(color);
@@ -222,37 +282,37 @@ void StylesheetHighligter::setBadValueFormat(Qt::GlobalColor color, QFont::Weigh
   m_badValueFormat.setUnderlineColor(QColor("red"));
 }
 
-void StylesheetHighligter::setPropertyFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPropertyFormat(QColor color, QFont::Weight weight)
 {
   m_propertyFormat.setFontWeight(weight);
   m_propertyFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_propertyFormat.setFontWeight(weight);
   m_propertyFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setPropertyMarkerFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPropertyMarkerFormat(QColor color, QFont::Weight weight)
 {
   m_propertyMarkerFormat.setFontWeight(weight);
   m_propertyMarkerFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_propertyMarkerFormat.setFontWeight(weight);
   m_propertyMarkerFormat.setForeground(color);
 }
 
-void StylesheetHighligter::setNameFormat(QColor color, QFont::Weight weight)
+void StylesheetHighlighter::setNameFormat(QColor color, QFont::Weight weight)
 {
   m_nameFormat.setFontWeight(weight);
   m_nameFormat.setForeground(QBrush(color));
 }
 
-void StylesheetHighligter::setNameFormat(Qt::GlobalColor color, QFont::Weight weight)
+void StylesheetHighlighter::setNameFormat(Qt::GlobalColor color, QFont::Weight weight)
 {
   m_nameFormat.setFontWeight(weight);
   m_nameFormat.setForeground(color);

@@ -53,6 +53,9 @@ public:
     PropertyType,
     PropertyMarkerType,
   };
+  Node* previous;
+  Node* next;
+
   explicit Node(int start, QObject* parent, Type type = NodeType);
 
   virtual int start() const;
@@ -61,15 +64,21 @@ public:
 
   Type type() const;
 
+  //  Node* next();
+  //  void setNext(Node *next);
+  //  Node* previous();
+  //  void setPrevious(Node *previous);
+
 protected:
   int m_start;
   Type m_type;
+
 };
 
-class StringNode : public Node
+class BaseNode : public Node
 {
 public:
-  explicit StringNode(const QString& value, int start, QObject* parent, Type type = StringNodeType);
+  explicit BaseNode(const QString& value, int start, QObject* parent, Type type = StringNodeType);
 
   QString value() const;
   int end() const override;
@@ -78,12 +87,35 @@ public:
 protected:
   QString m_value;
 };
+using NodeList = QList<BaseNode*>;
 
-class NameNode : public StringNode
+class NameNode : public Node
 {
   Q_OBJECT
 public:
   explicit NameNode(const QString& name, int start, QObject* parent, Type type = NameType);
+
+  QString value() const;
+  int end() const override;
+  int length() const override;
+
+private:
+  QString m_name;
+
+};
+
+class BadBlock: public Node
+{
+  Q_OBJECT
+public:
+  explicit BadBlock(const QString& name, int start, QObject* parent, Type type = NameType);
+
+  QString value() const;
+  int end() const override;
+  int length() const override;
+
+private:
+  QString m_name;
 };
 
 class ValueNode : public Node
@@ -109,28 +141,28 @@ private:
   QList<int> m_offsets;
 };
 
-class WidgetNode : public StringNode
+class WidgetNode : public BaseNode
 {
   Q_OBJECT
 public:
   explicit WidgetNode(const QString& name, int start, QObject* parent, Type type = WidgetType);
 };
 
-class PropertyNode : public StringNode
+class PropertyNode : public BaseNode
 {
   Q_OBJECT
 public:
   explicit PropertyNode(const QString& name, int start, QObject* parent, Type type = PropertyType);
 };
 
-class SubControlNode : public WidgetNode
+class SubControlNode : public NameNode
 {
   Q_OBJECT
 public:
   explicit SubControlNode(const QString& name, int start, QObject* parent, Type type = SubControlType);
 };
 
-class PseudoStateNode : public WidgetNode
+class PseudoStateNode : public NameNode
 {
   Q_OBJECT
 public:

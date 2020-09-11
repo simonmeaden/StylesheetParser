@@ -27,8 +27,10 @@ namespace StylesheetParser {
 
 Parser::Parser(QObject* parent)
   : QObject(parent)
-  , m_nodes(new QList<Node*>())
+  , m_nodes(new NodeList())
   , m_datastore(new DataStore(this))
+  , m_braceCount(0)
+  , m_bracesMatched(true)
 {}
 
 void Parser::deleteNodes()
@@ -43,368 +45,611 @@ Parser::~Parser()
   delete m_nodes;
 }
 
-ParserState* Parser::parse(const QString& text)
+void Parser::checkBraceCount(const QString& text, ParserState* state)
 {
-  ParserState::Errors errors = ParserState::NoError;
-  int braceCount = 0;
-  bool bracesMatched = false;
-  int pos = 0;
-  Node* node = nullptr;
-  QString name;
-
-  // Mark all newline chars and check for matching brace pairs for use later use.
-  // Capture newline chars as skipBlanks() skips over them.
-  for (int p = pos; p < text.length(); p++) {
+  for (int p = 0; p < text.length(); p++) {
     QChar c = text.at(p);
 
-    if (c == '\n') {
-      node = new NewlineNode(p, this);
-      m_nodes->append(node);
-
-    } else if (c == '{') {
-      braceCount++;
+    if (c == '{') {
+      m_braceCount++;
 
     } else if (c == '}') {
-      braceCount--;
+      m_braceCount--;
     }
   }
 
-  if (braceCount == 0) {
-    bracesMatched = true;
+  if (m_braceCount == 0) {
+    m_bracesMatched = true;
 
   } else {
     // reset braceCount to use in brace detection.
-    braceCount = 0;
+    m_braceCount = 0;
   }
 
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
-
-    if (c == '\n') {
-      // capture newline char before skipBlanks() skips over it.
-      node = new NewlineNode(pos, this);
-      m_nodes->append(node);
-    }
-
-    skipBlanks(text, pos);
-
-    if (pos < text.length()) {
-      c = text.at(pos);
-
-      if (c.isLetter()) {
-        if (braceCount == 0) {
-          // must be either a class name OR a style without OR an error
-          node = findName(text, pos, braceCount);
-          NameNode* nNode = qobject_cast<NameNode*>(node);
-
-          if (nNode) {
-            name = nNode->value();
-          }
-
-          m_nodes->append(node);
-
-        } else if (braceCount == 1) {
-          findPropertyAndValues(text, pos);
-        }
-
-      } else if (c == '{') {
-        braceCount++;
-        // must be either a class name OR a style without OR an error
-        node = new StartBraceNode(pos, this);
-        m_nodes->append(node);
-
-      } else if (c == "}") {
-        braceCount--;
-        node = new EndBraceNode(pos, this);
-        m_nodes->append(node);
-
-      } else if (c == ";") {
-        node = new EndBraceNode(pos, this);
-        m_nodes->append(node);
-
-      } else if (c == ':') {
-        if (braceCount == 0) {
-          if (pos < text.length() - 1) {
-            if (text.at(pos + 1) == ':') {
-              // :: sub_control
-              node = new SubControlMarkerNode(pos, this);
-              m_nodes->append(node);
-              skipBlanks(text, pos);
-              pos += 2;
-              node = findSubControl(text, pos);
-              m_nodes->append(node);
-
-            } else {
-              // : pseudo state
-              node = new PseudoStateMarkerNode(pos, this);
-              m_nodes->append(node);
-              skipBlanks(text, pos);
-              pos++;
-              node = findPseudoState(text, pos);
-              m_nodes->append(node);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  ParserState* state =  new ParserState(errors, this);
-
-  if (!bracesMatched) {
-    if (braceCount > 0) {
+  if (!m_bracesMatched) {
+    if (m_braceCount > 0) {
       state->unsetError(ParserState::NoError);
       state->setError(ParserState::MismatchedBraceCount);
       state->setError(ParserState::MissingEndBrace);
 
-      if (!errors.testFlag(ParserState::FatalError)) {
+      if (!state->errors().testFlag(ParserState::FatalError)) {
         state->setError(ParserState::NonFatalError);
       }
 
-    } else if (braceCount < 0) {
+    } else if (m_braceCount < 0) {
       state->unsetError(ParserState::NoError);
       state->setError(ParserState::MismatchedBraceCount);
       state->setError(ParserState::MissingStartBrace);
+    }
+  }
+}
 
-      if (!errors.testFlag(ParserState::FatalError)) {
-        state->setError(ParserState::NonFatalError);
+ParserState* Parser::parse(const QString& text)
+{
+  ParserState* state =  new ParserState(this);
+  m_braceCount = 0;
+  int pos = 0;
+  QString block;
+  //  QChar c;
+  Node* lastnode = nullptr, *propertynode = nullptr;
+
+  if (text.trimmed().length() == 0) {
+    state->unsetError(ParserState::NoError);
+    state->setError(ParserState::BlankText);
+    return state;
+  }
+
+  checkBraceCount(text, state);
+
+  while (true) {
+    block = findNext(text, pos, state);
+
+    if (m_datastore->containsWidget(block)) {
+      WidgetNode* widgetnode = new WidgetNode(block, pos - block.length(), this);
+      m_nodes->append(widgetnode);
+      lastnode = widgetnode;
+
+      while (pos < text.length()) {
+        block = findNext(text, pos, state);
+
+        if (block == ":") { // pseudo state
+          if (m_braceCount == 0) {
+            Node* marker = new PseudoStateMarkerNode(pos - block.length(), this);
+            setNodeLinks(lastnode, marker);
+            lastnode = marker;
+
+          } else if (m_braceCount == 1) {  //    if (c.isLetter()) {
+            Node* marker = new PropertyMarkerNode(pos - block.length(), this);
+            setNodeLinks(lastnode, marker);
+            lastnode = marker;
+
+          } else {
+            // TODO missing end brace
+          }
+
+          continue;
+
+        } else if (m_braceCount == 1) {
+          PropertyNode* property = qobject_cast<PropertyNode*>(propertynode);
+
+          if (property) {
+            QStringList values;
+            QList<bool> checks;
+            QList<int> offsets;
+            bool check = false;
+            QString propertyName = property->value();
+            int start = -1;
+
+            while (true) {
+              if (block.isEmpty() || block == ";" || block == "}") {
+                break;
+              }
+
+              if (start < 0) {
+                start = pos - block.length();
+              }
+
+              values.append(block);
+              check = m_datastore->isValidPropertyValue(propertyName, block);
+              checks.append(check);
+              // +1 to account for the
+              offsets.append(pos - start - block.length());
+              block = findNext(text, pos, state);
+              continue;
+            }
+
+            ValueNode* valuenode = new ValueNode(values, checks, offsets, start, this);
+            setNodeLinks(lastnode, valuenode);
+            lastnode = valuenode;
+            propertynode = nullptr;
+
+            if (block == ";") { // value end
+              Node* endvalues = new SemiColonNode(pos - block.length(), this);
+              setNodeLinks(lastnode, endvalues);  //    if (c.isLetter()) {
+              lastnode = endvalues;
+              continue;
+
+            } else if (block == "}") { // end brace
+              m_braceCount--;
+              Node* brace = new EndBraceNode(pos - block.length(), this);
+              setNodeLinks(lastnode, brace);
+              lastnode = brace;
+              continue;
+
+            }
+
+            continue;
+
+          } else {
+            Node* property = new PropertyNode(block, pos - block.length(), this);
+            setNodeLinks(lastnode, property);
+            lastnode = property;
+            propertynode = property;
+            continue;
+          }
+
+        } else if (block == "::") { // sub control
+          Node* marker = new SubControlMarkerNode(pos - block.length(), this);
+          setNodeLinks(lastnode, marker);
+          lastnode = marker;
+          continue;
+
+        } else if (block == "{") { // start brace
+          m_braceCount++;
+          Node* brace = new StartBraceNode(pos - block.length(), this);
+          setNodeLinks(lastnode, brace);
+          lastnode = brace;
+          continue;
+
+        } else if (block == "}") { // end brace
+          m_braceCount--;
+          Node* brace = new EndBraceNode(pos - block.length(), this);
+          setNodeLinks(lastnode, brace);
+          lastnode = brace;
+          continue;
+
+        } else if (block == ";") { // value end
+          Node* endvalues = new SemiColonNode(pos - block.length(), this);
+          setNodeLinks(lastnode, endvalues);
+          lastnode = endvalues;
+          continue;
+
+        } else {
+          // TODO non standard block error.
+        }
+
+        if (!block.isEmpty()) {
+          PseudoStateMarkerNode* pseudostatemarker = qobject_cast<PseudoStateMarkerNode*>(lastnode);
+
+          if (pseudostatemarker) {
+            if (m_datastore->containsPseudoState(block)) {
+              Node* pseudostate = new PseudoStateNode(block, pos - block.length(), this);
+              setNodeLinks(lastnode, pseudostate);
+              lastnode = pseudostate;
+
+            } else {
+              Node* badblock = new BadBlock(block, pos - block.length(), this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+            continue;
+          }
+
+          SubControlMarkerNode* subcontrolmarker = qobject_cast<SubControlMarkerNode*>(lastnode);
+
+          if (subcontrolmarker) {
+            if (m_datastore->containsSubControl(block)) {
+              Node* subcontrol = new SubControlNode(block, pos - block.length(), this);
+              setNodeLinks(lastnode, subcontrol);
+              lastnode = subcontrol;
+
+            } else {
+              Node* badblock = new BadBlock(block, pos - block.length(), this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+            continue;
+          }
+        }
       }
 
+      skipBlanks(text, pos);
+    }
+
+    if (pos >= text.length()) {
+      break;
     }
   }
 
   return state;
-
 }
 
-Node* Parser::findName(const QString& text, int& pos, int& braceCount)
+/*
+  Finds the next character block.
+  This block can end with a space, a colon, a semicolon, a start curly brace
+  or an end curly brace. Multipe copies of these end characters are allowed.
+  Some of blocks these are good, but some are errors.
+  for example a double colon is good but a double curly start brace is not good.
+*/
+QString Parser::findNext(const QString& text, int& pos, ParserState* state)
 {
-  QString name;
-  Node* node = nullptr;
-  int start = pos;
+  QString block;
+  QChar c;
+  skipBlanks(text, pos);
+  c=text.at(pos);
 
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
+  while (true) {
+    if (c.isNull() || pos >= text.length()) {
+      return block;
+    }
 
-    if (c.isSpace() || c == '{' || c == ':') {
-      if (braceCount == 0) {
-        if (m_datastore->containsWidget(name)) {
-          node = new WidgetNode(name, start, this);
-          pos--; // step back from the last character
-          break;
+    if (c.isLetterOrNumber()) {
+      if (!block.isEmpty()) {
+        QChar b = block.back();
 
-        } else if (m_datastore->containsProperty(name)) {
-          pos = start; // step back to start opf name and try again.
-          findPropertyAndValues(text, pos);
-
-        } else {
-          node = new NameNode(name, start, this);
-          pos--; // step back from the last character
+        if (b == '{' || b == '}' || b == ';' || b == ':') {
+          return block;
         }
+      }
 
-        // TODO handle property name.
+      block += c;
+      pos++;
 
-        break;
+    } else if (c.isSpace() && !block.isEmpty()) {
+      return block;
+
+    } else if (c == '{' || c == '}' || c == ';' || c == ':') {
+      if (!block.isEmpty()) {
+        if (block.back().isLetterOrNumber()) {
+          // a possibly correct name/number string
+          return block;
+        }
+      }
+
+      if (block.length() == 0 || block.back() == c) {
+        block += c;
+        pos++;
 
       } else {
-        // TODO neither widget name or pseudo-state
+        return block;
       }
-    } else if (c.isLetter()) {
-      name += c;
-      continue;
+    }
 
+    if (pos < text.length()) {
+      c = text.at(pos);
     }
   }
-
-  if (!node && name.length() > 0) {
-    node = new NameNode(name, start, this);
-  }
-
-  return node;
 }
 
-Node* Parser::findSubControl(const QString& text, int& pos)
+//void Parser::findWidgetOrProperty(const QString& text, int& pos, ParserState* state)
+//{
+//  QString name;
+//  BaseNode* basenode = nullptr;
+//  Node* lastnode = nullptr;
+//  int start = pos;
+//  QChar c;
+
+//  while (true) {
+//    name = findNext(text, pos, state);
+
+//    //    if (c.isSpace() || c == '{' || c == ':' || c == '\n') {
+//    //      if (m_braceCount == 0) {
+//    //        name = findNext(text, pos, state);
+
+//    //        if (name.isEmpty()) {
+//    //          return;
+//    //        }
+
+//    //      if (m_datastore->containsWidget(name)) {
+//    //        WidgetNode* node = new WidgetNode(name, start, this);
+//    //        m_nodes->append(node);
+
+//    //        c = skipBlanks(text, pos);
+
+//    //        if (!c.isNull()) {
+//    //          if (c == ':') {
+//    //            // : indicates a pseudostate
+//    //            // :: indicates a subcontrol.
+//    //            if (pos < text.length() - 1) {
+//    //              if (text.at(pos + 1) == ':') {
+//    //                // :: sub_control
+//    //                Node* marker = new SubControlMarkerNode(pos, this);
+//    //                setNodeLinks(basenode, marker);
+//    //                skipBlanks(text, pos);
+//    //                pos += 2;
+//    //                Node* subcontrol = findSubControl(text, pos, state);
+//    //                marker->next = subcontrol;
+//    //                lastnode = subcontrol;
+//    //                c = skipBlanks(text, pos);
+
+//    //              } else {
+//    //                // : pseudo state
+//    //                Node* marker = new PseudoStateMarkerNode(pos, this);
+//    //                setNodeLinks(basenode, marker);
+//    //                skipBlanks(text, pos);
+//    //                pos++;
+//    //                Node* pseudostate = findPseudoState(text, pos, state);
+//    //                setNodeLinks(marker, pseudostate);
+//    //                lastnode = pseudostate;
+//    //              }
+//    //            }
+
+//    //          } else if (m_datastore->containsProperty(name)) {
+//    //            pos = start; // step back to start opf name and try again.
+//    //            findPropertyAndValues(text, pos, state);
+
+//    //          }
+
+//    //        } else {
+//    //          // TODO Error ???
+//    //          return;
+//    //        }
+
+
+//    //      } else {
+//    //        // TODO neither widget name or pseudo-state
+//    //      }
+//    //      }
+//    //    } else if (c.isLetterOrNumber()) {
+//    //      name += c;
+//    //      pos++;
+//    //    }
+//  }
+//}
+
+void Parser::setNodeLinks(Node* first, Node* second)
 {
-  QString name;
-  Node* node = nullptr;
-  int start = pos;
-
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
-
-    if (c.isLetter()) {
-      name += c;
-      continue;
-
-    } else if (c.isSpace() || c == '{') {
-      if (m_datastore->containsWidget(name)) {
-        node = new SubControlNode(name, start, this);
-        pos--; // step back from the last characters
-        break;
-      }
-    }
-  }
-
-  return node;
+  first->next = second;
+  second->previous = first;
 }
 
-Node* Parser::findPseudoState(const QString& text, int& pos)
-{
-  QString name;
-  Node* node = nullptr;
-  int start = pos;
+//void Parser::findSubControlOrPseudoState(BaseNode* basenode, const QString& text, int& pos,
+//    ParserState* state)
+//{
+//  Node* lastNode = nullptr;
 
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
+//  if (pos < text.length() - 1) {
+//    if (text.at(pos + 1) == ':') {
+//      // :: sub_control
+//      Node* marker = new SubControlMarkerNode(pos, this);
+//      setNodeLinks(basenode, marker);
+//      skipBlanks(text, pos);
+//      pos += 2;
+//      Node* subcontrol = findSubControl(text, pos, state);
+//      marker->next = subcontrol;
+//      lastNode = subcontrol;
 
-    if (c.isLetter()) {
-      name += c;
-      continue;
-
-    } else if (c.isSpace() || c == '{') {
-      if (m_datastore->containsPseudoState(name)) {
-        node = new PseudoStateNode(name, start, this);
-        pos--; // step back from the last character
-        break;
-        node = new NameNode(name, start, this);
-
-      }
-    }
-  }
-
-  return node;
-}
-
-void Parser::findPropertyAndValues(const QString& text, int& pos)
-{
-  QString propertyName;
-  PropertyNode* pNode = nullptr;
-  int start = pos;
-
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
-
-    if (c.isSpace() || c == '{' || c == ':') {
-      if (m_datastore->containsProperty(propertyName)) {
-        pNode = new PropertyNode(propertyName, start, this);
-        m_nodes->append(pNode);
-
-        skipBlanks(text, pos);
-
-        if (pos < text.length() && text.at(pos) == ':') {
-          PropertyMarkerNode* node = new PropertyMarkerNode(pos, this);
-          m_nodes->append(node);
-          pos++;
-          skipBlanks(text, pos);
-        }
-
-        findValues(text, pos, pNode);
-
-        break;
-
-      } else {
-        // TODO some kind of error??
-      }
-
-      // TODO handle property name.
-
-      break;
-
-    } else if (c.isLetter()) {
-      propertyName += c;
-      continue;
-
-    }
-  }
-}
-
-void StylesheetParser::Parser::findValues(const QString& text, int& pos, PropertyNode* pNode)
-{
-  QStringList values;
-  QList<bool> checks;
-  QList<int> offsets;
-  QString value;
-  Node* node = nullptr;
-  bool check = false, semicolon = false, endbrace = false;
-  int start = pos;
-  QString propertyName;
-
-  if (pNode) {
-    propertyName = pNode->value();
-  }
-
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
-
-    if (c.isSpace() || c == ';' || c == '}') {
-      values.append(value);
-      check = m_datastore->isValidPropertyValue(propertyName, value);
-      checks.append(check);
-      offsets.append(pos - value.length() - start);
+//    } else {
+//      // : pseudo state
+//      Node* marker = new PseudoStateMarkerNode(pos, this);
+//      setNodeLinks(basenode, marker);
+//      skipBlanks(text, pos);
+//      pos++;
+//      Node* pseudostate = findPseudoState(text, pos, state);
+//      setNodeLinks(marker, pseudostate);
+//      lastNode = pseudostate;
+//    }
+//  }
+//}
 
 
-      value.clear();
-      skipBlanks(text, pos);
-      pos--;  // step back from the last character
 
-      if (c.isSpace()) {
-        continue;
 
-      } else if (c == ';') {
-        // a property value list ends with a semicolon
-        semicolon = true;
-        break;
+//Node* Parser::findSubControl(const QString& text, int& pos, ParserState* state)
+//{
+//  QString name;
+//  Node* node = nullptr;
+//  int start = pos;
 
-      } else if (c == '}') {
-        // OR optionally a brace if it is the last property in
-        // the property list.
-        endbrace = true;
-        break;
+//  for (; pos < text.length(); pos++) {
+//    QChar c = text.at(pos);
 
-      }
 
-      continue;
+//    if (c.isLetter()) {
+//      name += c;
+//      continue;
 
-    } else if (c.isLetter() || c.isNumber()) {
-      value += c;
-      continue;
+//    } else if (c.isSpace() || c == '{' || c == '\n') {
+//      if (m_datastore->containsWidget(name)) {
+//        node = new SubControlNode(name, start, this);
+//        pos--; // step back from the last characters
+//        break;
+//      }
 
-    }
-  }
+//      if (c == '\n') {
+//        // capture newline char before skipBlanks() skips over it.
+//        node = new NewlineNode(pos, this);
+//        //        m_nodes->append(node);
+//        continue;
+//      }
+//    }
+//  }
 
-  if (!values.isEmpty() && !checks.isEmpty() && (values.size() == checks.size())) {
-    node = new ValueNode(values, checks, offsets, start, this);
-    m_nodes->append(node);
+//  return node;
+//}
 
-  } else {
-    // TODO some form of error.
-  }
+//Node* Parser::findPseudoState(const QString& text, int& pos, ParserState* state)
+//{
+//  QString name;
+//  Node* node = nullptr;
+//  int start = pos;
 
-  if (semicolon) {
-    // a property value list ends with a semicolon
-    node = new SemiColonNode(pos, this);
-    m_nodes->append(node);
+//  for (; pos < text.length(); pos++) {
+//    QChar c = text.at(pos);
 
-  } else if (endbrace) {
-    // OR optionally a brace if it is the last property in
-    // the property list.
-    node = new EndBraceNode(pos, this);
-    m_nodes->append(node);
-  }
+//    if (c.isLetter()) {
+//      name += c;
+//      continue;
 
-}
+//    } else if (c.isSpace() || c == '{' || c == '\n') {
+//      if (m_datastore->containsPseudoState(name)) {
+//        node = new PseudoStateNode(name, start, this);
+//        pos--; // step back from the last character
+//        break;
+//        node = new NameNode(name, start, this);
 
-QList<Node*>* Parser::nodes()
+//      }
+
+//      if (c == '\n') {
+//        // capture newline char before skipBlanks() skips over it.
+//        node = new NewlineNode(pos, this);
+//        //        m_nodes->append(node);
+//        continue;
+//      }
+
+//    }
+//  }
+
+//  return node;
+//}
+
+//void Parser::findPropertyAndValues(const QString& text, int& pos, ParserState* state)
+//{
+//  QString propertyName;
+//  PropertyNode* pNode = nullptr;
+//  int start = pos;
+
+//  for (; pos < text.length(); pos++) {
+//    QChar c = text.at(pos);
+
+//    if (c.isSpace() || c == '{' || c == ':' | c == '\n') {
+//      if (m_datastore->containsProperty(propertyName)) {
+//        pNode = new PropertyNode(propertyName, start, this);
+//        m_nodes->append(pNode);
+
+//        skipBlanks(text, pos);
+
+//        if (pos < text.length() && text.at(pos) == ':') {
+//          PropertyMarkerNode* node = new PropertyMarkerNode(pos, this);
+//          //          m_nodes->append(node);
+//          pos++;
+//          skipBlanks(text, pos);
+//        }
+
+//        findValues(text, pos, pNode, state);
+//        break;
+
+//      } else if (c == '\n') {
+//        // capture newline char before skipBlanks() skips over it.
+//        Node* node = new NewlineNode(pos, this);
+//        //        m_nodes->append(node);
+//        continue;
+
+//      } else {
+//        // TODO some kind of error??
+//      }
+
+//      // TODO handle property name.
+//      break;
+
+//    } else if (c.isLetter()) {
+//      propertyName += c;
+//      continue;
+
+//    }
+//  }
+//}
+
+//void StylesheetParser::Parser::findValues(const QString& text, int& pos, PropertyNode* pNode,
+//    ParserState* state)
+//{
+//  QStringList values;
+//  QList<bool> checks;
+//  QList<int> offsets;
+//  QString value;
+//  Node* node = nullptr;
+//  bool check = false, semicolon = false, endbrace = false;
+//  int start = pos;
+//  QString propertyName;
+
+//  if (pNode) {
+//    propertyName = pNode->value();
+//  }
+
+//  for (; pos < text.length(); pos++) {
+//    QChar c = text.at(pos);
+
+
+//    if (c.isSpace() || c == ';' || c == '}' || c == '\n') {
+//      if (!value.isEmpty()) {
+//        values.append(value);
+//        check = m_datastore->isValidPropertyValue(propertyName, value);
+//        checks.append(check);
+//        // +1 to account for the
+//        offsets.append(pos - value.length() - start + 1);
+//        value.clear();
+//        skipBlanks(text, pos);
+//      }
+
+//      if (c == '\n') {
+//        // capture newline char before skipBlanks() skips over it.
+//        //        node = new NewlineNode(pos, this);
+//        //        m_nodes->append(node);
+//        continue;
+
+//      } else if (c.isSpace()) {
+//        continue;
+
+//      } else if (c == ';') {
+//        // a property value list ends with a semicolon
+//        semicolon = true;
+//        break;
+
+//      } else if (c == '}') {
+//        // OR optionally a brace if it is the last property in
+//        // the property list.
+//        endbrace = true;
+//        break;
+
+//      }
+
+
+//      continue;
+
+//    } else if (c.isLetter() || c.isNumber()) {
+//      value += c;
+//      continue;
+
+//    }
+//  }
+
+//  if (!values.isEmpty() && !checks.isEmpty() && (values.size() == checks.size())) {
+//    node = new ValueNode(values, checks, offsets, start, this);
+//    //    m_nodes->append(node);
+
+//  } else {
+//    // TODO some form of error.
+//  }
+
+//  if (semicolon) {
+//    // a property value list ends with a semicolon
+//    node = new SemiColonNode(pos, this);
+//    //    m_nodes->append(node);
+
+//  } else if (endbrace) {
+//    // OR optionally a brace if it is the last property in
+//    // the property list.
+//    node = new EndBraceNode(pos, this);
+//    //    m_nodes->append(node);
+//  }
+
+//}
+
+NodeList* Parser::nodes()
 {
   return m_nodes;
 }
 
 void Parser::skipBlanks(const QString& text, int& pos)
 {
-  for (; pos < text.length(); pos++) {
-    QChar c = text.at(pos);
+  QChar c;
 
-    if (c.isSpace() || c == '\n' || c == '\r' || c == '\t') {
+  for (; pos < text.length(); pos++) {
+    c = text.at(pos);
+
+    if (c.isSpace()/* || c == '\n' || c == '\r' || c == '\t'*/) {
       continue;
 
     } else {

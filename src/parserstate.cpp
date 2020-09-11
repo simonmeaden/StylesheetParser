@@ -21,6 +21,14 @@
 
 namespace StylesheetParser {
 
+ParserState::ParserState(QObject *parent)
+  : QObject(parent)
+  , m_pos(-1)
+  , m_value(QString())
+{
+
+}
+
 ParserState::ParserState(Errors errors, QObject* parent = nullptr)
    : QObject(parent)
    , m_errors(errors)
@@ -69,6 +77,11 @@ void ParserState::setError(ParserState::Error error) {
 
 void ParserState::unsetError(ParserState::Error error) {
   m_errors = m_errors & (~error);
+}
+
+bool ParserState::hasError(ParserState::Error error)
+{
+  return m_errors.testFlag(error);
 }
 
 int ParserState::pos() const

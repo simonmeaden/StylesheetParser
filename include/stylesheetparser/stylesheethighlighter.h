@@ -29,10 +29,10 @@ namespace StylesheetParser {
 
 class StylesheetEdit;
 
-class StylesheetHighligter : public QSyntaxHighlighter
+class StylesheetHighlighter : public QSyntaxHighlighter
 {
 public:
-  explicit StylesheetHighligter(StylesheetEdit* editor);
+  explicit StylesheetHighlighter(StylesheetEdit* editor);
 
   void highlightBlock(const QString& text);
 
@@ -60,10 +60,12 @@ public:
   void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
 
 private:
-  QList<Node*>* m_nodes;
+  NodeList* m_nodes;
   QTextCharFormat m_baseFormat, m_widgetFormat, m_nameFormat, m_valueFormat, m_badValueFormat,
                   m_pseudoStateFormat, m_pseudoStateMarkerFormat, m_subControlFormat,
                   m_subControlMarkerFormat, m_propertyFormat, m_propertyMarkerFormat;
+  int setNodeEnd(int nodeEnd, int blockEnd);
+  int setNodeStart(int nodeStart, int blockStart);
 };
 
 } // end of StylesheetParser

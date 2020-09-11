@@ -38,22 +38,30 @@ public:
 
   ParserState* parse(const QString& text);
 
-  QList<Node*>* nodes();
+  NodeList* nodes();
 
 private:
-  QList<Node*>* m_nodes;
+  NodeList* m_nodes;
   DataStore* m_datastore;
-  void skipBlanks(const QString& text, int& pos);
-  bool isWhiteSpace(QChar c);
+  int m_braceCount;
+  bool m_bracesMatched;
 
-  Node* findName(const QString& text, int& pos, int& braceCount);
-  Node* findSubControl(const QString& text, int& pos);
-  Node* findPseudoState(const QString& text, int& pos);
-  void findPropertyAndValues(const QString& text, int& pos);
-  void findValues(const QString& text, int& pos, PropertyNode *pNode);
+  //! Skips blank characters (inc \n\t etc.) and returns the first non-blank character.
+  void skipBlanks(const QString& text, int& pos);
+
+  QString findNext(const QString& text, int& pos, ParserState* state);
+
+//  void findWidgetOrProperty(const QString& text, int& pos, ParserState* state);
+//  void findSubControlOrPseudoState(BaseNode* basenode, const QString& text, int& pos, ParserState* state);
+//  Node* findSubControl(const QString& text, int& pos, ParserState* state);
+//  Node* findPseudoState(const QString& text, int& pos, ParserState* state);
+//  void findPropertyAndValues(const QString& text, int& pos, ParserState* state);
+//  void findValues(const QString& text, int& pos, PropertyNode* pNode, ParserState* state);
 
   void deleteNodes();
 
+  void setNodeLinks(Node* first, Node* second);
+  void checkBraceCount(const QString& text, ParserState* state);
 };
 
 } // end of StylesheetParser

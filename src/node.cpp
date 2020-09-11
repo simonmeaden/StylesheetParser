@@ -25,6 +25,8 @@ namespace StylesheetParser {
 
 Node::Node(int start, QObject* parent, Type type)
   : QObject(parent)
+  , previous(nullptr)
+  , next(nullptr)
   , m_start(start)
   , m_type(type)
 {}
@@ -49,36 +51,85 @@ Node::Type Node::type() const
   return m_type;
 }
 
-StringNode::StringNode(const QString& value, int start, QObject* parent, Type type)
+//Node *Node::previous() {
+//  return m_previous;
+//}
+
+//Node *Node::next() {
+//  return m_next;
+//}
+
+//void Node::setNext(Node *next)
+//{
+//  m_next = next;
+//}
+
+//void Node::setPrevious(Node *previous)
+//{
+//  m_previous = previous;
+//}
+
+
+BaseNode::BaseNode(const QString& value, int start, QObject* parent, Type type)
   : Node(start, parent, type)
   , m_value(value)
 {}
 
-QString StringNode::value() const
+QString BaseNode::value() const
 {
   return m_value;
 }
 
-int StringNode::end() const
+int BaseNode::end() const
 {
   return m_start + m_value.length();
 }
 
-int StringNode::length() const
+int BaseNode::length() const
 {
   return m_value.length();
 }
 
+
 NameNode::NameNode(const QString& name, int start, QObject* parent, Type type)
-  : StringNode(name, start, parent, type)
+  : Node(start, parent, type)
+  , m_name(name)
 {}
 
-//ValueNode::ValueNode(const QString& name, const QString& value, int start, QObject* parent, Type type)
-//  : Node(start, parent, type)
-//  , m_name(name)
-//{
-//  m_values.append(value);
-//}
+QString NameNode::value() const
+{
+  return m_name;
+}
+
+int NameNode::end() const
+{
+  return m_start + m_name.length();
+}
+
+int NameNode::length() const
+{
+  return m_name.length();
+}
+
+BadBlock::BadBlock(const QString& name, int start, QObject* parent, Type type)
+  : Node(start, parent, type)
+  , m_name(name)
+{}
+
+QString BadBlock::value() const
+{
+  return m_name;
+}
+
+int BadBlock::end() const
+{
+  return m_start + m_name.length();
+}
+
+int BadBlock::length() const
+{
+  return m_name.length();
+}
 
 ValueNode::ValueNode(const QStringList& values, QList<bool> checks, QList<int> offsets, int start, QObject* parent,
                      Type type)
@@ -114,21 +165,21 @@ QList<bool> ValueNode::checks() const
 }
 
 WidgetNode::WidgetNode(const QString& name, int start, QObject* parent, Type type)
-  : StringNode(name, start, parent, type)
+  : BaseNode(name, start, parent, type)
 {}
 
 
 PropertyNode::PropertyNode(const QString& name, int start, QObject* parent, Node::Type type)
-  : StringNode(name, start, parent, type)
+  : BaseNode(name, start, parent, type)
 {}
 
 SubControlNode::SubControlNode(const QString& name, int start, QObject* parent, Type type)
-  : WidgetNode(name, start, parent, type)
+  : NameNode(name, start, parent, type)
 {
 }
 
 PseudoStateNode::PseudoStateNode(const QString& name, int start, QObject* parent, Type type)
-  : WidgetNode(name, start, parent, type)
+  : NameNode(name, start, parent, type)
 {}
 
 CharNode::CharNode(int start, QObject* parent, Type type)

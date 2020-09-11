@@ -28,48 +28,51 @@ namespace StylesheetParser {
 class ParserState : public QObject
 {
 public:
-   enum Error
-   {
-      NoError = 0x1,
-      FatalError = 0x2,
-      NonFatalError = 0x4,
-      BlankText = 0x10,
-      WronglyPositionedSpace = 0x20,
-      IncorrectlyTerminatedName = 0x40,
-      MismatchedBraceCount = 0x80,
-      MissingEndBrace = 0x100,
-      MissingStartBrace = 0x200,
-   };
-   Q_DECLARE_FLAGS(Errors, Error)
-   Q_FLAG(Errors)
-   enum State
-   {
-      ColonFound = 0x1,
-      SemicolonFound = 0x2,
-      TerminatingSpaceFound = 0x4,
-      TerminatingBraceFound = 0x8,
-      StartingBraceFound = 0x10,
-      TextFinished = 0x20,
-   };
+  enum Error
+  {
+    NoError = 0x1,
+    FatalError = 0x2,
+    NonFatalError = 0x4,
+    BlankText = 0x10,
+    WronglyPositionedSpace = 0x20,
+    IncorrectlyTerminatedName = 0x40,
+    MismatchedBraceCount = 0x80,
+    MissingEndBrace = 0x100,
+    MissingStartBrace = 0x200,
+    TooManyCharactersInBlock = 0x400,
+  };
+  Q_DECLARE_FLAGS(Errors, Error)
+  Q_FLAG(Errors)
+  //   enum State
+  //   {
+  //      ColonFound = 0x1,
+  //      SemicolonFound = 0x2,
+  //      TerminatingSpaceFound = 0x4,
+  //      TerminatingBraceFound = 0x8,
+  //      StartingBraceFound = 0x10,
+  //      TextFinished = 0x20,
+  //   };
 
-   ParserState(Errors errors, QObject* parent);
-   ParserState(Errors errors, int pos, QObject* parent);
-   ParserState(Errors errors, int pos, const QString& value, QObject* parent);
+  ParserState(QObject* parent);
+  ParserState(Errors errors, QObject* parent);
+  ParserState(Errors errors, int pos, QObject* parent);
+  ParserState(Errors errors, int pos, const QString& value, QObject* parent);
 
-   QString value() const;
-   void setValue(const QString& value);
+  QString value() const;
+  void setValue(const QString& value);
 
-   Errors errors() const;
-   void setError(Error error);
-   void unsetError(Error error);
+  Errors errors() const;
+  void setError(Error error);
+  void unsetError(Error error);
+  bool hasError(Error error);
 
-   int pos() const;
-   void setPos(int pos);
+  int pos() const;
+  void setPos(int pos);
 
 private:
-   Errors m_errors;
-   int m_pos;
-   QString m_value;
+  Errors m_errors;
+  int m_pos;
+  QString m_value;
 };
 
 } // end of StylesheetParser

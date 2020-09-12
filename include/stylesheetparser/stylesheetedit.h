@@ -40,6 +40,7 @@ public:
    NodeList *nodes();
 
    void showNewlineMarkers(bool show);
+   void showLineNumbers(bool show);
 
    //! Sets a new color/fontweight pair for the highlighter base format
    void setNormalFormat(QColor color, QFont::Weight weight=QFont::Normal);
@@ -83,13 +84,13 @@ private:
    StylesheetHighlighter* m_highlighter;
    QTextCursor m_cursor;
    Node* m_node;
-   int m_cursorPos;
 
    void onTextChanged();
    void onCursorPositionChanged();
 //   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
 
 };
+
 
 } // end of StylesheetParser
 

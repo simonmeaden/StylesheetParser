@@ -111,22 +111,22 @@ int NameNode::length() const
   return m_name.length();
 }
 
-BadBlock::BadBlock(const QString& name, int start, QObject* parent, Type type)
+BadBlockNode::BadBlockNode(const QString& name, int start, QObject* parent, Type type)
   : Node(start, parent, type)
   , m_name(name)
 {}
 
-QString BadBlock::value() const
+QString BadBlockNode::value() const
 {
   return m_name;
 }
 
-int BadBlock::end() const
+int BadBlockNode::end() const
 {
   return m_start + m_name.length();
 }
 
-int BadBlock::length() const
+int BadBlockNode::length() const
 {
   return m_name.length();
 }

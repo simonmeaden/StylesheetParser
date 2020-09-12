@@ -58,6 +58,11 @@ void StylesheetEdit::showNewlineMarkers(bool show)
   // maybe detect position of line end and draw a [NL] box??
 }
 
+void StylesheetEdit::showLineNumbers(bool show)
+{
+  // TODO show/hide line numbers
+}
+
 void StylesheetEdit::setNormalFormat(QColor color, QFont::Weight weight)
 {
   m_highlighter->setNormalFormat(color, weight);
@@ -161,14 +166,94 @@ void StylesheetEdit::setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weigh
 
 void StylesheetEdit::onTextChanged()
 {
+  if (!m_node) {
+    return;
+  }
 
+  int anchor = m_cursor.anchor();
+  int position = m_cursor.position();
+  QString text = toPlainText();
+  QString value, oldValue;
+  QChar c;
+  int start = m_node->start();
+  int end, length;
+
+  if (m_node->type() == Node::ValueType) {
+    ValueNode* valNode = qobject_cast<ValueNode*>(m_node);
+
+
+  } else {
+    switch (m_node->type()) {
+    case Node::WidgetType:
+    case Node::PropertyType:
+      oldValue = qobject_cast<BaseNode*>(m_node)->value();
+      break;
+
+    case Node::SubControlType:
+    case Node::PseudoStateType:
+      oldValue = qobject_cast<NameNode*>(m_node)->value();
+      break;
+
+    case Node::SubControlMarkerType:
+      oldValue = "::";
+      break;
+
+    case Node::PseudoStateMarkerType:
+      oldValue = ":";
+      break;
+
+    case Node::StartBraceType:
+      oldValue = "{";
+      break;
+
+    case Node::EndBraceType:
+      oldValue = "}";
+      break;
+
+    case Node::SemiColonType:
+      oldValue = ";";
+      break;
+
+    default:
+      break;
+    }
+
+    length = m_node->length();
+    end = start + length;
+
+    if (position == anchor) {
+      // no selection
+      for (int p = anchor; p >= start; p--) {
+        c = text.at(p);
+
+        if (c.isLetterOrNumber()) {
+          value.prepend(c);
+        }
+      }
+
+      for (int p = anchor; p < end; p++) {
+        c = text.at(p);
+
+        if (c.isLetterOrNumber()) {
+          value.append(c);
+        }
+      }
+
+      if (value != oldValue) {
+        qWarning() << QString("New value(%1) != old value (%2)").arg(value).arg(oldValue);
+      }
+
+    } else {
+      // a selection.
+    }
+  }
 }
 
 void StylesheetEdit::onCursorPositionChanged()
 {
   m_cursor = textCursor();
-  m_cursorPos = m_cursor.anchor();
-  int start, end, len;
+  int cursorPos = m_cursor.anchor();
+  int start, end;
 
   for (auto basenode : *nodes()) {
     if (!basenode) {
@@ -178,13 +263,33 @@ void StylesheetEdit::onCursorPositionChanged()
     Node* node = basenode;
 
     while (true) {
-      start = node->start();
-      len = node->length();
-      end = start - len;
+      if (node->type() == Node::ValueType) {
+        ValueNode* valNode = qobject_cast<ValueNode*>(node);
+        QList<int> offsets = valNode->offsets();
+        QStringList values = valNode->values();
+        int offset, valStart;
+        start = node->start();
 
-      if (m_cursorPos >= start && m_cursorPos < end) {
-        m_node = node;
-        break;
+        for (int i = 0; i < offsets.size(); i++) {
+          offset = offsets[i];
+          valStart = start + offset;
+          end = valStart + values[i].length();
+
+          if (cursorPos >= valStart && cursorPos < end) {
+            m_node = node;
+            break;
+          }
+        }
+
+      } else {
+        start = node->start();
+        int length = node->length();
+        end = start + length;
+
+        if (cursorPos >= start && cursorPos < end) {
+          m_node = node;
+          break;
+        }
       }
 
       if (node->next) {

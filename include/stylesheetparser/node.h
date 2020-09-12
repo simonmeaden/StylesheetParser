@@ -77,6 +77,7 @@ protected:
 
 class BaseNode : public Node
 {
+  Q_OBJECT
 public:
   explicit BaseNode(const QString& value, int start, QObject* parent, Type type = StringNodeType);
 
@@ -104,11 +105,11 @@ private:
 
 };
 
-class BadBlock: public Node
+class BadBlockNode: public Node
 {
   Q_OBJECT
 public:
-  explicit BadBlock(const QString& name, int start, QObject* parent, Type type = NameType);
+  explicit BadBlockNode(const QString& name, int start, QObject* parent, Type type = NameType);
 
   QString value() const;
   int end() const override;

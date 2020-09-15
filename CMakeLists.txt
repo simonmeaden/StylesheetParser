@@ -62,6 +62,7 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheethighlighter.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/datastore.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
 
       $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/parser.h>
@@ -71,6 +72,7 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheethighlighter.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/datastore.h>
+      $<INSTALL_INTERFACE:include/stylesheetparser/x11colors.h>
 
    PRIVATE
       src/main.cpp
@@ -81,6 +83,7 @@ target_sources(tst_parser
       src/stylesheethighlighter.cpp
       src/mainwindow.cpp
       src/datastore.cpp
+      src/x11colors.cpp
 
    )
 target_include_directories(tst_parser

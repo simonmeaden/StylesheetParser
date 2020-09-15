@@ -1,4 +1,4 @@
-# this finds qt core, gui and widgets
+# this finds qt core, gui, widgets and quick
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

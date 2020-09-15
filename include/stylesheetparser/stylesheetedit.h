@@ -22,72 +22,127 @@
 
 //#include <QTextEdit>
 #include <QPlainTextEdit>
+#include <QPainter>
 
 #include "parser.h"
 #include "stylesheetparser/stylesheethighlighter.h"
 
 namespace StylesheetParser {
 
-class StylesheetEdit : public /*QPlainTextEdit*/ QTextEdit
+class StylesheetEdit;
+class LineNumberArea : public QWidget
 {
-
 public:
-   explicit StylesheetEdit(QWidget* parent = nullptr);
+  LineNumberArea(StylesheetEdit* editor);
 
-   void setText(const QString& text);
-   void setPlainText(const QString& text);
+  QSize sizeHint() const override;
 
-   NodeList *nodes();
+  QColor fore() const;
+  void setFore(const QColor &fore);
 
-   void showNewlineMarkers(bool show);
-   void showLineNumbers(bool show);
+  QColor back() const;
+  void setBack(const QColor &back);
 
-   //! Sets a new color/fontweight pair for the highlighter base format
-   void setNormalFormat(QColor color, QFont::Weight weight=QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter base format
-   void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter name format
-   void setNameFormat(QColor color, QFont::Weight weight=QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter name format
-   void setNameFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter value format
-   void setValueFormat(QColor color, QFont::Weight weight=QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter value format
-   void setValueFormat(Qt::GlobalColor color, QFont::Weight weight=QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter widget name format
-   void setWidgetFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter widget name format
-   void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter pseudo state format
-   void setPseudoStateFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter pseudo state format
-   void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
-   void setPseudoStateMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
-   void setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter sub control format
-   void setSubControlFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter sub control format
-   void setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
-   void setSubControlMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
-   void setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-   void setPropertyFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-   void setPropertyMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
-   void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  QFont::Weight weight() const;
+  void setWeight(const QFont::Weight &weight);
+
+protected:
+  void paintEvent(QPaintEvent* event) override;
 
 private:
-   Parser* m_parser;
-   StylesheetHighlighter* m_highlighter;
-   QTextCursor m_cursor;
-   Node* m_node;
+  StylesheetEdit* m_codeEditor;
+  QColor m_fore, m_back;
+  QFont::Weight m_weight;
+};
 
-   void onTextChanged();
-   void onCursorPositionChanged();
-//   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
+class StylesheetEdit : public QPlainTextEdit
+{
+
+  struct Data
+  {
+    Node* node = nullptr;
+    Node* nextNode = nullptr;
+    Node* prevNode = nullptr;
+    int valueIndex = -1;
+    int nextValueIndex = -1;
+  };
+
+public:
+  explicit StylesheetEdit(QWidget* parent = nullptr);
+
+  //  void setText(const QString& text);
+  void setPlainText(const QString& text);
+
+  NodeList* nodes();
+
+  void showNewlineMarkers(bool show);
+  //  void showLineNumbers(bool show);
+
+  //! Sets a new color/fontweight pair for the highlighter base format
+  void setNormalFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter base format
+  void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter name format
+  void setNameFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter name format
+  void setNameFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter value format
+  void setValueFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter value format
+  void setValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter widget name format
+  void setWidgetFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter widget name format
+  void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter pseudo state format
+  void setPseudoStateFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter pseudo state format
+  void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
+  void setPseudoStateMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
+  void setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter sub control format
+  void setSubControlFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter sub control format
+  void setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
+  void setSubControlMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
+  void setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
+  void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setLineNumberFormat(QColor foreground, QColor background, QFont::Weight weight = QFont::Light);
+  void setLineNumberFormat(Qt::GlobalColor foreground, Qt::GlobalColor background, QFont::Weight weight = QFont::Light);
+
+  void lineNumberAreaPaintEvent(QPaintEvent* event);
+  int lineNumberAreaWidth();
+
+protected:
+  void resizeEvent(QResizeEvent* event) override;
+
+private:
+  LineNumberArea* m_lineNumberArea;
+  DataStore* m_datastore;
+  Parser* m_parser;
+  StylesheetHighlighter* m_highlighter;
+  QTextCursor m_cursor;
+  //  Node* /*m_node, */*m_prevNode, *m_nextNode;
+  //  int m_valueIndex,m_prevIndex, m_nextValueIndex;
+
+  //  void onCursorPositionChanged();
+  void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
+
+  Data* getNodeAtCursor();
+  QString getValueAtCursor(int anchor, const QString& text);
+  QString getOldNodeValue(Data* data);
+  void updateNodes(Node* modifiedNode, int charsChanged);
+
+  void updateLineNumberAreaWidth(int);
+  void highlightCurrentLine();
+  void updateLineNumberArea(const QRect& rect, int dy);
 
 };
 

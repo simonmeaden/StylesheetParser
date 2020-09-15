@@ -22,8 +22,8 @@
 
 namespace StylesheetParser {
 
-StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
-  : QSyntaxHighlighter(editor)
+StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit *editor)
+  : QSyntaxHighlighter(editor->document())
 {
   m_nodes = editor->nodes();
 

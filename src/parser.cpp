@@ -25,10 +25,11 @@
 
 namespace StylesheetParser {
 
-Parser::Parser(QObject* parent)
+Parser::Parser(QTextDocument* document, DataStore* datastore, QObject* parent)
   : QObject(parent)
+  , m_document(document)
   , m_nodes(new NodeList())
-  , m_datastore(new DataStore(this))
+  , m_datastore(datastore)
   , m_braceCount(0)
   , m_bracesMatched(true)
 {}
@@ -84,14 +85,14 @@ void Parser::checkBraceCount(const QString& text, ParserState* state)
   }
 }
 
-ParserState* Parser::parse(const QString& text)
+ParserState* Parser::parse(const QString& text, int pos)
 {
   ParserState* state =  new ParserState(this);
   m_braceCount = 0;
-  int pos = 0;
   QString block;
   //  QChar c;
   Node* lastnode = nullptr, *propertynode = nullptr;
+  QTextCursor *cursor;
 
   if (text.trimmed().length() == 0) {
     state->unsetError(ParserState::NoError);
@@ -105,7 +106,9 @@ ParserState* Parser::parse(const QString& text)
     block = findNext(text, pos, state);
 
     if (m_datastore->containsWidget(block)) {
-      WidgetNode* widgetnode = new WidgetNode(block, pos - block.length(), this);
+      cursor = new QTextCursor(m_document);
+      cursor->setPosition(pos - block.length());
+      WidgetNode* widgetnode = new WidgetNode(block, cursor, this);
       m_nodes->append(widgetnode);
       lastnode = widgetnode;
 
@@ -114,12 +117,16 @@ ParserState* Parser::parse(const QString& text)
 
         if (block == ":") { // pseudo state
           if (m_braceCount == 0) {
-            Node* marker = new PseudoStateMarkerNode(pos - block.length(), this);
+            cursor = new QTextCursor(m_document);
+            cursor->setPosition(pos - block.length());
+            Node* marker = new PseudoStateMarkerNode(cursor, this);
             setNodeLinks(lastnode, marker);
             lastnode = marker;
 
           } else if (m_braceCount == 1) {  //    if (c.isLetter()) {
-            Node* marker = new PropertyMarkerNode(pos - block.length(), this);
+            cursor = new QTextCursor(m_document);
+            cursor->setPosition(pos - block.length());
+            Node* marker = new PropertyMarkerNode(cursor, this);
             setNodeLinks(lastnode, marker);
             lastnode = marker;
 
@@ -158,20 +165,26 @@ ParserState* Parser::parse(const QString& text)
               continue;
             }
 
-            ValueNode* valuenode = new ValueNode(values, checks, offsets, start, this);
+            cursor = new QTextCursor(m_document);
+            cursor->setPosition(start);
+            ValueNode* valuenode = new ValueNode(values, checks, offsets, cursor, this);
             setNodeLinks(lastnode, valuenode);
             lastnode = valuenode;
             propertynode = nullptr;
 
             if (block == ";") { // value end
-              Node* endvalues = new SemiColonNode(pos - block.length(), this);
+              cursor = new QTextCursor(m_document);
+              cursor->setPosition(pos - block.length());
+              Node* endvalues = new SemiColonNode(cursor, this);
               setNodeLinks(lastnode, endvalues);  //    if (c.isLetter()) {
               lastnode = endvalues;
               continue;
 
             } else if (block == "}") { // end brace
               m_braceCount--;
-              Node* brace = new EndBraceNode(pos - block.length(), this);
+              cursor = new QTextCursor(m_document);
+              cursor->setPosition(pos - block.length());
+              Node* brace = new EndBraceNode(cursor, this);
               setNodeLinks(lastnode, brace);
               lastnode = brace;
               continue;
@@ -181,7 +194,9 @@ ParserState* Parser::parse(const QString& text)
             continue;
 
           } else {
-            Node* property = new PropertyNode(block, pos - block.length(), this);
+            cursor = new QTextCursor(m_document);
+            cursor->setPosition(pos - block.length());
+            Node* property = new PropertyNode(block, cursor, this);
             setNodeLinks(lastnode, property);
             lastnode = property;
             propertynode = property;
@@ -189,27 +204,35 @@ ParserState* Parser::parse(const QString& text)
           }
 
         } else if (block == "::") { // sub control
-          Node* marker = new SubControlMarkerNode(pos - block.length(), this);
+          cursor = new QTextCursor(m_document);
+          cursor->setPosition(pos - block.length());
+          Node* marker = new SubControlMarkerNode(cursor, this);
           setNodeLinks(lastnode, marker);
           lastnode = marker;
           continue;
 
         } else if (block == "{") { // start brace
           m_braceCount++;
-          Node* brace = new StartBraceNode(pos - block.length(), this);
+          cursor = new QTextCursor(m_document);
+          cursor->setPosition(pos - block.length());
+          Node* brace = new StartBraceNode(cursor, this);
           setNodeLinks(lastnode, brace);
           lastnode = brace;
           continue;
 
         } else if (block == "}") { // end brace
           m_braceCount--;
-          Node* brace = new EndBraceNode(pos - block.length(), this);
+          cursor = new QTextCursor(m_document);
+          cursor->setPosition(pos - block.length());
+          Node* brace = new EndBraceNode(cursor, this);
           setNodeLinks(lastnode, brace);
           lastnode = brace;
           continue;
 
         } else if (block == ";") { // value end
-          Node* endvalues = new SemiColonNode(pos - block.length(), this);
+          cursor = new QTextCursor(m_document);
+          cursor->setPosition(pos - block.length());
+          Node* endvalues = new SemiColonNode(cursor, this);
           setNodeLinks(lastnode, endvalues);
           lastnode = endvalues;
           continue;
@@ -223,12 +246,16 @@ ParserState* Parser::parse(const QString& text)
 
           if (pseudostatemarker) {
             if (m_datastore->containsPseudoState(block)) {
-              Node* pseudostate = new PseudoStateNode(block, pos - block.length(), this);
+              cursor = new QTextCursor(m_document);
+              cursor->setPosition(pos - block.length());
+              Node* pseudostate = new PseudoStateNode(block, cursor, this);
               setNodeLinks(lastnode, pseudostate);
               lastnode = pseudostate;
 
             } else {
-              Node* badblock = new BadBlockNode(block, pos - block.length(), this);
+              cursor = new QTextCursor(m_document);
+              cursor->setPosition(pos - block.length());
+              Node* badblock = new BadBlockNode(block, cursor, this);
               setNodeLinks(lastnode, badblock);
               lastnode = badblock;
             }
@@ -240,12 +267,16 @@ ParserState* Parser::parse(const QString& text)
 
           if (subcontrolmarker) {
             if (m_datastore->containsSubControl(block)) {
-              Node* subcontrol = new SubControlNode(block, pos - block.length(), this);
+              cursor = new QTextCursor(m_document);
+              cursor->setPosition(pos - block.length());
+              Node* subcontrol = new SubControlNode(block, cursor, this);
               setNodeLinks(lastnode, subcontrol);
               lastnode = subcontrol;
 
             } else {
-              Node* badblock = new BadBlockNode(block, pos - block.length(), this);
+              cursor = new QTextCursor(m_document);
+              cursor->setPosition(pos - block.length());
+              Node* badblock = new BadBlockNode(block, cursor, this);
               setNodeLinks(lastnode, badblock);
               lastnode = badblock;
             }
@@ -278,7 +309,7 @@ QString Parser::findNext(const QString& text, int& pos, ParserState* state)
   QString block;
   QChar c;
   skipBlanks(text, pos);
-  c=text.at(pos);
+  c = text.at(pos);
 
   while (true) {
     if (c.isNull() || pos >= text.length()) {

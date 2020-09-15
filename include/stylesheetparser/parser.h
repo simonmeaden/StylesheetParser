@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QtDebug>
+#include <QPlainTextEdit>
 
 #include "StylesheetParser_global.h"
 #include "parserstate.h"
@@ -33,14 +34,15 @@ namespace StylesheetParser {
 class STYLESHEETPARSER_EXPORT Parser : public QObject
 {
 public:
-  Parser(QObject* parent = nullptr);
+  Parser(QTextDocument *document, DataStore* datastore, QObject* parent = nullptr);
   ~Parser();
 
-  ParserState* parse(const QString& text);
+  ParserState* parse(const QString& text, int pos = 0);
 
   NodeList* nodes();
 
 private:
+  QTextDocument* m_document;
   NodeList* m_nodes;
   DataStore* m_datastore;
   int m_braceCount;

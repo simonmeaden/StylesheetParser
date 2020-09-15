@@ -36,28 +36,28 @@ public:
 
   void highlightBlock(const QString& text);
 
-  void setNormalFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setWidgetFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setPseudoStateFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setPseudoStateMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setSubControlFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setSubControlMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setNameFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setNameFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setValueFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setBadValueFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setPropertyFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  void setPropertyMarkerFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
+  void setNormalFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setWidgetFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setPseudoStateFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setPseudoStateMarkerFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setSubControlFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setSubControlMarkerFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setNameFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setNameFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setValueFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setBadValueFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setPropertyFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
+  void setPropertyMarkerFormat(QColor color, QFont::Weight weight = QFont::Light);
+  void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
 
 private:
   NodeList* m_nodes;

@@ -643,10 +643,21 @@ ParserState* StylesheetEdit::parseInitialText(const QString& text, int pos)
             propertynode = nullptr;
 
             if (block == ";") { // value end
-              Node* endvalues = new SemiColonNode(getNode(pos - block.length()), this);
-              setNodeLinks(lastnode, endvalues);  //    if (c.isLetter()) {
-              lastnode = endvalues;
-              continue;
+              if (lastnode->type() == Node::ValueType) {
+                Node* endvalues = new SemiColonNode(getNode(pos - block.length()), this);
+                setNodeLinks(lastnode, endvalues);  //    if (c.isLetter()) {
+                lastnode = endvalues;
+                continue;
+
+              } else {
+                // can only end with a ';' or a '{'
+                Node* badblock = new BadBlockNode(block,
+                                                  getNode(pos - block.length()),
+                                                  ParserState::IncorrectPropertyEnder,
+                                                  this);
+                setNodeLinks(lastnode, badblock);
+                lastnode = badblock;
+              }
 
             } else if (block == "}") { // end brace
               m_braceCount--;
@@ -656,7 +667,7 @@ ParserState* StylesheetEdit::parseInitialText(const QString& text, int pos)
               continue;
 
             } else {
-              // can only end with a ';' or a '{'
+              // can only follow a property/value pair.
               Node* badblock = new BadBlockNode(block,
                                                 getNode(pos - block.length()),
                                                 ParserState::IncorrectPropertyEnder,

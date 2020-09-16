@@ -21,9 +21,9 @@
 */
 #include "stylesheetparser/node.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
-Node::Node(QTextCursor* start, QObject* parent, Type type)
+Node::Node(QTextCursor start, QObject* parent, Type type)
   : QObject(parent)
   , previous(nullptr)
   , next(nullptr)
@@ -33,24 +33,24 @@ Node::Node(QTextCursor* start, QObject* parent, Type type)
 
 int Node::start() const
 {
-  return m_start->anchor();
+  return m_start.anchor();
 }
 
 void Node::setStart(int position)
 {
-  m_start->movePosition(QTextCursor::Start, QTextCursor::MoveAnchor);
-  m_start->movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, position);
+  m_start.movePosition(QTextCursor::Start, QTextCursor::MoveAnchor);
+  m_start.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, position);
 }
 
 void Node::moveStart(int count)
 {
   QTextCursor::MoveOperation moveOp = (count < 0 ? QTextCursor::Left : QTextCursor::Right);
-  m_start->movePosition(moveOp, QTextCursor::MoveAnchor, qAbs(count));
+  m_start.movePosition(moveOp, QTextCursor::MoveAnchor, qAbs(count));
 }
 
 int Node::end() const
 {
-  return m_start->anchor();
+  return m_start.anchor();
 }
 
 int Node::length() const
@@ -82,7 +82,7 @@ Node::Type Node::type() const
 //}
 
 
-BaseNode::BaseNode(const QString& value, QTextCursor* start, QObject* parent, Type type)
+BaseNode::BaseNode(const QString& value, QTextCursor start, QObject* parent, Type type)
   : Node(start, parent, type)
   , m_value(value)
 {}
@@ -94,7 +94,7 @@ QString BaseNode::value() const
 
 int BaseNode::end() const
 {
-  return m_start->anchor() + m_value.length();
+  return m_start.anchor() + m_value.length();
 }
 
 int BaseNode::length() const
@@ -103,7 +103,7 @@ int BaseNode::length() const
 }
 
 
-NameNode::NameNode(const QString& name, QTextCursor* start, QObject* parent, Type type)
+NameNode::NameNode(const QString& name, QTextCursor start, QObject* parent, Type type)
   : Node(start, parent, type)
   , m_name(name)
 {}
@@ -115,7 +115,7 @@ QString NameNode::value() const
 
 int NameNode::end() const
 {
-  return m_start->anchor() + m_name.length();
+  return m_start.anchor() + m_name.length();
 }
 
 int NameNode::length() const
@@ -123,7 +123,10 @@ int NameNode::length() const
   return m_name.length();
 }
 
-BadBlockNode::BadBlockNode(const QString& name, QTextCursor* start, QObject* parent, Type type)
+BadBlockNode::BadBlockNode(const QString& name,
+                           QTextCursor start,
+                           ParserState::Errors errors,
+                           QObject* parent, Type type)
   : Node(start, parent, type)
   , m_name(name)
 {}
@@ -135,7 +138,7 @@ QString BadBlockNode::value() const
 
 int BadBlockNode::end() const
 {
-  return m_start->anchor() + m_name.length();
+  return m_start.anchor() + m_name.length();
 }
 
 int BadBlockNode::length() const
@@ -143,7 +146,17 @@ int BadBlockNode::length() const
   return m_name.length();
 }
 
-ValueNode::ValueNode(const QStringList& values, QList<bool> checks, QList<int> offsets, QTextCursor* start,
+ParserState::Errors BadBlockNode::errors() const
+{
+  return m_errors;
+}
+
+void BadBlockNode::setError(const ParserState::Errors &errors)
+{
+  m_errors = errors;
+}
+
+ValueNode::ValueNode(const QStringList& values, QList<bool> checks, QList<int> offsets, QTextCursor start,
                      QObject* parent,
                      Type type)
   : Node(start, parent, type)
@@ -192,32 +205,32 @@ QList<bool> ValueNode::checks() const
   return m_checks;
 }
 
-WidgetNode::WidgetNode(const QString& name, QTextCursor* start, QObject* parent, Type type)
+WidgetNode::WidgetNode(const QString& name, QTextCursor start, QObject* parent, Type type)
   : BaseNode(name, start, parent, type)
 {}
 
 
-PropertyNode::PropertyNode(const QString& name, QTextCursor* start, QObject* parent, Node::Type type)
+PropertyNode::PropertyNode(const QString& name, QTextCursor start, QObject* parent, Node::Type type)
   : BaseNode(name, start, parent, type)
 {}
 
-SubControlNode::SubControlNode(const QString& name, QTextCursor* start, QObject* parent, Type type)
+SubControlNode::SubControlNode(const QString& name, QTextCursor start, QObject* parent, Type type)
   : NameNode(name, start, parent, type)
 {
 }
 
-PseudoStateNode::PseudoStateNode(const QString& name, QTextCursor* start, QObject* parent, Type type)
+PseudoStateNode::PseudoStateNode(const QString& name, QTextCursor start, QObject* parent, Type type)
   : NameNode(name, start, parent, type)
 {}
 
-CharNode::CharNode(QTextCursor* start, QObject* parent, Type type)
+CharNode::CharNode(QTextCursor start, QObject* parent, Type type)
   : Node(start, parent, type)
 {
 }
 
 int CharNode::end() const
 {
-  return m_start->anchor() + 1;
+  return m_start.anchor() + 1;
 }
 
 int CharNode::length() const
@@ -225,17 +238,17 @@ int CharNode::length() const
   return 1;
 }
 
-ColonNode::ColonNode(QTextCursor* start, QObject* parent, Type type)
+ColonNode::ColonNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
 {}
 
-SubControlMarkerNode::SubControlMarkerNode(QTextCursor* start, QObject* parent, Type type)
+SubControlMarkerNode::SubControlMarkerNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
 {}
 
 int SubControlMarkerNode::end() const
 {
-  return m_start->anchor() + 2;
+  return m_start.anchor() + 2;
 }
 
 int SubControlMarkerNode::length() const
@@ -243,27 +256,27 @@ int SubControlMarkerNode::length() const
   return 2;
 }
 
-SemiColonNode::SemiColonNode(QTextCursor* start, QObject* parent, Type type)
+SemiColonNode::SemiColonNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
 {}
 
-NewlineNode::NewlineNode(QTextCursor* start, QObject* parent, Type type)
+NewlineNode::NewlineNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
 {}
 
-StartBraceNode::StartBraceNode(QTextCursor* start, QObject* parent, Type type)
+StartBraceNode::StartBraceNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
 {}
 
-EndBraceNode::EndBraceNode(QTextCursor* start, QObject* parent, Type type)
+EndBraceNode::EndBraceNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
 {}
 
-PseudoStateMarkerNode::PseudoStateMarkerNode(QTextCursor* start, QObject* parent, Type type)
+PseudoStateMarkerNode::PseudoStateMarkerNode(QTextCursor start, QObject* parent, Type type)
   : ColonNode(start, parent, type)
 {}
 
-PropertyMarkerNode::PropertyMarkerNode(QTextCursor* start, QObject* parent, Node::Type type)
+PropertyMarkerNode::PropertyMarkerNode(QTextCursor start, QObject* parent, Node::Type type)
   : ColonNode(start, parent, type)
 {}
 

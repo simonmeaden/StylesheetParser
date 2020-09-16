@@ -27,7 +27,7 @@
 #include "parser.h"
 #include "stylesheetparser/stylesheethighlighter.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 class StylesheetEdit;
 class LineNumberArea : public QWidget
@@ -60,6 +60,7 @@ class StylesheetEdit : public QPlainTextEdit
 
   struct Data
   {
+    QTextCursor cursor;
     Node* node = nullptr;
     Node* nextNode = nullptr;
     Node* prevNode = nullptr;
@@ -126,19 +127,32 @@ protected:
 private:
   LineNumberArea* m_lineNumberArea;
   DataStore* m_datastore;
-  Parser* m_parser;
+//  Parser* m_parser;
   StylesheetHighlighter* m_highlighter;
-  QTextCursor m_cursor;
+  NodeList* m_nodes;
+  int m_braceCount;
+  bool m_bracesMatched;
+
+//  QTextCursor m_cursor;
   //  Node* /*m_node, */*m_prevNode, *m_nextNode;
   //  int m_valueIndex,m_prevIndex, m_nextValueIndex;
 
   //  void onCursorPositionChanged();
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
 
-  Data* getNodeAtCursor();
+  ParserState* parseInitialText(const QString& text, int pos = 0);
+  void checkBraceCount(const QString& text, ParserState* state);
+  void setNodeLinks(Node* first, Node* second);
+  // Skips blank characters (inc \n\t etc.) and returns the first non-blank character.
+  void skipBlanks(const QString& text, int& pos);
+  QTextCursor getNode(int position);
+  QString findNext(const QString& text, int& pos, ParserState* state);
+
+
+  Data* getNodeAtCursor(int position);
   QString getValueAtCursor(int anchor, const QString& text);
   QString getOldNodeValue(Data* data);
-  void updateNodes(Node* modifiedNode, int charsChanged);
+//  void updateNodes(Node* modifiedNode, int charsChanged);
 
   void updateLineNumberAreaWidth(int);
   void highlightCurrentLine();

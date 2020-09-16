@@ -23,23 +23,27 @@
 #include <QObject>
 //#include <QException>
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 class ParserState : public QObject
 {
 public:
   enum Error
   {
-    NoError = 0x1,
-    FatalError = 0x2,
-    NonFatalError = 0x4,
-    BlankText = 0x10,
-    WronglyPositionedSpace = 0x20,
-    IncorrectlyTerminatedName = 0x40,
-    MismatchedBraceCount = 0x80,
-    MissingEndBrace = 0x100,
-    MissingStartBrace = 0x200,
-    TooManyCharactersInBlock = 0x400,
+    NoError                             = 0x1, //!< No parsing error
+    FatalError                          = 0x2, //!< Fatal parsing error
+    NonFatalError                       = 0x4, //!< Non fatal parsing error
+    BlankText                           = 0x10, //!< No text so far
+    WronglyPositionedSpace              = 0x20, //!< A space in the wrong place
+    IncorrectlyTerminatedName           = 0x40, //!<
+    MismatchedBraceCount                = 0x80, //!< Either a extra start or end curly brace
+    MissingEndBrace                     = 0x100, //!< A missing  end curly brace
+    MissingStartBrace                   = 0x200, //!< A missing start brace
+    TooManyCharactersInBlock            = 0x400, //!<
+    PseudoStateMarkerNotFollowingWidget = 0x800, //!< A pseudo state must folow a valid widget name
+    SubControlMarkerNotFollowingWidget  = 0x1000, //!< A sub control must folow a valid widget name
+    NotAValidPropertyName               = 0x2000, //!< Not a valid property name.
+    IncorrectPropertyEnder              = 0x4000, //!< A property/value list must end in ';', '}' or the end of text.
   };
   Q_DECLARE_FLAGS(Errors, Error)
   Q_FLAG(Errors)
@@ -75,9 +79,9 @@ private:
   QString m_value;
 };
 
-} // end of StylesheetParser
+} // end of StylesheetEditor
 
-Q_DECLARE_METATYPE(StylesheetParser::ParserState::Error)
-Q_DECLARE_OPERATORS_FOR_FLAGS(StylesheetParser::ParserState::Errors)
+Q_DECLARE_METATYPE(StylesheetEditor::ParserState::Error)
+Q_DECLARE_OPERATORS_FOR_FLAGS(StylesheetEditor::ParserState::Errors)
 
 #endif // PARSERERROR_H

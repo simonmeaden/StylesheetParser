@@ -20,12 +20,13 @@
 #include "stylesheetparser/stylesheethighlighter.h"
 #include "stylesheetparser/stylesheetedit.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
-StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit *editor)
+StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   : QSyntaxHighlighter(editor->document())
+  , m_editor(editor)
 {
-  m_nodes = editor->nodes();
+  //  m_nodes = editor->nodes();
 
   setNormalFormat(Qt::black);
   setNameFormat(Qt::lightGray);
@@ -59,8 +60,10 @@ int StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
 }
 
 void StylesheetHighlighter::highlightBlock(const QString& text)
-{  
-  if (text.isEmpty() || m_nodes->isEmpty()) {
+{
+  NodeList* nodes = m_editor->nodes();
+
+  if (text.isEmpty() || (nodes && nodes->isEmpty())) {
     return;
   }
 
@@ -68,7 +71,7 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
   auto blockStart = block.position();
   auto blockEnd = blockStart + block.length();
 
-  for (auto basenode : *m_nodes) {
+  for (auto basenode : *nodes) {
     if (!basenode) {
       continue;
     }
@@ -252,7 +255,7 @@ void StylesheetHighlighter::setSubControlMarkerFormat(Qt::GlobalColor color, QFo
   m_subControlMarkerFormat.setForeground(color);
 }
 
-void StylesheetParser::StylesheetHighlighter::setValueFormat(QColor color, QFont::Weight weight)
+void StylesheetEditor::StylesheetHighlighter::setValueFormat(QColor color, QFont::Weight weight)
 {
   m_valueFormat.setFontWeight(weight);
   m_valueFormat.setForeground(QBrush(color));

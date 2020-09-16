@@ -25,7 +25,7 @@
 
 #include "stylesheetedit.h"
 
-using namespace StylesheetParser;
+using namespace StylesheetEditor;
 
 class MainWindow : public QMainWindow
 {

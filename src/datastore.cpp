@@ -19,7 +19,7 @@
 */
 #include "stylesheetparser/datastore.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 //! The list of permissible colour strings.
 const QString DataStore::RE_COLOUR_NAMES =

@@ -19,7 +19,7 @@
 */
 #include "stylesheetparser/parserstate.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 ParserState::ParserState(QObject *parent)
   : QObject(parent)

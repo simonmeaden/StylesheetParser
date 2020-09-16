@@ -26,7 +26,7 @@
 #include <QRegularExpression>
 #include <QFile>
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 class DataStore : public QObject
 {

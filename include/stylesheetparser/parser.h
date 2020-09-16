@@ -25,16 +25,18 @@
 #include <QPlainTextEdit>
 
 #include "StylesheetParser_global.h"
+#include "datastore.h"
 #include "parserstate.h"
 #include "node.h"
-#include "datastore.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
+
+class StylesheetEdit;
 
 class STYLESHEETPARSER_EXPORT Parser : public QObject
 {
 public:
-  Parser(QTextDocument *document, DataStore* datastore, QObject* parent = nullptr);
+  Parser(StylesheetEdit* editor, DataStore* datastore, QObject* parent = nullptr);
   ~Parser();
 
   ParserState* parse(const QString& text, int pos = 0);
@@ -42,7 +44,7 @@ public:
   NodeList* nodes();
 
 private:
-  QTextDocument* m_document;
+  StylesheetEdit* m_editor;
   NodeList* m_nodes;
   DataStore* m_datastore;
   int m_braceCount;
@@ -55,6 +57,7 @@ private:
   void deleteNodes();
   void setNodeLinks(Node* first, Node* second);
   void checkBraceCount(const QString& text, ParserState* state);
+  QTextCursor getNode(int position);
 };
 
 } // end of StylesheetParser

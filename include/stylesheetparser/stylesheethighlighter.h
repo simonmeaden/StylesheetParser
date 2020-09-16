@@ -25,7 +25,7 @@
 
 #include "stylesheetparser/node.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 class StylesheetEdit;
 
@@ -60,7 +60,8 @@ public:
   void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light);
 
 private:
-  NodeList* m_nodes;
+  StylesheetEdit *m_editor;
+//  NodeList* m_nodes;
   QTextCharFormat m_baseFormat, m_widgetFormat, m_nameFormat, m_valueFormat, m_badValueFormat,
                   m_pseudoStateFormat, m_pseudoStateMarkerFormat, m_subControlFormat,
                   m_subControlMarkerFormat, m_propertyFormat, m_propertyMarkerFormat;

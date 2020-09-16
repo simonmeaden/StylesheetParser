@@ -21,15 +21,18 @@
 */
 #include "stylesheetparser/stylesheetedit.h"
 
-namespace StylesheetParser {
+namespace StylesheetEditor {
 
 //=== StylesheetEdit
 //================================================================
 StylesheetEdit::StylesheetEdit(QWidget* parent)
   : QPlainTextEdit(parent)
   , m_datastore(new DataStore(this))
-  , m_parser(new Parser(document(), m_datastore, this))
+    //  , m_parser(new Parser(this, m_datastore, this))
   , m_highlighter(new StylesheetHighlighter(this))
+  , m_nodes(new NodeList())
+  , m_braceCount(0)
+  , m_bracesMatched(true)
 {
   m_lineNumberArea = new LineNumberArea(this);
 
@@ -58,18 +61,18 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
 
 void StylesheetEdit::setPlainText(const QString& text)
 {
-  ParserState* state = m_parser->parse(text);
+  QPlainTextEdit::setPlainText(text);
+  ParserState* state = parseInitialText(text);
 
   if (!state->errors().testFlag(ParserState::NoError)) {
     // TODO error recovery
   }
 
-  QPlainTextEdit::setPlainText(text);
 }
 
 NodeList* StylesheetEdit::nodes()
 {
-  return m_parser->nodes();
+  return m_nodes;
 }
 
 void StylesheetEdit::showNewlineMarkers(bool show)
@@ -250,7 +253,7 @@ void StylesheetEdit::resizeEvent(QResizeEvent* event)
   m_lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
 }
 
-QString StylesheetParser::StylesheetEdit::getValueAtCursor(int pos, const QString& text)
+QString StylesheetEditor::StylesheetEdit::getValueAtCursor(int pos, const QString& text)
 {
   QChar c;
   QString value;
@@ -285,7 +288,7 @@ QString StylesheetParser::StylesheetEdit::getValueAtCursor(int pos, const QStrin
   return value;
 }
 
-QString StylesheetParser::StylesheetEdit::getOldNodeValue(Data* data)
+QString StylesheetEditor::StylesheetEdit::getOldNodeValue(Data* data)
 {
   QString oldValue;
 
@@ -329,46 +332,46 @@ QString StylesheetParser::StylesheetEdit::getOldNodeValue(Data* data)
   return oldValue;
 }
 
-void StylesheetEdit::updateNodes(Node* modifiedNode, int charsChanged)
-{
-  Node* basenode = modifiedNode;
-  Node* modified = modifiedNode;
+//void StylesheetEdit::updateNodes(Node* modifiedNode, int charsChanged)
+//{
+//  Node* basenode = modifiedNode;
+//  Node* modified = modifiedNode;
 
-  // find modifiedNode's base node.
-  while (basenode->previous) {
-    basenode = basenode->previous;
-  }
+//  // find modifiedNode's base node.
+//  while (basenode->previous) {
+//    basenode = basenode->previous;
+//  }
 
-  // modify the rest of the nodes under this basenode.
-  while (modified->next) {
-    modified = modified->next;
-    modified->moveStart(charsChanged);
-  }
+//  // modify the rest of the nodes under this basenode.
+//  while (modified->next) {
+//    modified = modified->next;
+//    modified->moveStart(charsChanged);
+//  }
 
-  NodeList* nodelist = nodes();
+//  NodeList* nodelist = nodes();
 
-  // find the base node following this basenode.
-  int i = 0;
+//  // find the base node following this basenode.
+//  int i = 0;
 
-  for (; i < nodelist->length();) {
-    auto base = nodelist->at(i++);
+//  for (; i < nodelist->length();) {
+//    auto base = nodelist->at(i++);
 
-    if (base == basenode) {
-      break;
-    }
-  }
+//    if (base == basenode) {
+//      break;
+//    }
+//  }
 
-  // then skip over it and modify the rest.
-  for (; i < nodelist->length(); i++) {
-    modified = nodelist->at(i);
-    modified->moveStart(charsChanged);
+//  // then skip over it and modify the rest.
+//  for (; i < nodelist->length(); i++) {
+//    modified = nodelist->at(i);
+//    modified->moveStart(charsChanged);
 
-    while (modified->next) {
-      modified = modified->next;
-      modified->moveStart(charsChanged);
-    }
-  }
-}
+//    while (modified->next) {
+//      modified = modified->next;
+//      modified->moveStart(charsChanged);
+//    }
+//  }
+//}
 
 void StylesheetEdit::updateLineNumberAreaWidth(int /*newBlockCount*/)
 {
@@ -415,11 +418,25 @@ void StylesheetEdit::updateLineNumberArea(const QRect& rect, int dy)
 
 void StylesheetEdit::onDocumentChanged(int pos, int charsRemoved, int charsAdded)
 {
-  Data* data = getNodeAtCursor();
+  if (m_nodes->isEmpty()) {
+    // initial text has not yet been parsed.
+    return;
+  }
+
+  QString text = toPlainText();
+
+  if (text.isEmpty()) {
+    return;
+  }
+
+  //    QTextCursor c2(document());
+  //    c2.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 4);
+
+
+  Data* data = getNodeAtCursor(pos);
 
   if (data->node) {
-    int anchor = m_cursor.anchor();
-    QString text = toPlainText();
+    int anchor = data->cursor.anchor();
     QString value, oldValue;
     int start = data->node->start();
     int end, length;
@@ -461,7 +478,7 @@ void StylesheetEdit::onDocumentChanged(int pos, int charsRemoved, int charsAdded
       if (data->valueIndex >= 0) {
         if (data->valueIndex == size && data->nextValueIndex == size) {
           // beyond last existing value
-          int index = size;
+          //          int index = size;
           value = getValueAtCursor(pos, text);
 
           if (!value.isEmpty()) {
@@ -490,7 +507,7 @@ void StylesheetEdit::onDocumentChanged(int pos, int charsRemoved, int charsAdded
 
             check = m_datastore->isValidPropertyValue(property, value);
             checks[data->valueIndex] = check;
-            updateNodes(data->node, charChanged);
+            //            updateNodes(data->node, charChanged);
             m_highlighter->rehighlight();
           }
         }
@@ -535,12 +552,421 @@ void StylesheetEdit::onDocumentChanged(int pos, int charsRemoved, int charsAdded
   }*/
 }
 
-StylesheetEdit::Data* StylesheetEdit::getNodeAtCursor()
+ParserState* StylesheetEdit::parseInitialText(const QString& text, int pos)
+{
+  ParserState* state =  new ParserState(this);
+  m_braceCount = 0;
+  QString block;
+  //  QChar c;
+  Node* lastnode = nullptr, *propertynode = nullptr;
+
+  if (text.trimmed().length() == 0) {
+    state->unsetError(ParserState::NoError);
+    state->setError(ParserState::BlankText);
+    return state;
+  }
+
+  checkBraceCount(text, state);
+
+  while (true) {
+    block = findNext(text, pos, state);
+
+    if (m_datastore->containsWidget(block)) {
+      WidgetNode* widgetnode = new WidgetNode(block, getNode(pos - block.length())/*c*/, this);
+      m_nodes->append(widgetnode);
+      lastnode = widgetnode;
+
+      while (pos < text.length()) {
+        block = findNext(text, pos, state);
+
+        if (block == ":") { // pseudo state
+          if (m_braceCount == 0) {
+            WidgetNode* widget = qobject_cast<WidgetNode*>(lastnode);
+
+            if (widget) {
+              Node* marker = new PseudoStateMarkerNode(getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, marker);
+              lastnode = marker;
+
+            } else {
+              Node* badblock = new BadBlockNode(block,
+                                                getNode(pos - block.length()),
+                                                ParserState::PseudoStateMarkerNotFollowingWidget,
+                                                this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+          } else if (m_braceCount == 1) {  //    if (c.isLetter()) {
+            Node* marker = new PropertyMarkerNode(getNode(pos - block.length()), this);
+            setNodeLinks(lastnode, marker);
+            lastnode = marker;
+
+          } else {
+            // TODO missing end brace
+          }
+
+          continue;
+
+        } else if (m_braceCount == 1) {
+          PropertyNode* property = qobject_cast<PropertyNode*>(propertynode);
+
+          if (property) {
+            QStringList values;
+            QList<bool> checks;
+            QList<int> offsets;
+            bool check = false;
+            QString propertyName = property->value();
+            int start = -1;
+
+            while (true) {
+              if (block.isEmpty() || block == ";" || block == "}") {
+                break;
+              }
+
+              if (start < 0) {
+                start = pos - block.length();
+              }
+
+              values.append(block);
+              check = m_datastore->isValidPropertyValue(propertyName, block);
+              checks.append(check);
+              // +1 to account for the
+              offsets.append(pos - start - block.length());
+              block = findNext(text, pos, state);
+              continue;
+            }
+
+            ValueNode* valuenode = new ValueNode(values, checks, offsets, getNode(start), this);
+            setNodeLinks(lastnode, valuenode);
+            lastnode = valuenode;
+            propertynode = nullptr;
+
+            if (block == ";") { // value end
+              Node* endvalues = new SemiColonNode(getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, endvalues);  //    if (c.isLetter()) {
+              lastnode = endvalues;
+              continue;
+
+            } else if (block == "}") { // end brace
+              m_braceCount--;
+              Node* brace = new EndBraceNode(getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, brace);
+              lastnode = brace;
+              continue;
+
+            } else {
+              // can only end with a ';' or a '{'
+              Node* badblock = new BadBlockNode(block,
+                                                getNode(pos - block.length()),
+                                                ParserState::IncorrectPropertyEnder,
+                                                this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+            continue;
+
+          } else {
+            if (m_datastore->containsProperty(block)) {
+              Node* property = new PropertyNode(block, getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, property);
+              lastnode = property;
+              propertynode = property;
+
+            } else {
+              Node* badblock = new BadBlockNode(block,
+                                                getNode(pos - block.length()),
+                                                ParserState::NotAValidPropertyName,
+                                                this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+            continue;
+          }
+
+        } else if (block == "::") { // sub control marker
+          WidgetNode* widget = qobject_cast<WidgetNode*>(lastnode);
+
+          if (widget) {
+            Node* marker = new SubControlMarkerNode(getNode(pos - block.length()), this);
+            setNodeLinks(lastnode, marker);
+            lastnode = marker;
+            continue;
+
+          } else {
+            Node* badblock = new BadBlockNode(block,
+                                              getNode(pos - block.length()),
+                                              ParserState::SubControlMarkerNotFollowingWidget,
+                                              this);
+            setNodeLinks(lastnode, badblock);
+            lastnode = badblock;
+          }
+
+        } else if (block == "{") { // start brace
+          m_braceCount++;
+          Node* brace = new StartBraceNode(getNode(pos - block.length()), this);
+          setNodeLinks(lastnode, brace);
+          lastnode = brace;
+          continue;
+
+        } else if (block == "}") { // end brace
+          m_braceCount--;
+          Node* brace = new EndBraceNode(getNode(pos - block.length()), this);
+          setNodeLinks(lastnode, brace);
+          lastnode = brace;
+          continue;
+
+        } else if (block == ";") { // value end
+          Node* endvalues = new SemiColonNode(getNode(pos - block.length()), this);
+          setNodeLinks(lastnode, endvalues);
+          lastnode = endvalues;
+          continue;
+
+        } else {
+          // TODO error???
+        }
+
+        if (!block.isEmpty()) {
+          PseudoStateMarkerNode* pseudostatemarker = qobject_cast<PseudoStateMarkerNode*>(lastnode);
+
+          if (pseudostatemarker) {
+            if (m_datastore->containsPseudoState(block)) {
+              Node* pseudostate = new PseudoStateNode(block, getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, pseudostate);
+              lastnode = pseudostate;
+
+            } else {
+              Node* badblock = new BadBlockNode(block, getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+            continue;
+          }
+
+          SubControlMarkerNode* subcontrolmarker = qobject_cast<SubControlMarkerNode*>(lastnode);
+
+          if (subcontrolmarker) {
+            if (m_datastore->containsSubControl(block)) {
+              Node* subcontrol = new SubControlNode(block, getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, subcontrol);
+              lastnode = subcontrol;
+
+            } else {
+              Node* badblock = new BadBlockNode(block, getNode(pos - block.length()), this);
+              setNodeLinks(lastnode, badblock);
+              lastnode = badblock;
+            }
+
+            continue;
+          }
+        }
+      }
+
+      skipBlanks(text, pos);
+
+    } else if (m_datastore->containsProperty(block)) {
+      if (m_datastore->containsProperty(block)) {
+        Node* property = new PropertyNode(block, getNode(pos - block.length()), this);
+        setNodeLinks(lastnode, property);
+        lastnode = property;
+        propertynode = property;
+
+      } else {
+        Node* badblock = new BadBlockNode(block, getNode(pos - block.length()), this);
+        setNodeLinks(lastnode, badblock);
+        lastnode = badblock;
+      }
+
+    } else if (block == ':') {
+      if (m_braceCount == 0) {
+        Node* marker = new PropertyMarkerNode(getNode(pos - block.length()), this);
+        setNodeLinks(lastnode, marker);
+        lastnode = marker;
+
+      } else {
+        PropertyNode* property = qobject_cast<PropertyNode*>(propertynode);
+
+        if (property) {
+          QStringList values;
+          QList<bool> checks;
+          QList<int> offsets;
+          bool check = false;
+          QString propertyName = property->value();
+          int start = -1;
+
+          while (true) {
+            if (block.isEmpty() || block == ";" || block == "}") {
+              break;
+            }
+
+            if (start < 0) {
+              start = pos - block.length();
+            }
+
+            values.append(block);
+            check = m_datastore->isValidPropertyValue(propertyName, block);
+            checks.append(check);
+            // +1 to account for the
+            offsets.append(pos - start - block.length());
+            block = findNext(text, pos, state);
+            continue;
+          }
+
+          ValueNode* valuenode = new ValueNode(values, checks, offsets, getNode(start), this);
+          setNodeLinks(lastnode, valuenode);
+          lastnode = valuenode;
+          propertynode = nullptr;
+
+          if (block == ";") { // value end
+            Node* endvalues = new SemiColonNode(getNode(pos - block.length()), this);
+            setNodeLinks(lastnode, endvalues);  //    if (c.isLetter()) {
+            lastnode = endvalues;
+            continue;
+
+          }
+        }
+      }
+    }
+
+    if (pos >= text.length()) {
+      break;
+    }
+  }
+
+  return state;
+}
+
+void StylesheetEdit::checkBraceCount(const QString& text, ParserState* state)
+{
+  for (int p = 0; p < text.length(); p++) {
+    QChar c = text.at(p);
+
+    if (c == '{') {
+      m_braceCount++;
+
+    } else if (c == '}') {
+      m_braceCount--;
+    }
+  }
+
+  if (m_braceCount == 0) {
+    m_bracesMatched = true;
+
+  } else {
+    // reset braceCount to use in brace detection.
+    m_braceCount = 0;
+  }
+
+  if (!m_bracesMatched) {
+    if (m_braceCount > 0) {
+      state->unsetError(ParserState::NoError);
+      state->setError(ParserState::MismatchedBraceCount);
+      state->setError(ParserState::MissingEndBrace);
+
+      if (!state->errors().testFlag(ParserState::FatalError)) {
+        state->setError(ParserState::NonFatalError);
+      }
+
+    } else if (m_braceCount < 0) {
+      state->unsetError(ParserState::NoError);
+      state->setError(ParserState::MismatchedBraceCount);
+      state->setError(ParserState::MissingStartBrace);
+    }
+  }
+}
+
+void StylesheetEdit::setNodeLinks(Node* first, Node* second)
+{
+  first->next = second;
+  second->previous = first;
+}
+
+void StylesheetEdit::skipBlanks(const QString& text, int& pos)
+{
+  QChar c;
+
+  for (; pos < text.length(); pos++) {
+    c = text.at(pos);
+
+    if (c.isSpace()/* || c == '\n' || c == '\r' || c == '\t'*/) {
+      continue;
+
+    } else {
+      break;
+    }
+  }
+
+}
+
+QTextCursor StylesheetEdit::getNode(int position)
+{
+  QTextCursor c(document());
+  c.movePosition(QTextCursor::Start);
+  c.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, position);
+  return c;
+}
+
+QString StylesheetEdit::findNext(const QString& text, int& pos, ParserState* state)
+{
+  QString block;
+  QChar c;
+  skipBlanks(text, pos);
+  c = text.at(pos);
+
+  while (true) {
+    if (c.isNull() || pos >= text.length()) {
+      return block;
+    }
+
+    if (c.isLetterOrNumber()) {
+      if (!block.isEmpty()) {
+        QChar b = block.back();
+
+        if (b == '{' || b == '}' || b == ';' || b == ':') {
+          return block;
+        }
+      }
+
+      block += c;
+      pos++;
+
+    } else if (c.isSpace() && !block.isEmpty()) {
+      return block;
+
+    } else if (c == '{' || c == '}' || c == ';' || c == ':') {
+      if (!block.isEmpty()) {
+        if (block.back().isLetterOrNumber()) {
+          // a possibly correct name/number string
+          return block;
+        }
+      }
+
+      if (block.length() == 0 || block.back() == c) {
+        block += c;
+        pos++;
+
+      } else {
+        return block;
+      }
+    }
+
+    if (pos < text.length()) {
+      c = text.at(pos);
+    }
+  }
+}
+
+StylesheetEdit::Data* StylesheetEdit::getNodeAtCursor(int position)
 {
   Data* data = new Data();
-
-  m_cursor = textCursor();
-  int cursorPos = m_cursor.anchor();
+  data->cursor = QTextCursor(document());
+  //  if (data->cursor) {
+  //    return data;
+  //  }
+  //  int cursorPos = data->cursor.anchor();
   int start, end;
 
   for (auto basenode : *nodes()) {
@@ -559,7 +985,7 @@ StylesheetEdit::Data* StylesheetEdit::getNodeAtCursor()
         start = node->start();
         end = start + offsets.back() + values.back().length();
 
-        if (cursorPos > end) {
+        if (position > end) {
           data->prevNode = node;
           node = node->next;
           continue;
@@ -570,7 +996,7 @@ StylesheetEdit::Data* StylesheetEdit::getNodeAtCursor()
           valStart = start + offset;
           valEnd = valStart + values[i].length();
 
-          if (cursorPos > valEnd) {
+          if (position > valEnd) {
             if (i == offsets.size() - 1) {
               data->node = node;
               data->valueIndex = i;
@@ -580,14 +1006,14 @@ StylesheetEdit::Data* StylesheetEdit::getNodeAtCursor()
 
             continue;
 
-          } else if (cursorPos < valStart) {
+          } else if (position < valStart) {
             // already overshot the cursor.
             data->node = node;
             data->valueIndex = -1;
             data->nextValueIndex = i;
             break;
 
-          } else if (cursorPos >= valStart && cursorPos <= valEnd) {
+          } else if (position >= valStart && position <= valEnd) {
             data->node = node;
             data->valueIndex = i;
             data->nextValueIndex = -1;
@@ -604,17 +1030,17 @@ StylesheetEdit::Data* StylesheetEdit::getNodeAtCursor()
         int length = node->length();
         end = start + length;
 
-        if (cursorPos > end) {
+        if (position > end) {
           data->prevNode = node;
           node = node->next;
           continue;
 
-        } else if (cursorPos < start) {
+        } else if (position < start) {
           // already overshot the cursor.
           data->nextNode = node;
           break;
 
-        } else if (cursorPos >= start && cursorPos < end) {
+        } else if (position >= start && position < end) {
           data->node = node;
           break;
         }

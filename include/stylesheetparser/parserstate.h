@@ -44,6 +44,7 @@ public:
     SubControlMarkerNotFollowingWidget  = 0x1000, //!< A sub control must folow a valid widget name
     NotAValidPropertyName               = 0x2000, //!< Not a valid property name.
     IncorrectPropertyEnder              = 0x4000, //!< A property/value list must end in ';', '}' or the end of text.
+    PropertyEnderWithoudPropertyValues = 0x8000,
   };
   Q_DECLARE_FLAGS(Errors, Error)
   Q_FLAG(Errors)

@@ -650,10 +650,10 @@ ParserState* StylesheetEdit::parseInitialText(const QString& text, int pos)
                 continue;
 
               } else {
-                // can only end with a ';' or a '{'
+                // must folllow values.
                 Node* badblock = new BadBlockNode(block,
                                                   getNode(pos - block.length()),
-                                                  ParserState::IncorrectPropertyEnder,
+                                                  ParserState::PropertyEnderWithoudPropertyValues,
                                                   this);
                 setNodeLinks(lastnode, badblock);
                 lastnode = badblock;

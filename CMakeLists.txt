@@ -55,7 +55,7 @@ target_sources(tst_parser
    PUBLIC
 
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/StylesheetParser_global.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parser.h>
+#      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parser.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parserstate.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/node.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheetedit.h>
@@ -65,7 +65,7 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
 
       $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/parser.h>
+#      $<INSTALL_INTERFACE:include/stylesheetparser/parser.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/parserstate.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/node.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetedit.h>
@@ -76,7 +76,7 @@ target_sources(tst_parser
 
    PRIVATE
       src/main.cpp
-      src/parser.cpp
+#      src/parser.cpp
       src/parserstate.cpp
       src/node.cpp
       src/stylesheetedit.cpp

@@ -79,7 +79,7 @@ public:
   bool containsPseudoState(const QString& name);
   bool containsSubControl(const QString& name);
 
-  bool isValidPropertyValue(const QString& name, const QString& value);
+  bool isValidPropertyValue(const QString& propertyname, const QString& value);
   QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
 
   //! Returns the names of all widgets for which this sub-control is valid.

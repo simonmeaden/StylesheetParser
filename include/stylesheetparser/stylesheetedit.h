@@ -23,6 +23,7 @@
 //#include <QTextEdit>
 #include <QPlainTextEdit>
 #include <QPainter>
+#include <QToolTip>
 
 #include "parser.h"
 #include "stylesheetparser/stylesheethighlighter.h"
@@ -38,13 +39,13 @@ public:
   QSize sizeHint() const override;
 
   QColor fore() const;
-  void setFore(const QColor &fore);
+  void setFore(const QColor& fore);
 
   QColor back() const;
-  void setBack(const QColor &back);
+  void setBack(const QColor& back);
 
   QFont::Weight weight() const;
-  void setWeight(const QFont::Weight &weight);
+  void setWeight(const QFont::Weight& weight);
 
 protected:
   void paintEvent(QPaintEvent* event) override;
@@ -83,10 +84,6 @@ public:
   void setNormalFormat(QColor color, QFont::Weight weight = QFont::Normal);
   //! Sets a new color/fontweight pair for the highlighter base format
   void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter name format
-  void setNameFormat(QColor color, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter name format
-  void setNameFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
   //! Sets a new color/fontweight pair for the highlighter value format
   void setValueFormat(QColor color, QFont::Weight weight = QFont::Normal);
   //! Sets a new color/fontweight pair for the highlighter value format
@@ -117,6 +114,16 @@ public:
   void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Normal);
   void setLineNumberFormat(QColor foreground, QColor background, QFont::Weight weight = QFont::Light);
   void setLineNumberFormat(Qt::GlobalColor foreground, Qt::GlobalColor background, QFont::Weight weight = QFont::Light);
+  void setBadValueFormat(QColor color, QFont::Weight weight = QFont::Light, bool underline = true,
+                         QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
+                         QColor underlineColor = QColor("red"));
+  void setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight = QFont::Light, bool underline = true,
+                         QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
+                         QColor underlineColor = QColor("red"));
+  void setStartBraceFormat(QColor color, QFont::Weight weight);
+  void setStartBraceFormat(Qt::GlobalColor color, QFont::Weight weight);
+  void setEndBraceFormat(QColor color, QFont::Weight weight);
+  void setEndBraceFormat(Qt::GlobalColor color, QFont::Weight weight);
 
   void lineNumberAreaPaintEvent(QPaintEvent* event);
   int lineNumberAreaWidth();
@@ -127,37 +134,49 @@ protected:
 private:
   LineNumberArea* m_lineNumberArea;
   DataStore* m_datastore;
-//  Parser* m_parser;
+  //  Parser* m_parser;
   StylesheetHighlighter* m_highlighter;
   NodeList* m_nodes;
   int m_braceCount;
   bool m_bracesMatched;
+  Node* m_lastnode = nullptr, *m_nextnode = nullptr;;
+  PropertyNode* m_propertynode = nullptr;
 
-//  QTextCursor m_cursor;
+
+  bool event(QEvent* event);
+  //  QTextCursor m_cursor;
   //  Node* /*m_node, */*m_prevNode, *m_nextNode;
   //  int m_valueIndex,m_prevIndex, m_nextValueIndex;
 
   //  void onCursorPositionChanged();
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
 
-  ParserState* parseInitialText(const QString& text, int pos = 0);
-  void checkBraceCount(const QString& text, ParserState* state);
-  void setNodeLinks(Node* first, Node* second);
+  void parseInitialText(const QString& text, int pos = 0);
+//  void parseValueBlock(const QString& text, int& pos,
+//                       QStringList& values, QList<bool>& checks, QList<int>& offsets,
+//                       ParserState* state, bool updating);
+
+  ParserState *checkBraceCount(const QString& text);
+  void setNodeLinks(Node* node);
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank character.
   void skipBlanks(const QString& text, int& pos);
-  QTextCursor getNode(int position);
-  QString findNext(const QString& text, int& pos, ParserState* state);
+  QTextCursor getCursorForNode(int position);
+  QString findNext(const QString& text, int& pos);
 
 
+  Data* getNodeAtCursor(QTextCursor cursor);
   Data* getNodeAtCursor(int position);
+  void nodeAtCursorPosition(Data **data, int position);
+
   QString getValueAtCursor(int anchor, const QString& text);
   QString getOldNodeValue(Data* data);
-//  void updateNodes(Node* modifiedNode, int charsChanged);
+  //  void updateNodes(Node* modifiedNode, int charsChanged);
 
   void updateLineNumberAreaWidth(int);
   void highlightCurrentLine();
   void updateLineNumberArea(const QRect& rect, int dy);
 
+  int parseProperty(const QString &text, int start, int &pos, QString &block, Node **endnode);
 };
 
 

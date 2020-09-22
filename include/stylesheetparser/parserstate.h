@@ -42,9 +42,18 @@ public:
     TooManyCharactersInBlock            = 0x400, //!<
     PseudoStateMarkerNotFollowingWidget = 0x800, //!< A pseudo state must folow a valid widget name
     SubControlMarkerNotFollowingWidget  = 0x1000, //!< A sub control must folow a valid widget name
-    NotAValidPropertyName               = 0x2000, //!< Not a valid property name.
+    InvalidPropertyName                 = 0x2000, //!< Not a valid property name.
     IncorrectPropertyEnder              = 0x4000, //!< A property/value list must end in ';', '}' or the end of text.
-    PropertyEnderWithoudPropertyValues = 0x8000,
+    PropertyEnderWithoudPropertyValues  = 0x8000,
+    PseudoStateNeedsMarker              = 0x10000,
+    SubControlNeedsMarker               = 0x20000,
+    InvalidPseudoState                  = 0x40000,
+    InvalidSubControl                   = 0x80000,
+    InvalidWidget                       = 0x100000,
+    InvalidPropertyMarker               = 0x200000,
+    PreviousBadNode                     = 0x400000,
+    InvalidPropertyValue                = 0x800000,
+    ValueIsAProperty                    = 0x1000000,
   };
   Q_DECLARE_FLAGS(Errors, Error)
   Q_FLAG(Errors)

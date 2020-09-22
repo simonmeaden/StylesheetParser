@@ -237,7 +237,10 @@ ParserState* Parser::parse(const QString& text, int pos)
               lastnode = pseudostate;
 
             } else {
-              Node* badblock = new BadBlockNode(block, getNode(pos - block.length()), this);
+              Node* badblock = new BadBlockNode(block,
+                                                getNode(pos - block.length()),
+                                                ParserState::InvalidPseudoState,
+                                                this);
               setNodeLinks(lastnode, badblock);
               lastnode = badblock;
             }
@@ -254,7 +257,10 @@ ParserState* Parser::parse(const QString& text, int pos)
               lastnode = subcontrol;
 
             } else {
-              Node* badblock = new BadBlockNode(block, getNode(pos - block.length()), this);
+              Node* badblock = new BadBlockNode(block,
+                                                getNode(pos - block.length()),
+                                                ParserState::InvalidSubControl,
+                                                this);
               setNodeLinks(lastnode, badblock);
               lastnode = badblock;
             }

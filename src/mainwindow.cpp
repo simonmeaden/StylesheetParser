@@ -35,12 +35,24 @@ QWidget* MainWindow::initGui()
   f->setLayout(layout);
 
   QString text;
-  //      " color: red;\n background: green;\n";
-//  text = "QTabWidget::branch {\n}\n\n";
-  //  text = "QTabWidget::branch {\n}"
-//    text = "QTabWidget:active { border: 1px solid rd\n }";
-    text = "QTabWidget::branch {\n color: black;\n border: 1px solid rd\n }";
-//  text = "color: black; border: 1px solid rd\n";
+  //  text =   "color: red";
+  //  text =   "color: red;";
+  //  text =  "color: red; background: green";
+  //  text =  "color: red; background: green;";
+  //  text =  "color: red; border: green solid 1px;";
+  //  text =  "color: red border: green solid 1px;"; // missing first end property char.
+  //  text =  "color: red border: green solid 1px; background-color: blue;";
+  //  text = "QTabWidget::branch {}";
+  //  text = "QTabWidget::branch {color: red}";
+  //  text = "QTabWidget::branch {color: red; background: green}";
+  //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;";
+  //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;}";
+  text = "QTabWidget::branch {\ncolor: red;\n}\n"
+         "QWidget:active {\nborder: blue;}";
+//  text = "QTabWidget::branch {\ncolor: red;\n border: green solid 1px;\n background-color: blue;\n}\n"
+//         "QWidget::branch {\ncolor: blue;\n background-color: red;\n}";
+  //  text = "QTabWidget::branch {}";}";
+  //    text = "QTabWidget:active {";
 
 
   m_editor = new StylesheetEdit(this);

@@ -648,104 +648,104 @@ bool DataStore::checkTextDecoration(const QString& value)
   return false;
 }
 
-bool DataStore::isValidPropertyValue(const QString& name, const QString& value)
+bool DataStore::isValidPropertyValue(const QString& propertyname, const QString& valuename)
 {
-  if (value.isEmpty()) {
+  if (valuename.isEmpty()) {
     return false;
   }
 
-  AttributeType type = m_attributes.value(name);
+  AttributeType propertyAttribute = m_attributes.value(propertyname);
 
-  switch (type) {
+  switch (propertyAttribute) {
   case Alignment:
-    return checkAlignment(value);
+    return checkAlignment(valuename);
 
   case Attachment:
-    return checkAttachment(value);
+    return checkAttachment(valuename);
 
   case Background:
-    return checkBackground(value);
+    return checkBackground(valuename);
 
   case Bool:
-    return checkBool(value);
+    return checkBool(valuename);
 
   case Boolean:
-    return checkBoolean(value);
+    return checkBoolean(valuename);
 
   case Border:
-    return checkBorder(value);
+    return checkBorder(valuename);
 
   case BorderImage:
-    return checkBorderImage(value);
+    return checkBorderImage(valuename);
 
   case BorderStyle:
-    return checkBorderStyle(value);
+    return checkBorderStyle(valuename);
 
   case BoxColors:
-    return checkBoxColors(value);
+    return checkBoxColors(valuename);
 
   case BoxLengths:
-    return checkBoxLengths(value);
+    return checkBoxLengths(valuename);
 
   case Brush:
-    return checkBrush(value);
+    return checkBrush(valuename);
 
   case Color:
-    return checkColor(value);
+    return checkColor(valuename);
 
   case Font:
-    return checkFont(value);
+    return checkFont(valuename);
 
   case FontSize:
-    return checkFontSize(value);
+    return checkFontSize(valuename);
 
   case FontStyle:
-    return checkFontStyle(value);
+    return checkFontStyle(valuename);
 
   case FontWeight:
-    return checkFontWeight(value);
+    return checkFontWeight(valuename);
 
   case Gradient:
-    return checkGradient(value);
+    return checkGradient(valuename);
 
   case Icon:
-    return checkIcon(value);
+    return checkIcon(valuename);
 
   case Length:
-    return checkLength(value);
+    return checkLength(valuename);
 
   case Number:// TODO not supported.
-    return checkNumber(value);
+    return checkNumber(valuename);
 
   case Origin:
-    return checkOrigin(value);
+    return checkOrigin(valuename);
 
   case Outline:
-    return checkOutline(value);
+    return checkOutline(valuename);
 
   case OutlineRadius:
-    return checkOutlineRadius(value);
+    return checkOutlineRadius(valuename);
 
   case OutlineStyle:
-    return checkOutlineStyle(value);
+    return checkOutlineStyle(valuename);
 
   case PaletteRole:
-    return checkPaletteRole(value);
+    return checkPaletteRole(valuename);
 
   case Position:
-    return checkPosition(value);
+    return checkPosition(valuename);
 
   case Radius:
-    return checkRadius(value);
+    return checkRadius(valuename);
 
   case Repeat:
-    return checkRepeat(value);
+    return checkRepeat(valuename);
 
   case TextDecoration:
-    return checkTextDecoration(value);
+    return checkTextDecoration(valuename);
 
   case Url:
-    return checkUrl(value);
+    return checkUrl(valuename);
 
   case String:
     // value IS a string.

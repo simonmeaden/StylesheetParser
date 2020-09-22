@@ -43,7 +43,7 @@ public:
     CharNodeType,
     ColonNodeType,
     NameType,
-    ValueType,
+    //    ValueType,
     WidgetType,
     SubControlType,
     SubControlMarkerType,
@@ -55,6 +55,7 @@ public:
     NewlineType,
     PropertyType,
     PropertyMarkerType,
+    PropertyEndType,
     BadNodeType,
   };
   Node* previous;
@@ -85,9 +86,6 @@ public:
 
     case NameType:
       return "Name Node";
-
-    case ValueType:
-      return "Value Node";
 
     case WidgetType:
       return "Widget Node";
@@ -120,7 +118,10 @@ public:
       return "Property Node";
 
     case PropertyMarkerType:
-      return "Property Marker";
+      return "Property End Marker";
+
+    case PropertyEndType:
+      return "Property End";
 
     case BadNodeType:
       return "Bad Node";
@@ -147,7 +148,7 @@ public:
 protected:
   QString m_value;
 };
-using NodeList = QList<BaseNode*>;
+using NodeList = QList<Node*>;
 
 class NameNode : public Node
 {
@@ -168,47 +169,48 @@ class BadBlockNode: public Node
 {
   Q_OBJECT
 public:
-  explicit BadBlockNode(const QString& name, QTextCursor start, ParserState::Errors errors, QObject* parent, Type type = NameType);
+  explicit BadBlockNode(const QString& name, QTextCursor start, ParserState::Errors errors, QObject* parent,
+                        Type type = BadNodeType);
 
   QString value() const;
   int end() const override;
   int length() const override;
 
   ParserState::Errors errors() const;
-  void setErrors(const ParserState::Errors &errors);
+  void setError(const ParserState::Errors& errors);
 
 private:
   QString m_name;
   ParserState::Errors m_errors;
 };
 
-class ValueNode : public Node
-{
-  Q_OBJECT
-public:
-  explicit ValueNode(const QStringList& values,
-                     QList<bool> checks,
-                     QList<int> offsets,
-                     QTextCursor start,
-                     QObject* parent,
-                     Type type = ValueType);
+//class ValueNode : public Node
+//{
+//  Q_OBJECT
+//public:
+//  explicit ValueNode(const QStringList& values,
+//                     QList<bool> checks,
+//                     QList<int> offsets,
+//                     QTextCursor start,
+//                     QObject* parent,
+//                     Type type = ValueType);
 
-  QStringList values() const;
-  QList<bool> checks() const;
-  QList<int> offsets() const;
-  void setValues(const QStringList& values);
-  void setChecks(const QList<bool>& checks);
-  void setOffsets(const QList<int>& offsets);
+//  QStringList values() const;
+//  QList<bool> checks() const;
+//  QList<int> offsets() const;
+//  void setValues(const QStringList& values);
+//  void setChecks(const QList<bool>& checks);
+//  void setOffsets(const QList<int>& offsets);
 
-  int count();
-  bool isValid(int index);
+//  int count();
+//  bool isValid(int index);
 
 
-private:
-  QStringList m_values;
-  QList<bool> m_checks;
-  QList<int> m_offsets;
-};
+//private:
+//  QStringList m_values;
+//  QList<bool> m_checks;
+//  QList<int> m_offsets;
+//};
 
 class WidgetNode : public BaseNode
 {
@@ -222,6 +224,23 @@ class PropertyNode : public BaseNode
   Q_OBJECT
 public:
   explicit PropertyNode(const QString& name, QTextCursor start, QObject* parent, Type type = PropertyType);
+
+  QStringList values() const;
+  QList<bool> checks() const;
+  QList<int> offsets() const;
+  void setValues(const QStringList& values);
+  void setChecks(const QList<bool>& checks);
+  void setOffsets(const QList<int>& offsets);
+  void addValue(const QString& value, bool check, int offset);
+
+  int count();
+  bool isValid(int index);
+  int end();
+
+private:
+  QStringList m_values;
+  QList<bool> m_checks;
+  QList<int> m_offsets;
 };
 
 class SubControlNode : public NameNode
@@ -269,6 +288,27 @@ public:
   explicit PropertyMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyMarkerType);
 };
 
+class SemiColonNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit SemiColonNode(QTextCursor start, QObject* parent, Type type = SemiColonType);
+};
+
+class PropertyEndMarkerNode : public SemiColonNode
+{
+  Q_OBJECT
+public:
+  explicit PropertyEndMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyEndType);
+};
+
+class PropertyEndNode : public Node
+{
+  Q_OBJECT
+public:
+  explicit PropertyEndNode(QTextCursor start, QObject* parent, Type type = PropertyEndType);
+};
+
 class SubControlMarkerNode : public CharNode
 {
   Q_OBJECT
@@ -279,12 +319,6 @@ public:
   int length() const override;
 };
 
-class SemiColonNode : public CharNode
-{
-  Q_OBJECT
-public:
-  explicit SemiColonNode(QTextCursor start, QObject* parent, Type type = SemiColonType);
-};
 
 class NewlineNode : public CharNode
 {

@@ -677,11 +677,11 @@ void StylesheetEdit::parseInitialText(const QString& text, int pos)
           }
 
         } else if (block == ":") { // pseudostate
-          start = pos - block.length();
           Node* marker = new PseudoStateMarkerNode(getCursorForNode(start), this);
           setNodeLinks(marker);
 
           if (!(block = findNext(text, pos)).isEmpty()) {
+            start = pos - block.length();
             if (m_datastore->containsPseudoState(block)) {
               Node* pseudostate = new PseudoStateNode(block, getCursorForNode(start), this);
               setNodeLinks(pseudostate);
@@ -704,7 +704,7 @@ void StylesheetEdit::parseInitialText(const QString& text, int pos)
           m_braceCount++;
           Node* brace = new EndBraceNode(getCursorForNode(start), this);
           setNodeLinks(brace);
-//          brace->next = nullptr; // might already be true?
+          //          brace->next = nullptr; // might already be true?
           m_lastnode = nullptr;
           break;
 

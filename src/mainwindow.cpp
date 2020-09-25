@@ -40,19 +40,17 @@ QWidget* MainWindow::initGui()
   //  text =  "color: red; background: green";
   //  text =  "color: red; background: green;";
   //  text =  "color: red; border: green solid 1px;";
-  //  text =  "color: red border: green solid 1px;"; // missing first end property char.
-  //  text =  "color: red border: green solid 1px; background-color: blue;";
+    text =  "color: red border: green solid 1px;"; // missing first end property char.
+//    text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
   //  text = "QTabWidget::branch {}";
   //  text = "QTabWidget::branch {color: red}";
   //  text = "QTabWidget::branch {color: red; background: green}";
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;";
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;}";
-  text = "QTabWidget::branch {\ncolor: red;\n}\n"
-         "QWidget:active {\nborder: blue;}";
-//  text = "QTabWidget::branch {\ncolor: red;\n border: green solid 1px;\n background-color: blue;\n}\n"
+//  text = "QTabWidget::branch {\ncolor: red;\n}\n"
+//         "QWidget:active {\nborder: blue;}";
+//  text = "QTabWidget:active {\ncolor: red;\n border: green solid 1px;\n background-color: blue;\n}\n"
 //         "QWidget::branch {\ncolor: blue;\n background-color: red;\n}";
-  //  text = "QTabWidget::branch {}";}";
-  //    text = "QTabWidget:active {";
 
 
   m_editor = new StylesheetEdit(this);

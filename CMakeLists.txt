@@ -55,20 +55,20 @@ target_sources(tst_parser
    PUBLIC
 
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/StylesheetParser_global.h>
-#      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parser.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parserstate.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/node.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheetedit.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheetedit.h>      #      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parser.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheeteditdialog.h>      #      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parser.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheethighlighter.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/datastore.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
 
       $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
-#      $<INSTALL_INTERFACE:include/stylesheetparser/parser.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/parserstate.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/node.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetedit.h>
+      $<INSTALL_INTERFACE:include/stylesheetparser/stylesheeteditdialog.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheethighlighter.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/datastore.h>
@@ -80,6 +80,7 @@ target_sources(tst_parser
       src/parserstate.cpp
       src/node.cpp
       src/stylesheetedit.cpp
+      src/stylesheeteditdialog.cpp
       src/stylesheethighlighter.cpp
       src/mainwindow.cpp
       src/datastore.cpp

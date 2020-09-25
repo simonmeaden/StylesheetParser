@@ -132,15 +132,21 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
         break;
 
       case Node::PropertyType: {
-        setFormat(nodeStart, length, m_propertyFormat);
 
         PropertyNode* pNode = qobject_cast<PropertyNode*>(node);
 
+        if (pNode->propertyMarkerExists()) {
+          setFormat(nodeStart, length, m_propertyFormat);
+
+        } else {
+          setFormat(nodeStart, length, m_badValueFormat);
+        }
+
         if (pNode) {
           QStringList values = pNode->values();
-          QList<bool> checks = pNode->checks();
+          QList<PropertyNode::Check> checks = pNode->checks();
           QList<int> offsets = pNode->offsets();
-          bool check;
+          PropertyNode::Check check;
           QString value;
           int offset;
           int start;
@@ -152,7 +158,7 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
 
             start = nodeStart + offset;
 
-            if (check) {
+            if (check == PropertyNode::GoodValue) {
               setFormat(start, value.length(), m_valueFormat);
 
             } else {

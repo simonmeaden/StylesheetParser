@@ -225,6 +225,7 @@ PropertyNode::PropertyNode(const QString& name,
                            QObject* parent,
                            Node::Type type)
   : BaseNode(name, start, parent, type)
+  , m_propertyMarkerExists(false)
 {}
 
 QStringList PropertyNode::values() const
@@ -232,7 +233,7 @@ QStringList PropertyNode::values() const
   return m_values;
 }
 
-QList<bool> PropertyNode::checks() const
+QList<PropertyNode::Check> PropertyNode::checks() const
 {
   return m_checks;
 }
@@ -247,7 +248,7 @@ void PropertyNode::setValues(const QStringList& values)
   m_values = values;
 }
 
-void PropertyNode::setChecks(const QList<bool>& checks)
+void PropertyNode::setChecks(const QList<PropertyNode::Check>& checks)
 {
   m_checks = checks;
 }
@@ -257,11 +258,25 @@ void PropertyNode::setOffsets(const QList<int>& offsets)
   m_offsets = offsets;
 }
 
-void PropertyNode::addValue(const QString& value, bool check, int offset)
+void PropertyNode::addValue(const QString& value, PropertyNode::Check check, int offset)
 {
   m_values.append(value);
   m_checks.append(check);
   m_offsets.append(offset);
+}
+
+bool PropertyNode::setBadCheck(Check check, int index)
+{
+  if (index == -1) {
+    m_checks[m_checks.length() - 1] = check;
+    return true;
+
+  } else if (index >= 0 && index < m_checks.length()) {
+    m_checks[index] = check;
+    return true;
+  }
+
+  return false;
 }
 
 int PropertyNode::count()
@@ -269,17 +284,29 @@ int PropertyNode::count()
   return m_offsets.size();
 }
 
-bool PropertyNode::isValid(int index)
+PropertyNode::Check PropertyNode::isValid(int index)
 {
   if (index > 00 && index < count()) {
     return m_checks.at(index);
   }
 
-  return false;
+  // default to bad.
+  return Check::BadValue;
 }
 
-int PropertyNode::end() {
+int PropertyNode::end()
+{
   return start() + m_offsets.back() + m_values.back().length();
+}
+
+bool PropertyNode::propertyMarkerExists() const
+{
+  return m_propertyMarkerExists;
+}
+
+void PropertyNode::setPropertyMarkerExists(bool propertyMarker)
+{
+  m_propertyMarkerExists = propertyMarker;
 }
 
 SubControlNode::SubControlNode(const QString& name,

@@ -40,7 +40,6 @@ QWidget* MainWindow::initGui()
   //  text =  "color: red; background: green";
   //  text =  "color: red; background: green;";
   //  text =  "color: red; border: green solid 1px;";
-    text =  "color: red border: green solid 1px;"; // missing first end property char.
 //    text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
   //  text = "QTabWidget::branch {}";
   //  text = "QTabWidget::branch {color: red}";
@@ -51,6 +50,11 @@ QWidget* MainWindow::initGui()
 //         "QWidget:active {\nborder: blue;}";
 //  text = "QTabWidget:active {\ncolor: red;\n border: green solid 1px;\n background-color: blue;\n}\n"
 //         "QWidget::branch {\ncolor: blue;\n background-color: red;\n}";
+
+  // Errors
+  text =  "color: red border: green solid 1px;"; // missing first end property char.
+  text =  "color red; border: green solid 1px;"; // missing first end property marker.
+
 
 
   m_editor = new StylesheetEdit(this);

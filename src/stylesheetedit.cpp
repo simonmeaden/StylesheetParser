@@ -273,44 +273,44 @@ void StylesheetEdit::resizeEvent(QResizeEvent* event)
 
 bool StylesheetEdit::event(QEvent* event)
 {
-  if (event->type() == QEvent::ToolTip) {
-    QHelpEvent* helpEvent = static_cast<QHelpEvent*>(event);
-    QTextCursor cursor = cursorForPosition(helpEvent->pos());
-    Data* data = getNodeAtCursor(cursor);
+  //  if (event->type() == QEvent::ToolTip) {
+  //    QHelpEvent* helpEvent = static_cast<QHelpEvent*>(event);
+  //    QTextCursor cursor = cursorForPosition(helpEvent->pos());
+  //    Data* data = getNodeAtCursor(cursor);
 
-    if (data->node) {
-      if (data->node->type() == Node::BadNodeType) {
-        BadBlockNode* badnode = qobject_cast<BadBlockNode*>(data->node);
+  //    if (data->node) {
+  //      if (data->node->type() == Node::BadNodeType) {
+  //        BadBlockNode* badnode = qobject_cast<BadBlockNode*>(data->node);
 
-        if (badnode) {
-          ParserState::Errors errors = badnode->errors();
+  //        if (badnode) {
+  //          ParserState::Errors errors = badnode->errors();
 
-          if (errors.testFlag(ParserState::InvalidPropertyMarker)) {
-            QToolTip::showText(helpEvent->globalPos(), tr("Too many property markers!"));
+  //          if (errors.testFlag(ParserState::InvalidPropertyMarker)) {
+  //            QToolTip::showText(helpEvent->globalPos(), tr("Too many property markers!"));
 
-          } else if (errors.testFlag(ParserState::InvalidPropertyValue)) {
-            QToolTip::showText(helpEvent->globalPos(), tr("Property value is not valid for this property!"));
+  //          } else if (errors.testFlag(ParserState::InvalidPropertyValue)) {
+  //            QToolTip::showText(helpEvent->globalPos(), tr("Property value is not valid for this property!"));
 
-          } else if (errors.testFlag(ParserState::ValueIsAProperty)) {
-            QToolTip::showText(helpEvent->globalPos(), tr("Value is a property!"));
+  //          } else if (errors.testFlag(ParserState::ValueIsAProperty)) {
+  //            QToolTip::showText(helpEvent->globalPos(), tr("Value is a property!"));
 
-          } else if (errors.testFlag(ParserState::PreviousBadNode)) {
-            QToolTip::showText(helpEvent->globalPos(), tr("An earlier value is bad!"));
+  //          } else if (errors.testFlag(ParserState::PreviousBadNode)) {
+  //            QToolTip::showText(helpEvent->globalPos(), tr("An earlier value is bad!"));
 
-          } else {
-            QToolTip::hideText();
-            event->ignore();
-          }
-        }
-      }
+  //          } else {
+  //            QToolTip::hideText();
+  //            event->ignore();
+  //          }
+  //        }
+  //      }
 
-    } else {
-      QToolTip::hideText();
-      event->ignore();
-    }
+  //    } else {
+  //      QToolTip::hideText();
+  //      event->ignore();
+  //    }
 
-    return true;
-  }
+  //    return true;
+  //  }
 
   return QPlainTextEdit::event(event);
 }
@@ -562,11 +562,10 @@ int StylesheetEditor::StylesheetEdit::parseProperty(const QString& text, int sta
 {
   PropertyNode* property = new PropertyNode(block, getCursorForNode(start), this);
   QString propertyName = block;
-  int propertyMarkerCount = 0;
-  BadBlockNode* badnode = nullptr;
 
   if (m_lastnode) {
     setNodeLinks(property);
+    m_lastnode = property;
 
   } else {
     m_nodes->append(property);
@@ -574,23 +573,18 @@ int StylesheetEditor::StylesheetEdit::parseProperty(const QString& text, int sta
 
   while (!(block = findNext(text, pos)).isEmpty()) {
     if (block == ":") {
-      propertyMarkerCount++;
-
-      if (propertyMarkerCount == 1) {
+      if (!property->propertyMarkerExists()) {
         Node* marker = new PropertyMarkerNode(getCursorForNode((pos - block.length()) - start), this);
         setNodeLinks(marker);
+        property->setPropertyMarkerExists(true);
 
-      } else {
-        badnode = new BadBlockNode(block,
-                                   getCursorForNode((pos - block.length()) - start),
-                                   ParserState::InvalidPropertyMarker,
-                                   this);
-        setNodeLinks(badnode);
       }
 
     } else if (block == ";") {
       *endnode = new PropertyEndMarkerNode(getCursorForNode(property->end()), this);
       setNodeLinks(*endnode);
+      //      property->next = *endnode;
+      //      (*endnode)->previous = property;
       break;
 
     } else if (block == "}") {
@@ -599,37 +593,24 @@ int StylesheetEditor::StylesheetEdit::parseProperty(const QString& text, int sta
       break;
 
     } else {
-      if (badnode) {
-        badnode = new BadBlockNode(block,
-                                   getCursorForNode((pos - block.length()) - start),
-                                   ParserState::PreviousBadNode,
-                                   this);
-        setNodeLinks(badnode);
+      bool valid = m_datastore->isValidPropertyValue(propertyName, block);
+
+      if (valid) {
+        property->addValue(block, PropertyNode::GoodValue, (pos - block.length()) - start);
 
       } else {
+        if (m_datastore->containsProperty(block)) {
+          // the block is actually another property. Probably a missing ';'.
+          // set the last check value to missing property end.
+          property->setBadCheck(PropertyNode::MissingPropertyEnd);
+          setNodeLinks(property);
 
-        bool valid = m_datastore->isValidPropertyValue(propertyName, block);
-
-        if (valid) {
-          property->addValue(block, true, (pos - block.length()) - start);
-
-        } else {
-          if (m_datastore->containsProperty(block)) {
-            badnode = new BadBlockNode(block,
-                                       getCursorForNode((pos - block.length()) - start),
-                                       ParserState::ValueIsAProperty,
-                                       this);
-
-          } else {
-            badnode = new BadBlockNode(block,
-                                       getCursorForNode((pos - block.length()) - start),
-                                       ParserState::InvalidPropertyValue,
-                                       this);
-          }
-
-          setNodeLinks(badnode);
+          parseProperty(text, pos - block.length(), pos, block, endnode);
+          return property->end();
         }
       }
+
+      //      }
     }
   }
 
@@ -682,6 +663,7 @@ void StylesheetEdit::parseInitialText(const QString& text, int pos)
 
           if (!(block = findNext(text, pos)).isEmpty()) {
             start = pos - block.length();
+
             if (m_datastore->containsPseudoState(block)) {
               Node* pseudostate = new PseudoStateNode(block, getCursorForNode(start), this);
               setNodeLinks(pseudostate);
@@ -711,6 +693,7 @@ void StylesheetEdit::parseInitialText(const QString& text, int pos)
         } else if (m_datastore->containsProperty(block)) {
           Node* endnode = nullptr;
           int end = parseProperty(text, start, pos, block, &endnode);
+          m_lastnode = nullptr;
 
           // run out of text.
           if (!endnode) {
@@ -730,6 +713,7 @@ void StylesheetEdit::parseInitialText(const QString& text, int pos)
     } else if (m_datastore->containsProperty(block)) {
       Node* endnode = nullptr;
       int end = parseProperty(text, start, pos, block, &endnode);
+      m_lastnode = nullptr;
 
       // run out of text.
       if (!endnode) {
@@ -1151,6 +1135,8 @@ void StylesheetEdit::nodeAtCursorPosition(Data** data, int position)
         (*data)->node = node;
         break;
       }
+
+      // TODO add property value hovers.
     }
   }
 }

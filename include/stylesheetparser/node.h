@@ -223,24 +223,51 @@ class PropertyNode : public BaseNode
 {
   Q_OBJECT
 public:
+  enum Check
+  {
+    GoodValue,
+    BadValue,
+//    MissingPropertyMarker,
+    MissingPropertyEnd,
+  };
   explicit PropertyNode(const QString& name, QTextCursor start, QObject* parent, Type type = PropertyType);
 
+  //! Returns the values as a list.
   QStringList values() const;
-  QList<bool> checks() const;
+  //! Returns the checks as a list.
+  QList<Check> checks() const;
+  //! Returns the offsets as a list.
   QList<int> offsets() const;
+  //! Sets the values to the supplied string values.
   void setValues(const QStringList& values);
-  void setChecks(const QList<bool>& checks);
+  //! Sets the checks to the supplied bool values.
+  void setChecks(const QList<Check>& checks);
+  //! Sets the offsets to the supplied int offsets.
   void setOffsets(const QList<int>& offsets);
-  void addValue(const QString& value, bool check, int offset);
+  //! Adds a complete value/check/offset to the values.
+  void addValue(const QString& value, Check check, int offset);
+  //! Sets the check at index as bad.
+  //!
+  //! If index is not set then the default is to set the last value as bad.
+  //!
+  //! This will mean that the property at index will show up as a bad node, even
+  //! if it is actually a correct value.
+  bool setBadCheck(Check check, int index = -1);
 
+  //! Returns the number of values in the property.
   int count();
-  bool isValid(int index);
+  // indicates wheter the value at index is a valid value.
+  Check isValid(int index);
   int end();
+
+  bool propertyMarkerExists() const;
+  void setPropertyMarkerExists(bool propertyMarker);
 
 private:
   QStringList m_values;
-  QList<bool> m_checks;
+  QList<Check> m_checks;
   QList<int> m_offsets;
+  bool m_propertyMarkerExists;
 };
 
 class SubControlNode : public NameNode

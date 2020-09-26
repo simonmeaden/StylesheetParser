@@ -76,9 +76,11 @@ public:
   void removeWidget(const QString& widget);
   bool containsWidget(const QString& name);
   bool containsProperty(const QString& name);
+  bool containsStylesheetProperty(const QString& name);
   bool containsPseudoState(const QString& name);
   bool containsSubControl(const QString& name);
 
+  bool isValidStylesheetValue(const QString& propertyname, const QString& valuename);
   bool isValidPropertyValue(const QString& propertyname, const QString& value);
   QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
 
@@ -99,9 +101,11 @@ private:
   QStringList m_properties;
   QStringList m_pseudoStates;
   QStringList m_possibleWidgets;
+  QStringList m_StylesheetProperties;
   QMap<QString, QStringList> m_subControls;
   QMap<QString, AttributeType> m_attributes;
-  QMap<QString, QStringList> m_attributeValues;
+//  QMap<QString, QStringList> m_attributeValues;
+  QMap<QString, AttributeType> m_stylesheetAttributes;
 
   bool checkAlignment(const QString& value);
   bool checkAttachment(const QString& value);
@@ -142,6 +146,8 @@ private:
   QStringList initialisePropertyList();
   QStringList initialisePseudoStateList();
   QMap<QString, AttributeType> initialiseAttributeMap();
+  QStringList initialiseStylesheetProperties();
+  QMap<QString, AttributeType> initialiseStylesheetMap();
 
   QStringList addControls(int count, ...);
 

@@ -56,6 +56,7 @@ private:
   QFont::Weight m_weight;
 };
 
+
 class StylesheetEdit : public QPlainTextEdit
 {
 
@@ -69,6 +70,12 @@ class StylesheetEdit : public QPlainTextEdit
     //    int valueIndex = -1;
     //    int nextValueIndex = -1;
   };
+  struct StylesheetData {
+    QString color;
+    QString background;
+    QString fontWeight;
+  };
+
 
 public:
   explicit StylesheetEdit(QWidget* parent = nullptr);
@@ -83,6 +90,7 @@ public:
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
+  QPair<QString, QString> getProperty(const QString& sheet, int& pos);
 
   //! Sets a new color/fontweight pair for the highlighter base format
   void setNormalFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
@@ -100,7 +108,7 @@ public:
   void setSubControlMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
   void setPropertyFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
   void setPropertyMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  void setLineNumberFormat(QColor foreground, QColor back, QColor background, QFont::Weight weight = QFont::Light);
+  void setLineNumberFormat(QColor foreground, QColor back, QFont::Weight weight = QFont::Light);
   void setBadValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Light, bool underline = true,
                          QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
                          QColor underlineColor = QColor("red"));
@@ -127,6 +135,7 @@ private:
   bool m_bracesMatched;
   PropertyNode* m_propertynode = nullptr;
   QString m_stylesheet;
+  StylesheetData m_stylesheetData;
   bool m_startComment;
 
 

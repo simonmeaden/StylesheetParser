@@ -115,10 +115,59 @@ void StylesheetEdit::setStyleSheet(const QString& stylesheet)
       if (match.hasMatch()) {
         m = match.captured(0);
         // remove curly braces.
-        sheet = m.mid(1, m.length() - 2);
+        sheet = m.mid(1, m.length() - 2).toLower();
+
+        int pos = 0;
+        QPair<QString, QString> data;
+
+        while (pos < sheet.length()) {
+          data = getProperty(sheet, pos);
+
+          if (data.first.isEmpty() || data.second.isEmpty()) {
+            return;
+          }
+
+          if (data.first == "color") {
+            m_stylesheetData.color = data.second;
+            continue;
+
+          } else if (data.first == "background") {
+            m_stylesheetData.background = data.second;
+
+          } else if (data.first == "font-weight") {
+            m_stylesheetData.fontWeight = data.second;
+          }
+        }
+
       }
     }
   }
+}
+
+QPair<QString, QString> StylesheetEdit::getProperty(const QString& sheet, int& pos)
+{
+  QString property, sep, value;
+  QPair<QString, QString> data;
+
+  property = findNext(sheet, pos);
+
+  if (m_datastore->containsStylesheetProperty(property)) {
+    data.first = property;
+
+    if (pos < sheet.length()) {
+      sep = findNext(sheet, pos);
+
+      if (sep == ":") {
+        value = findNext(sheet, pos);
+
+        if (m_datastore->isValidStylesheetValue(property, value)) {
+          data.second = value;
+        }
+      }
+    }
+  }
+
+  return data;
 }
 
 // void StylesheetEdit::showLineNumbers(bool show)
@@ -184,13 +233,12 @@ void StylesheetEdit::setPropertyMarkerFormat(QColor color,
   m_highlighter->setPropertyMarkerFormat(color, back, weight);
 }
 
-void StylesheetEdit::setLineNumberFormat(QColor foreground,
+void StylesheetEdit::setLineNumberFormat(QColor color,
     QColor back,
-    QColor background,
     QFont::Weight weight)
 {
-  m_lineNumberArea->setFore(foreground);
-  m_lineNumberArea->setBack(background);
+  m_lineNumberArea->setFore(color);
+  m_lineNumberArea->setBack(back);
   m_lineNumberArea->setWeight(weight);
 }
 

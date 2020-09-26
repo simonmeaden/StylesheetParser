@@ -52,6 +52,7 @@ DataStore::DataStore(QObject* parent) :
   , m_widgets(initialiseWidgetList())
   , m_properties(initialisePropertyList())
   , m_pseudoStates(initialisePseudoStateList())
+  , m_StylesheetProperties(initialiseStylesheetProperties())
   , m_subControls(initialiseSubControlMap())
   , m_attributes(initialiseAttributeMap())
   //  , m_attributeValues(initialiseValueMap())
@@ -83,6 +84,11 @@ bool DataStore::containsWidget(const QString& name)
 bool DataStore::containsProperty(const QString& name)
 {
   return m_properties.contains(name.toLower());
+}
+
+bool DataStore::containsStylesheetProperty(const QString& name)
+{
+  return m_StylesheetProperties.contains(name.toLower());
 }
 
 bool DataStore::containsPseudoState(const QString& name)
@@ -648,6 +654,25 @@ bool DataStore::checkTextDecoration(const QString& value)
   return false;
 }
 
+bool DataStore::isValidStylesheetValue(const QString& propertyname, const QString& valuename)
+{
+  if (valuename.isEmpty()) {
+    return false;
+  }
+
+  AttributeType stylesheetAttribute = m_stylesheetAttributes.value(propertyname);
+
+  switch (stylesheetAttribute) {
+  case Brush:
+    return checkBrush(valuename);
+
+  case FontWeight:
+    return checkFontWeight(valuename);
+
+  }
+}
+
+
 bool DataStore::isValidPropertyValue(const QString& propertyname, const QString& valuename)
 {
   if (valuename.isEmpty()) {
@@ -1009,6 +1034,24 @@ QStringList DataStore::initialisePropertyList()
        // I might as well add stylesheet stuff for this widget.
        << "color";
   return list;
+}
+
+QStringList DataStore::initialiseStylesheetProperties()
+{
+  QStringList list;
+  list << "color" << "background" << "font-weight";
+  // TODO more values
+  return list;
+}
+
+QMap<QString, DataStore::AttributeType> DataStore::initialiseStylesheetMap()
+{
+  QMap<QString, AttributeType> map;
+  map.insert("color", Brush);
+  map.insert("background", Brush);
+  map.insert("font-weight", FontWeight);
+  // TODO more values
+  return map;
 }
 
 QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()

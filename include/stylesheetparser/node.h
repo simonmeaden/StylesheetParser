@@ -57,6 +57,9 @@ public:
     PropertyMarkerType,
     PropertyEndType,
     BadNodeType,
+    CommentType,
+    CommentStartMarkerType,
+    CommentEndMarkerType,
   };
   Node* previous;
   Node* next;
@@ -148,7 +151,7 @@ public:
 protected:
   QString m_value;
 };
-using NodeList = QList<Node*>;
+//using NodeList = QList<Node*>;
 
 class NameNode : public Node
 {
@@ -183,34 +186,6 @@ private:
   QString m_name;
   ParserState::Errors m_errors;
 };
-
-//class ValueNode : public Node
-//{
-//  Q_OBJECT
-//public:
-//  explicit ValueNode(const QStringList& values,
-//                     QList<bool> checks,
-//                     QList<int> offsets,
-//                     QTextCursor start,
-//                     QObject* parent,
-//                     Type type = ValueType);
-
-//  QStringList values() const;
-//  QList<bool> checks() const;
-//  QList<int> offsets() const;
-//  void setValues(const QStringList& values);
-//  void setChecks(const QList<bool>& checks);
-//  void setOffsets(const QList<int>& offsets);
-
-//  int count();
-//  bool isValid(int index);
-
-
-//private:
-//  QStringList m_values;
-//  QList<bool> m_checks;
-//  QList<int> m_offsets;
-//};
 
 class WidgetNode : public BaseNode
 {
@@ -258,7 +233,7 @@ public:
   int count();
   // indicates wheter the value at index is a valid value.
   Check isValid(int index);
-  int end();
+  int end() const override;
 
   bool propertyMarkerExists() const;
   void setPropertyMarkerExists(bool propertyMarker);
@@ -282,6 +257,20 @@ class PseudoStateNode : public NameNode
   Q_OBJECT
 public:
   explicit PseudoStateNode(const QString& name, QTextCursor start, QObject* parent, Type type = PseudoStateType);
+};
+
+class CommentNode : public BaseNode {
+  Q_OBJECT
+public:
+  explicit CommentNode(QTextCursor start, QObject* parent, Type type = CommentType);
+
+  void append(QChar c);
+  void append(QString text);
+  int end() const override;
+  int length() const override;
+
+private:
+  QString m_value;
 };
 
 class CharNode : public Node
@@ -359,6 +348,12 @@ class StartBraceNode : public CharNode
   Q_OBJECT
 public:
   explicit StartBraceNode(QTextCursor start, QObject* parent, Type type = StartBraceType);
+
+  bool isBraceAtCursor() const;
+  void setBraceAtCursor(bool isFlagBrace);
+
+private:
+  bool m_isBraceAtCursor;
 };
 
 class EndBraceNode : public CharNode
@@ -366,6 +361,32 @@ class EndBraceNode : public CharNode
   Q_OBJECT
 public:
   explicit EndBraceNode(QTextCursor start, QObject* parent, Type type = EndBraceType);
+
+  bool isBraceAtCursor() const;
+  void setBraceAtCursor(bool isFlagBrace);
+
+private:
+  bool m_isBraceAtCursor;
+};
+
+class StartCommentNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit StartCommentNode(QTextCursor start, QObject* parent, Type type = CommentStartMarkerType);
+
+  int end() const override;
+  int length() const override;
+};
+
+class EndCommentNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit EndCommentNode(QTextCursor start, QObject* parent, Type type = CommentEndMarkerType);
+
+  int end() const override;
+  int length() const override;
 };
 
 

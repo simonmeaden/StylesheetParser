@@ -36,41 +36,32 @@ public:
 
   void highlightBlock(const QString& text);
 
-  void setNormalFormat(QColor color, QFont::Weight weight);
-  void setNormalFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setWidgetFormat(QColor color, QFont::Weight weight);
-  void setWidgetFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setPseudoStateFormat(QColor color, QFont::Weight weight);
-  void setPseudoStateFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setPseudoStateMarkerFormat(QColor color, QFont::Weight weight);
-  void setPseudoStateMarkerFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setSubControlFormat(QColor color, QFont::Weight weight);
-  void setSubControlFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setSubControlMarkerFormat(QColor color, QFont::Weight weight);
-  void setSubControlMarkerFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setValueFormat(QColor color, QFont::Weight weight);
-  void setValueFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setBadValueFormat(QColor color, QFont::Weight weight, bool underline,
+  void setNormalFormat(QColor color, QColor back, QFont::Weight weight);
+  void setWidgetFormat(QColor color, QColor back, QFont::Weight weight);
+  void setPseudoStateFormat(QColor color, QColor back, QFont::Weight weight);
+  void setPseudoStateMarkerFormat(QColor color, QColor back, QFont::Weight weight);
+  void setSubControlFormat(QColor color, QColor back, QFont::Weight weight);
+  void setSubControlMarkerFormat(QColor color, QColor back, QFont::Weight weight);
+  void setValueFormat(QColor color, QColor back, QFont::Weight weight);
+  void setBadValueFormat(QColor color, QColor back, QFont::Weight weight, bool underline,
                          QTextCharFormat::UnderlineStyle underlineStyle,
                          QColor underlineColor);
-  void setBadValueFormat(Qt::GlobalColor color, QFont::Weight weight, bool underline,
-                         QTextCharFormat::UnderlineStyle underlineStyle,
-                         QColor underlineColor);
-  void setPropertyFormat(QColor color, QFont::Weight weight);
-  void setPropertyFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setPropertyMarkerFormat(QColor color, QFont::Weight weight);
-  void setPropertyMarkerFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setStartBraceFormat(QColor color, QFont::Weight weight);
-  void setStartBraceFormat(Qt::GlobalColor color, QFont::Weight weight);
-  void setEndBraceFormat(QColor color, QFont::Weight weight);
-  void setEndBraceFormat(Qt::GlobalColor color, QFont::Weight weight);
+  void setPropertyFormat(QColor color, QColor back, QFont::Weight weight);
+  void setPropertyMarkerFormat(QColor color, QColor back, QFont::Weight weight);
+  void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
+  void setCommentFormat(QColor color, QColor back, QFont::Weight weight);
 
 private:
   StylesheetEdit* m_editor;
   //  NodeList* m_nodes;
   QTextCharFormat m_baseFormat, m_widgetFormat, m_nameFormat, m_valueFormat, m_badValueFormat,
                   m_pseudoStateFormat, m_pseudoStateMarkerFormat, m_subControlFormat,
-                  m_subControlMarkerFormat, m_propertyFormat, m_propertyMarkerFormat, m_startBraceFormat, m_endBraceFormat;
+                  m_subControlMarkerFormat, m_propertyFormat, m_propertyMarkerFormat,
+    m_startBraceFormat, m_endBraceFormat,
+    m_braceMatchFormat, m_commentFormat;
+
   int setNodeEnd(int nodeEnd, int blockEnd);
   int setNodeStart(int nodeStart, int blockStart);
 };

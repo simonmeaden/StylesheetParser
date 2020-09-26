@@ -951,7 +951,9 @@ QStringList DataStore::initialiseWidgetList()
        << "QSlider" << "QSpinBox" << "QSplitter" << "QStatusBar"
        << "QTabBar" << "QTabWidget" << "QTableView" << "QTableWidget" << "QTextEdit"
        << "QTimeEdit" << "QToolBar" << "QToolButton" << "QToolBox"
-       << "QToolTip" << "QTreeView" << "QTreeWidget" << "QWidget";
+       << "QToolTip" << "QTreeView" << "QTreeWidget" << "QWidget"
+       // I might as well add stylesheet stuff for this widget.
+       << "StylesheetEdit";
   return list;
 }
 
@@ -1003,7 +1005,9 @@ QStringList DataStore::initialisePropertyList()
        << "show-decoration-selected" << "spacing" << "subcontrol-origin"
        << "subcontrol-position" << "titlebar-show-tooltips-on-buttons"
        << "widget-animation-duration" << "text-align" << "text-decoration"
-       << "top" << "width" << "-qt-background-role" << "-qt-style-features";
+       << "top" << "width" << "-qt-background-role" << "-qt-style-features"
+       // I might as well add stylesheet stuff for this widget.
+       << "color";
   return list;
 }
 
@@ -1103,6 +1107,8 @@ QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
   map.insert("width", Length);
   map.insert("-qt-background-role", PaletteRole);
   map.insert("-qt-style-features", List);
+  // Below this is the attributes available for this stylesheet editor.
+
 
   return map;
 }

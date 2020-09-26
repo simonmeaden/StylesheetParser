@@ -294,9 +294,9 @@ PropertyNode::Check PropertyNode::isValid(int index)
   return Check::BadValue;
 }
 
-int PropertyNode::end()
+int PropertyNode::end() const
 {
-  return start() + m_offsets.back() + m_values.back().length();
+  return start() + m_offsets.back() + m_values.last().length();
 }
 
 bool PropertyNode::propertyMarkerExists() const
@@ -322,6 +322,30 @@ PseudoStateNode::PseudoStateNode(const QString& name,
                                  Type type)
   : NameNode(name, start, parent, type)
 {}
+
+CommentNode::CommentNode(QTextCursor start, QObject* parent, Node::Type type)
+  : BaseNode(QString(), start, parent, type)
+{}
+
+void CommentNode::append(QChar c)
+{
+  m_value.append(c);
+}
+
+void CommentNode::append(QString text)
+{
+  m_value.append(text);
+}
+
+int CommentNode::end() const
+{
+  return m_start.anchor() + m_value.length();
+}
+
+int CommentNode::length() const
+{
+  return m_value.length();
+}
 
 CharNode::CharNode(QTextCursor start, QObject* parent, Type type)
   : Node(start, parent, type)
@@ -367,11 +391,61 @@ NewlineNode::NewlineNode(QTextCursor start, QObject* parent, Type type)
 
 StartBraceNode::StartBraceNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
+  , m_isBraceAtCursor(false)
 {}
+
+bool StartBraceNode::isBraceAtCursor() const
+{
+  return m_isBraceAtCursor;
+}
+
+void StartBraceNode::setBraceAtCursor(bool isFlagBrace)
+{
+  m_isBraceAtCursor = isFlagBrace;
+}
 
 EndBraceNode::EndBraceNode(QTextCursor start, QObject* parent, Type type)
   : CharNode(start, parent, type)
+  , m_isBraceAtCursor(false)
 {}
+
+bool EndBraceNode::isBraceAtCursor() const
+{
+  return m_isBraceAtCursor;
+}
+
+void EndBraceNode::setBraceAtCursor(bool isFlagBrace)
+{
+  m_isBraceAtCursor = isFlagBrace;
+}
+
+StartCommentNode::StartCommentNode(QTextCursor start, QObject *parent, Node::Type type)
+  : CharNode(start, parent, type)
+{}
+
+int StartCommentNode::end() const
+{
+  return m_start.anchor() + 2;
+}
+
+int StartCommentNode::length() const
+{
+  return 2;
+}
+
+EndCommentNode::EndCommentNode(QTextCursor start, QObject* parent, Node::Type type)
+  : CharNode(start, parent, type)
+{}
+
+int EndCommentNode::end() const
+{
+  return m_start.anchor() + 2;
+}
+
+int EndCommentNode::length() const
+{
+  return 2;
+}
 
 PseudoStateMarkerNode::PseudoStateMarkerNode(QTextCursor start,
     QObject* parent,
@@ -396,5 +470,8 @@ PropertyEndNode::PropertyEndNode(QTextCursor start,
                                  Node::Type type)
   : Node(start, parent, type)
 {}
+
+
+
 
 } // end of StylesheetParser

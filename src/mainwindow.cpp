@@ -48,18 +48,26 @@ QWidget* MainWindow::initGui()
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;}";
 //  text = "QTabWidget::branch {\ncolor: red;\n}\n"
 //         "QWidget:active {\nborder: blue;}";
-//  text = "QTabWidget:active {\ncolor: red;\n border: green solid 1px;\n background-color: blue;\n}\n"
-//         "QWidget::branch {\ncolor: blue;\n background-color: red;\n}";
+  text = "QTabWidget:active {\ncolor: red;\n"
+         "/* An inline comment */\n}\n"
+         "/* This is another\n comment */"
+         "QWidget::branch {\ncolor: blue;\n background-color: red;\n}";
 
   // Errors
-  text =  "color: red border: green solid 1px;"; // missing first end property char.
-  text =  "color red; border: green solid 1px;"; // missing first end property marker.
+//  text =  "color: red border: green solid 1px;"; // missing first end property char.
+//  text =  "color red; border: green solid 1px;"; // missing first end property marker.
 
-
+  QString stylesheet =
+    "StylesheetEdit {"
+    "color: blue;"
+    "background: yellow;"
+    "font-weight: light;"
+    "}";
 
   m_editor = new StylesheetEdit(this);
   m_editor->setPlainText(text);
   m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  m_editor->setStyleSheet(stylesheet);
   layout->addWidget(m_editor, 0, 0);
 
   return f;

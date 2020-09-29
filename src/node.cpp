@@ -19,7 +19,7 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE.
 */
-#include "stylesheetparser/node.h"
+#include "node.h"
 
 namespace StylesheetEditor {
 

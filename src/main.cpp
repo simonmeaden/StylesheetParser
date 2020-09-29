@@ -22,7 +22,7 @@
 #include <Qt>
 
 #include "stylesheetparser/mainwindow.h"
-#include "stylesheetparser/parserstate.h"
+#include "parserstate.h"
 
 int main(int argc, char* argv[])
 {

@@ -1,23 +1,27 @@
 /*
   Copyright 2020 Simon Meaden
 
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this
-  software and associated documentation files (the "Software"), to deal in the Software
-  without restriction, including without limitation the rights to use, copy, modify, merge,
-  publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-                                                                         persons to whom the Software is furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in all copies or
-  substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 */
-#include "stylesheetparser/datastore.h"
+#include "datastore.h"
+#include "stylesheetparser/stylesheetedit.h"
+#include "stylesheetedit_p.h"
 
 namespace StylesheetEditor {
 
@@ -46,16 +50,16 @@ const QString DataStore::RE_COLOUR_NAMES =
   "steelblue|tan|thistle|tomato|transparent|turquoise|violet|wheat|white|"
   "yellowgreen|rebeccapurple";
 
-
-DataStore::DataStore(QObject* parent) :
-  QObject(parent)
+DataStore::DataStore(QObject* parent)
+  : QObject(parent)
   , m_widgets(initialiseWidgetList())
   , m_properties(initialisePropertyList())
   , m_pseudoStates(initialisePseudoStateList())
   , m_StylesheetProperties(initialiseStylesheetProperties())
   , m_subControls(initialiseSubControlMap())
   , m_attributes(initialiseAttributeMap())
-  //  , m_attributeValues(initialiseValueMap())
+  , m_stylesheetAttributes(initialiseStylesheetMap())
+    //  , m_attributeValues(initialiseValueMap())
 {}
 
 QStringList DataStore::widgets() const
@@ -329,7 +333,6 @@ bool DataStore::checkColor(const QString& value)
     if (count == 3) {
       return true;
     }
-
   }
 
   if (value.startsWith("hsla") || value.startsWith("hsva")) {
@@ -457,10 +460,10 @@ bool DataStore::checkFontSize(const QString& value)
 
 bool DataStore::checkFontWeight(const QString& value)
 {
-  if (value == "normal" | value == "bold" || value == "100" ||
-      value == "200" || value == "300" || value == "400" ||
-      value == "500" || value == "600" || value == "700" ||
-      value == "800" || value == "900") {
+  if (value == "normal" || value == "bold" || value == "bolder" ||
+      value == "lighter" || value == "100" || value == "200" ||
+      value == "300" || value == "400" || value == "500" || value == "600" ||
+      value == "700" || value == "800" || value == "900") {
     return true;
   }
 
@@ -495,8 +498,8 @@ bool DataStore::checkLength(const QString& value)
 {
   bool ok = false;
 
-  if (value.endsWith("px") || value.endsWith("pt") ||
-      value.endsWith("em") || value.endsWith("ex")) {
+  if (value.endsWith("px") || value.endsWith("pt") || value.endsWith("em") ||
+      value.endsWith("ex")) {
     value.left(value.length() - 2).toUInt(&ok);
 
   } else if (value.at(value.length() - 1).isDigit()) {
@@ -595,13 +598,13 @@ bool DataStore::checkPaletteRole(const QString& value)
   if (value == "alternate-base" | value == "base" || value == "bright-text" ||
       value == "button" || value == "button-text" || value == "dark" ||
       value == "highlight" || value == "highlighted-text" || value == "light" ||
-      value == "link" || value == "link-visited" || value == "mid" || value == "midlight" ||
-      value == "shadow" || value == "text" || value == "window" || value == "window-text") {
+      value == "link" || value == "link-visited" || value == "mid" ||
+      value == "midlight" || value == "shadow" || value == "text" ||
+      value == "window" || value == "window-text") {
     return true;
   }
 
   return false;
-
 }
 
 bool DataStore::checkRadius(const QString& value)
@@ -637,7 +640,7 @@ bool DataStore::checkUrl(const QString& value)
 
 bool DataStore::checkPosition(const QString& value)
 {
-  if (value ==  "relative" || value == "absolute") {
+  if (value == "relative" || value == "absolute") {
     return true;
   }
 
@@ -646,7 +649,7 @@ bool DataStore::checkPosition(const QString& value)
 
 bool DataStore::checkTextDecoration(const QString& value)
 {
-  if (value ==  "none" || value == "underline" || value == "overline" ||
+  if (value == "none" || value == "underline" || value == "overline" ||
       value == "line-through") {
     return true;
   }
@@ -654,33 +657,113 @@ bool DataStore::checkTextDecoration(const QString& value)
   return false;
 }
 
-bool DataStore::isValidStylesheetValue(const QString& propertyname, const QString& valuename)
+bool DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
 {
-  if (valuename.isEmpty()) {
-    return false;
+  if (checkColor(value)) {
+    data->colors.append(value);
+    return true;
   }
 
-  AttributeType stylesheetAttribute = m_stylesheetAttributes.value(propertyname);
-
-  switch (stylesheetAttribute) {
-  case Brush:
-    return checkBrush(valuename);
-
-  case FontWeight:
-    return checkFontWeight(valuename);
-
+  if (checkStylesheetFontWeight(value,data)) {
+    return true;
   }
+
+  return false;
 }
 
-
-bool DataStore::isValidPropertyValue(const QString& propertyname, const QString& valuename)
+bool DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* data)
 {
-  if (valuename.isEmpty()) {
-    return false;
+  if (checkColor(value)) {
+    data->colors.append(QColor(value));
+    return true;
   }
 
-  AttributeType propertyAttribute = m_attributes.value(propertyname);
+  if (checkStylesheetFontWeight(value, data)) {
+    return true;
+  }
 
+  if (value == "none") {
+    data->underline.append(QTextCharFormat::NoUnderline);
+    return true;
+
+  } else if (value == "single") {
+    data->underline.append(QTextCharFormat::SingleUnderline);
+    return true;
+
+  } else if (value == "dash") {
+    data->underline.append(QTextCharFormat::DashUnderline);
+    return true;
+
+  } else if (value == "dot") {
+    data->underline.append(QTextCharFormat::DotLine);
+    return true;
+
+  } else if (value == "dashdot") {
+    data->underline.append(QTextCharFormat::DashDotLine);
+    return true;
+
+  } else if (value == "dashdotdot") {
+    data->underline.append(QTextCharFormat::DashDotDotLine);
+    return true;
+
+  } else if (value == "wave") {
+    data->underline.append(QTextCharFormat::WaveUnderline);
+    return true;
+
+  } else if (value == "spellcheck") {
+    data->underline.append(QTextCharFormat::SpellCheckUnderline);
+    return true;
+  }
+
+  return false;
+}
+
+bool DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* data)
+{
+  if (value == "thin") {
+    data->weights.append(QFont::Thin);
+    return true;
+
+  } else if (value == "extralight") {
+    data->weights.append(QFont::ExtraLight);
+    return true;
+
+  } else if (value == "light") {
+    data->weights.append(QFont::Light);
+    return true;
+
+  } else if (value == "normal") {
+    data->weights.append(QFont::Normal);
+    return true;
+
+  } else if (value == "medium") {
+    data->weights.append(QFont::Medium);
+    return true;
+
+  } else if (value == "demibold") {
+    data->weights.append(QFont::DemiBold);
+    return true;
+
+  } else if (value == "bold") {
+    data->weights.append(QFont::Bold);
+    return true;
+
+  } else if (value == "extrabold") {
+    data->weights.append(QFont::ExtraBold);
+    return true;
+
+  } else if (value == "black") {
+    data->weights.append(QFont::Black);
+    return true;
+  }
+
+  return false;
+}
+
+bool DataStore::checkPropertyValue(DataStore::AttributeType propertyAttribute,
+                                   const QString& valuename,
+                                   StylesheetData* data)
+{
   switch (propertyAttribute) {
   case Alignment:
     return checkAlignment(valuename);
@@ -739,7 +822,7 @@ bool DataStore::isValidPropertyValue(const QString& propertyname, const QString&
   case Length:
     return checkLength(valuename);
 
-  case Number:// TODO not supported.
+  case Number: // TODO not supported.
     return checkNumber(valuename);
 
   case Origin:
@@ -780,9 +863,39 @@ bool DataStore::isValidPropertyValue(const QString& propertyname, const QString&
   case List:
     // This should never reach here.
     break;
+
+  case StylesheetEdit:
+    return checkStylesheetEdit(valuename, data);
+
+  case StylesheetEditBad:
+    return checkStylesheetEditBad(valuename, data);
   }
 
   return false;
+}
+
+bool DataStore::getIfValidStylesheetValue(const QString& propertyname,
+    const QString& valuename,
+    StylesheetData* data)
+{
+  if (valuename.isEmpty()) {
+    return false;
+  }
+
+  AttributeType stylesheetAttribute =
+    m_stylesheetAttributes.value(propertyname);
+  return checkPropertyValue(stylesheetAttribute, valuename, data);
+}
+
+bool DataStore::isValidPropertyValue(const QString& propertyname,
+                                     const QString& valuename)
+{
+  if (valuename.isEmpty()) {
+    return false;
+  }
+
+  AttributeType propertyAttribute = m_attributes.value(propertyname);
+  return checkPropertyValue(propertyAttribute, valuename);
 }
 
 QList<bool> DataStore::isValidPropertyValues(const QString& name, const QStringList& values)
@@ -830,7 +943,6 @@ QList<bool> DataStore::isValidPropertyValues(const QString& name, const QStringL
       default:
         break;
       }
-
     }
   }
 
@@ -844,7 +956,7 @@ QStringList DataStore::possibleSubControlWidgets(const QString& name) const
 
 void DataStore::addSubControl(const QString& control, const QString& widget)
 {
-  m_subControls.insert(control, addControls(1, &widget))     ;
+  m_subControls.insert(control, addControls(1, &widget));
 }
 
 void DataStore::addSubControl(const QString& control, QStringList& widgets)
@@ -871,17 +983,16 @@ void DataStore::removePseudoState(const QString& state)
   m_pseudoStates.removeAll(state);
 }
 
-
-//QMap<QString, AttributeTypes> DataStore::attributes() const
+// QMap<QString, AttributeTypes> DataStore::attributes() const
 //{
 //  return m_attributes;
 //}
 
-//void DataStore::setAttributes(const QMap<QString, AttributeTypes>& attributes)
+// void DataStore::setAttributes(const QMap<QString, AttributeTypes>&
+// attributes)
 //{
 //  m_attributes = attributes;
 //}
-
 
 QMap<QString, QStringList> DataStore::initialiseSubControlMap()
 {
@@ -964,19 +1075,49 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
 QStringList DataStore::initialiseWidgetList()
 {
   QStringList list;
-  list << "QAbstractScrollArea" << "QCheckBox" << "QColumnView" << "QComboBox"
+  list << "QAbstractScrollArea"
+       << "QCheckBox"
+       << "QColumnView"
+       << "QComboBox"
        << "QDateEdit"
-       << "QDateTimeEdit" << "QDialog" << "QDialogButtonBox" << "QDockWidget"
+       << "QDateTimeEdit"
+       << "QDialog"
+       << "QDialogButtonBox"
+       << "QDockWidget"
        << "QDoubleSpinBox"
-       << "QFrame" << "QGroupBox" << "QHeaderView" << "QLabel" << "QLineEdit"
+       << "QFrame"
+       << "QGroupBox"
+       << "QHeaderView"
+       << "QLabel"
+       << "QLineEdit"
        << "QListView"
-       << "QListWidget" << "QMainWindow" << "QMenu" << "QMenu" << "QMessageBox"
-       << "QProgressBar" << "QPushButton" << "QRadioButton" << "QScrollBar"
+       << "QListWidget"
+       << "QMainWindow"
+       << "QMenu"
+       << "QMenu"
+       << "QMessageBox"
+       << "QProgressBar"
+       << "QPushButton"
+       << "QRadioButton"
+       << "QScrollBar"
        << "QSizeGrip"
-       << "QSlider" << "QSpinBox" << "QSplitter" << "QStatusBar"
-       << "QTabBar" << "QTabWidget" << "QTableView" << "QTableWidget" << "QTextEdit"
-       << "QTimeEdit" << "QToolBar" << "QToolButton" << "QToolBox"
-       << "QToolTip" << "QTreeView" << "QTreeWidget" << "QWidget"
+       << "QSlider"
+       << "QSpinBox"
+       << "QSplitter"
+       << "QStatusBar"
+       << "QTabBar"
+       << "QTabWidget"
+       << "QTableView"
+       << "QTableWidget"
+       << "QTextEdit"
+       << "QTimeEdit"
+       << "QToolBar"
+       << "QToolButton"
+       << "QToolBox"
+       << "QToolTip"
+       << "QTreeView"
+       << "QTreeWidget"
+       << "QWidget"
        // I might as well add stylesheet stuff for this widget.
        << "StylesheetEdit";
   return list;
@@ -985,52 +1126,151 @@ QStringList DataStore::initialiseWidgetList()
 QStringList DataStore::initialisePseudoStateList()
 {
   QStringList list;
-  list << "active" << "adjoins-item" << "alternate" << "bottom" << "checked"
-       << "closable" << "closed" << "default" << "disabled" << "editable"
-       << "edit-focus" << "enabled" << "exclusive" << "first" << "flat" << "floatable"
-       << "focus" << "has-children" << "has-siblings" << "horizontal" << "hover"
-       << "indeterminate" << "last" << "left" << "maximized" << "middle"
-       << "minimized" << "movable" << "no-frame" << "non-exclusive"
-       << "off" << "on" << "only-one" << "open" << "next-selected"
-       << "pressed" << "previous-selected" << "read-only" << "right"
-       << "selected" << "top" << "unchecked" << "vertical" << "window";
+  list << "active"
+       << "adjoins-item"
+       << "alternate"
+       << "bottom"
+       << "checked"
+       << "closable"
+       << "closed"
+       << "default"
+       << "disabled"
+       << "editable"
+       << "edit-focus"
+       << "enabled"
+       << "exclusive"
+       << "first"
+       << "flat"
+       << "floatable"
+       << "focus"
+       << "has-children"
+       << "has-siblings"
+       << "horizontal"
+       << "hover"
+       << "indeterminate"
+       << "last"
+       << "left"
+       << "maximized"
+       << "middle"
+       << "minimized"
+       << "movable"
+       << "no-frame"
+       << "non-exclusive"
+       << "off"
+       << "on"
+       << "only-one"
+       << "open"
+       << "next-selected"
+       << "pressed"
+       << "previous-selected"
+       << "read-only"
+       << "right"
+       << "selected"
+       << "top"
+       << "unchecked"
+       << "vertical"
+       << "window";
   return list;
 }
 
 QStringList DataStore::initialisePropertyList()
 {
   QStringList list;
-  list << "alternate-background-color" << "background" << "background-color"
-       << "background-image" << "background-repeat" << "background-position"
-       << "background-attachment" << "background-clip" << "background-origin"
-       << "border"  << "border-top" << "border-right" << "border-bottom"
-       << "border-left" << "border-color" << "border-top-color"
-       << "border-right-color" << "border-bottom-color" << "border-left-color"
-       << "border-image" << "border-radius" << "border-top-left-radius"
-       << "border-top-right-radius" << "border-bottom-right-radius"
-       << "border-bottom-left-radius" << "border-style" << "border-top-style"
-       << "border-right-style" << "border-bottom-style" << "border-left-style"
-       << "border-width" << "border-top-width" << "border-right-width"
-       << "border-bottom-width" << "border-left-width" << "bottom"
-       << "button-layout" << "color" << "dialogbuttonbox-buttons-have-icons"
-       << "font" << "font-family" << "font-size" << "font-style" << "font-weight"
-       << "gridline-color" << "height" << "icon" << "icon-size" << "image"
-       << "image-position" << "left" << "lineedit-password-character"
-       << "lineedit-password-mask-delay" << "margin" << "margin-top"
-       << "margin-right" << "margin-bottom" << "margin-left"
-       << "max-height" << "max-width" << "messagebox-text-interaction-flags"
-       << "min-height" << "min-width" << "opacity"
-       << "outline" << "outline-color" << "outline-offset" << "outline-style"
-       << "outline-radius" << "outline-bottom-left-radius"
-       << "outline-bottom-right-radius" << "outline-top-left-radius"
-       << "outline-top-right-radius" << "padding" << "padding-top"
-       << "padding-right" << "padding-bottom" << "padding-left"
-       << "paint-alternating-row-colors-for-empty-area" << "position"
-       << "right" << "selection-background-color" << "selection-color"
-       << "show-decoration-selected" << "spacing" << "subcontrol-origin"
-       << "subcontrol-position" << "titlebar-show-tooltips-on-buttons"
-       << "widget-animation-duration" << "text-align" << "text-decoration"
-       << "top" << "width" << "-qt-background-role" << "-qt-style-features"
+  list << "alternate-background-color"
+       << "background"
+       << "background-color"
+       << "background-image"
+       << "background-repeat"
+       << "background-position"
+       << "background-attachment"
+       << "background-clip"
+       << "background-origin"
+       << "border"
+       << "border-top"
+       << "border-right"
+       << "border-bottom"
+       << "border-left"
+       << "border-color"
+       << "border-top-color"
+       << "border-right-color"
+       << "border-bottom-color"
+       << "border-left-color"
+       << "border-image"
+       << "border-radius"
+       << "border-top-left-radius"
+       << "border-top-right-radius"
+       << "border-bottom-right-radius"
+       << "border-bottom-left-radius"
+       << "border-style"
+       << "border-top-style"
+       << "border-right-style"
+       << "border-bottom-style"
+       << "border-left-style"
+       << "border-width"
+       << "border-top-width"
+       << "border-right-width"
+       << "border-bottom-width"
+       << "border-left-width"
+       << "bottom"
+       << "button-layout"
+       << "color"
+       << "dialogbuttonbox-buttons-have-icons"
+       << "font"
+       << "font-family"
+       << "font-size"
+       << "font-style"
+       << "font-weight"
+       << "gridline-color"
+       << "height"
+       << "icon"
+       << "icon-size"
+       << "image"
+       << "image-position"
+       << "left"
+       << "lineedit-password-character"
+       << "lineedit-password-mask-delay"
+       << "margin"
+       << "margin-top"
+       << "margin-right"
+       << "margin-bottom"
+       << "margin-left"
+       << "max-height"
+       << "max-width"
+       << "messagebox-text-interaction-flags"
+       << "min-height"
+       << "min-width"
+       << "opacity"
+       << "outline"
+       << "outline-color"
+       << "outline-offset"
+       << "outline-style"
+       << "outline-radius"
+       << "outline-bottom-left-radius"
+       << "outline-bottom-right-radius"
+       << "outline-top-left-radius"
+       << "outline-top-right-radius"
+       << "padding"
+       << "padding-top"
+       << "padding-right"
+       << "padding-bottom"
+       << "padding-left"
+       << "paint-alternating-row-colors-for-empty-area"
+       << "position"
+       << "right"
+       << "selection-background-color"
+       << "selection-color"
+       << "show-decoration-selected"
+       << "spacing"
+       << "subcontrol-origin"
+       << "subcontrol-position"
+       << "titlebar-show-tooltips-on-buttons"
+       << "widget-animation-duration"
+       << "text-align"
+       << "text-decoration"
+       << "top"
+       << "width"
+       << "-qt-background-role"
+       << "-qt-style-features"
        // I might as well add stylesheet stuff for this widget.
        << "color";
   return list;
@@ -1039,7 +1279,19 @@ QStringList DataStore::initialisePropertyList()
 QStringList DataStore::initialiseStylesheetProperties()
 {
   QStringList list;
-  list << "color" << "background" << "font-weight";
+  list << "widget"
+       << "subcontrol"
+       << "subcontrolmarker"
+       << "pseudostate"
+       << "pseudostatemarker"
+       << "property"
+       << "propertymarker"
+       << "value"
+       << "startbrace"
+       << "endbrace"
+       << "bracematch"
+       << "comment"
+       << "bad";
   // TODO more values
   return list;
 }
@@ -1047,9 +1299,19 @@ QStringList DataStore::initialiseStylesheetProperties()
 QMap<QString, DataStore::AttributeType> DataStore::initialiseStylesheetMap()
 {
   QMap<QString, AttributeType> map;
-  map.insert("color", Brush);
-  map.insert("background", Brush);
-  map.insert("font-weight", FontWeight);
+  map.insert("widget", StylesheetEdit);
+  map.insert("subcontrol", StylesheetEdit);
+  map.insert("pseudostate", StylesheetEdit);
+  map.insert("subcontrolmarker", StylesheetEdit);
+  map.insert("pseudostatemarker", StylesheetEdit);
+  map.insert("property", StylesheetEdit);
+  map.insert("propertymarker", StylesheetEdit);
+  map.insert("value", StylesheetEdit);
+  map.insert("startbrace", StylesheetEdit);
+  map.insert("endbrace", StylesheetEdit);
+  map.insert("bracematch", StylesheetEdit);
+  map.insert("comment", StylesheetEdit);
+  map.insert("bad", StylesheetEditBad);
   // TODO more values
   return map;
 }
@@ -1152,7 +1414,6 @@ QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
   map.insert("-qt-style-features", List);
   // Below this is the attributes available for this stylesheet editor.
 
-
   return map;
 }
 
@@ -1172,7 +1433,5 @@ QStringList DataStore::addControls(int count, ...)
 
   return widgets;
 }
-
-
 
 } // end of StylesheetParser

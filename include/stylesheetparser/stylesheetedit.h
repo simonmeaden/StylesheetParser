@@ -20,7 +20,6 @@
 #ifndef STYLESHEETEDIT_H
 #define STYLESHEETEDIT_H
 
-//#include <QTextEdit>
 #include <QPlainTextEdit>
 #include <QPainter>
 #include <QToolTip>
@@ -29,71 +28,27 @@
 #include "stylesheethighlighter.h"
 
 namespace StylesheetEditor {
-
-class StylesheetEdit;
-class LineNumberArea : public QWidget
-{
-public:
-  LineNumberArea(StylesheetEdit* editor);
-
-  QSize sizeHint() const override;
-
-  QColor fore() const;
-  void setFore(const QColor& fore);
-
-  QColor back() const;
-  void setBack(const QColor& back);
-
-  QFont::Weight weight() const;
-  void setWeight(const QFont::Weight& weight);
-
-protected:
-  void paintEvent(QPaintEvent* event) override;
-
-private:
-  StylesheetEdit* m_codeEditor;
-  QColor m_fore, m_back;
-  QFont::Weight m_weight;
-};
-
+class LineNumberArea;
+class StylesheetEditPrivate;
 
 class StylesheetEdit : public QPlainTextEdit
 {
-
-  struct Data
-  {
-    QTextCursor cursor;
-    Node* node = nullptr;
-    //    Node* nextNode = nullptr;
-    Node* prevNode = nullptr;
-    int start;
-    //    int valueIndex = -1;
-    //    int nextValueIndex = -1;
-  };
-  struct StylesheetData {
-    QString color;
-    QString background;
-    QString fontWeight;
-  };
-
-
+  Q_OBJECT
 public:
+
   explicit StylesheetEdit(QWidget* parent = nullptr);
 
-  //  void setText(const QString& text);
-  void setPlainText(const QString& text);
+   void setPlainText(const QString& text);
 
-  QMap<int, Node *> *nodes();
+//  QMap<int, Node*>* nodes();
 
   void showNewlineMarkers(bool show);
-  //  void showLineNumbers(bool show);
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
-  QPair<QString, QString> getProperty(const QString& sheet, int& pos);
+  StylesheetData *getStylesheetProperty(const QString& sheet, int& pos);
 
-  //! Sets a new color/fontweight pair for the highlighter base format
-  void setNormalFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
+  //  //! Sets a new color/fontweight pair for the highlighter base format
   //! Sets a new color/fontweight pair for the highlighter value format
   void setValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
   //! Sets a new color/fontweight pair for the highlighter widget name format
@@ -119,48 +74,21 @@ public:
   void lineNumberAreaPaintEvent(QPaintEvent* event);
   int lineNumberAreaWidth();
 
-protected:
-  void resizeEvent(QResizeEvent* event) override;
-
-private:
-  LineNumberArea* m_lineNumberArea;
-  DataStore* m_datastore;
-  //  Parser* m_parser;
-  StylesheetHighlighter* m_highlighter;
-  //  QList<Node*>* m_nodes;
-  QMap<int, Node*>* m_nodes;
-  QList<StartBraceNode*> m_startbraces;
-  QList<EndBraceNode*> m_endbraces;
-  int m_braceCount;
-  bool m_bracesMatched;
-  PropertyNode* m_propertynode = nullptr;
-  QString m_stylesheet;
-  StylesheetData m_stylesheetData;
-  bool m_startComment;
-
-
-  bool event(QEvent* event);
-
   void onCursorPositionChanged();
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
 
-  void parseInitialText(const QString& text, int pos = 0);
-  int parseProperty(const QString& text, int start, int& pos, QString& block, Node** endnode);
-  void parseComment(const QString &text, int &pos);
-  // Skips blank characters (inc \n\t etc.) and returns the first non-blank character.
-  void skipBlanks(const QString& text, int& pos);
-  QTextCursor getCursorForNode(int position);
-  QString findNext(const QString& text, int& pos);
-
-
-  Data getNodeAtCursor(QTextCursor cursor);
-  Data getNodeAtCursor(int position);
-  void nodeAtCursorPosition(Data* data, int position);
-
-  QString getValueAtCursor(int anchor, const QString& text);
-  QString getOldNodeValue(Data* data);
-
   void updateLineNumberAreaWidth(int);
+
+  QMap<int, Node*>* nodes();
+
+
+protected:
+  void resizeEvent(QResizeEvent* event) override;
+  bool event(QEvent* event);
+
+private:
+  StylesheetEditPrivate* d_ptr;
+
   void highlightCurrentLine();
   void updateLineNumberArea(const QRect& rect, int dy);
 

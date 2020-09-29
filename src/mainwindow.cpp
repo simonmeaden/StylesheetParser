@@ -59,9 +59,7 @@ QWidget* MainWindow::initGui()
 
   QString stylesheet =
     "StylesheetEdit {"
-    "color: blue;"
-    "background: yellow;"
-    "font-weight: light;"
+    "widget: blue light yellow;"
     "}";
 
   m_editor = new StylesheetEdit(this);

@@ -28,6 +28,9 @@
 
 namespace StylesheetEditor {
 
+class StylesheetEdit;
+class StylesheetData;
+
 class DataStore : public QObject
 {
   Q_OBJECT
@@ -66,6 +69,9 @@ public:
     Position,
     TextDecoration,
     List,
+    // below here are specific to StylesheetEdit
+    StylesheetEdit,
+    StylesheetEditBad,
   };
 
   explicit DataStore(QObject* parent);
@@ -80,7 +86,8 @@ public:
   bool containsPseudoState(const QString& name);
   bool containsSubControl(const QString& name);
 
-  bool isValidStylesheetValue(const QString& propertyname, const QString& valuename);
+  bool getIfValidStylesheetValue(const QString& propertyname, const QString& valuename,
+                                 StylesheetData* data);
   bool isValidPropertyValue(const QString& propertyname, const QString& value);
   QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
 
@@ -104,9 +111,12 @@ private:
   QStringList m_StylesheetProperties;
   QMap<QString, QStringList> m_subControls;
   QMap<QString, AttributeType> m_attributes;
-//  QMap<QString, QStringList> m_attributeValues;
+  //  QMap<QString, QStringList> m_attributeValues;
   QMap<QString, AttributeType> m_stylesheetAttributes;
 
+  bool checkPropertyValue(AttributeType propertyAttribute,
+                          const QString& valuename,
+                          StylesheetData* data = nullptr);
   bool checkAlignment(const QString& value);
   bool checkAttachment(const QString& value);
   bool checkBackground(const QString& value);
@@ -140,6 +150,12 @@ private:
   bool checkUrl(const QString& value);
   bool checkPosition(const QString& value);
   bool checkTextDecoration(const QString& value);
+  //
+  bool checkStylesheetEdit(const QString& value,
+                           StylesheetData* data = nullptr);
+  bool checkStylesheetEditBad(const QString& value,
+                              StylesheetData* data = nullptr);
+  bool checkStylesheetFontWeight(const QString& value, StylesheetData *data);
 
   QMap<QString, QStringList> initialiseSubControlMap();
   QStringList initialiseWidgetList();

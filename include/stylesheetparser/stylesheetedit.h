@@ -34,51 +34,49 @@ class StylesheetEditPrivate;
 class StylesheetEdit : public QPlainTextEdit
 {
   Q_OBJECT
+  Q_DECLARE_PRIVATE(StylesheetEdit)
 public:
 
   explicit StylesheetEdit(QWidget* parent = nullptr);
 
-   void setPlainText(const QString& text);
-
-//  QMap<int, Node*>* nodes();
+  //! Reimplemented from QPlainText::setPlainText()
+  void setPlainText(const QString& text);
 
   void showNewlineMarkers(bool show);
 
+  //! Reimplemented from QPlainText::stylesheet()
   QString styleSheet() const;
+  //! Reimplemented from QPlainText::setStylesheet()
   void setStyleSheet(const QString& stylesheet);
-  StylesheetData *getStylesheetProperty(const QString& sheet, int& pos);
 
-  //  //! Sets a new color/fontweight pair for the highlighter base format
-  //! Sets a new color/fontweight pair for the highlighter value format
+  //! Sets a new foreground/background/fontweight for the highlighter value format
   void setValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter widget name format
+  //! Sets a new foreground/background/fontweight for the highlighter widget format
   void setWidgetFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter pseudo state format
+  //! Sets a new foreground/background/fontweight for the highlighter pseudo-state format
   void setPseudoStateFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter pseudo state marker (:) format
+  //! Sets a new foreground/background/fontweight for the highlighter pseude-state marker (::) format
   void setPseudoStateMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter sub control format
+  //! Sets a new foreground/background/fontweight for the highlighter subcontrol format
   void setSubControlFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new color/fontweight pair for the highlighter sub control marker (::) format
+  //! Sets a new foreground/background/fontweight for the highlighter subcontrol marker (:) format
   void setSubControlMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter property name format
   void setPropertyFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter property marker (:) format
   void setPropertyMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter line numbers format
   void setLineNumberFormat(QColor foreground, QColor back, QFont::Weight weight = QFont::Light);
+  //! Sets a new foreground/background/fontweight for the highlighter bad value format
   void setBadValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Light, bool underline = true,
                          QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
                          QColor underlineColor = QColor("red"));
+  //! Sets a new foreground/background/fontweight for the highlighter start curly brace ({) format
   void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  //! Sets a new foreground/background/fontweight for the highlighter end curly brace (}) format
   void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  //! Sets a new foreground/background/fontweight for the highlighter brace match format
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
-
-  void lineNumberAreaPaintEvent(QPaintEvent* event);
-  int lineNumberAreaWidth();
-
-  void onCursorPositionChanged();
-  void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
-
-  void updateLineNumberAreaWidth(int);
-
   QMap<int, Node*>* nodes();
 
 
@@ -91,6 +89,11 @@ private:
 
   void highlightCurrentLine();
   void updateLineNumberArea(const QRect& rect, int dy);
+  void lineNumberAreaPaintEvent(QPaintEvent* event);
+  int lineNumberAreaWidth();
+  void onCursorPositionChanged();
+  void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  void updateLineNumberAreaWidth(int);
 
 };
 

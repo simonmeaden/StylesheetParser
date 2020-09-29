@@ -70,12 +70,6 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   highlightCurrentLine();
 }
 
-
-// void StylesheetEdit::setText(const QString& text)
-//{
-//  setPlainText(text);
-//}
-
 void StylesheetEdit::setPlainText(const QString& text)
 {
   QPlainTextEdit::setPlainText(text);
@@ -150,6 +144,7 @@ void StylesheetEdit::setStyleSheet(const QString& stylesheet)
 
 void StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
 {
+  // TODO implement standard stylesheet shit.
   m_stylesheet = stylesheet;
   QString sheet = stylesheet.simplified();
   QString reEditor, reBetweenCurly;
@@ -639,7 +634,7 @@ QString StylesheetEditPrivate::getValueAtCursor(int pos, const QString& text)
   return value;
 }
 
-QString StylesheetEditPrivate::getOldNodeValue(Data* data)
+QString StylesheetEditPrivate::getOldNodeValue(CursorData* data)
 {
   QString oldValue;
 
@@ -740,7 +735,7 @@ void StylesheetEdit::onCursorPositionChanged()
 void StylesheetEditPrivate::onCursorPositionChanged(QTextCursor textCursor)
 {
   Node* node;
-  Data data;
+  CursorData data;
   data.cursor = textCursor;
 
   nodeAtCursorPosition(&data, data.cursor.anchor());
@@ -1203,9 +1198,9 @@ QString StylesheetEditPrivate::findNext(const QString& text, int& pos)
   return QString();
 }
 
-Data StylesheetEditPrivate::getNodeAtCursor(QTextCursor cursor)
+CursorData StylesheetEditPrivate::getNodeAtCursor(QTextCursor cursor)
 {
-  Data data;
+  CursorData data;
   data.cursor = cursor;
 
   nodeAtCursorPosition(&data, cursor.anchor());
@@ -1213,9 +1208,9 @@ Data StylesheetEditPrivate::getNodeAtCursor(QTextCursor cursor)
   return data;
 }
 
-Data StylesheetEditPrivate::getNodeAtCursor(int position)
+CursorData StylesheetEditPrivate::getNodeAtCursor(int position)
 {
-  Data data;
+  CursorData data;
   data.cursor = QTextCursor(q_ptr->document());
 
   nodeAtCursorPosition(&data, position);
@@ -1223,7 +1218,7 @@ Data StylesheetEditPrivate::getNodeAtCursor(int position)
   return data;
 }
 
-void StylesheetEditPrivate::nodeAtCursorPosition(Data* data, int position)
+void StylesheetEditPrivate::nodeAtCursorPosition(CursorData* data, int position)
 {
   Node* previous;
 
@@ -1249,49 +1244,49 @@ void StylesheetEditPrivate::nodeAtCursorPosition(Data* data, int position)
   }
 }
 
-LineNumberArea::LineNumberArea(StylesheetEdit* editor)
+StylesheetEditPrivate::LineNumberArea::LineNumberArea(StylesheetEdit* editor)
   : QWidget(editor)
   , m_codeEditor(editor)
   , m_fore(QColor("#B5B5B5"))
   , m_back(QColor("#E9E9E8"))
 {}
 
-QSize LineNumberArea::sizeHint() const
+QSize StylesheetEditPrivate::LineNumberArea::sizeHint() const
 {
   return QSize(m_codeEditor->lineNumberAreaWidth(), 0);
 }
 
-void LineNumberArea::paintEvent(QPaintEvent* event)
+void StylesheetEditPrivate::LineNumberArea::paintEvent(QPaintEvent* event)
 {
   m_codeEditor->lineNumberAreaPaintEvent(event);
 }
 
-QFont::Weight LineNumberArea::weight() const
+QFont::Weight StylesheetEditPrivate::LineNumberArea::weight() const
 {
   return m_weight;
 }
 
-void LineNumberArea::setWeight(const QFont::Weight& weight)
+void StylesheetEditPrivate::LineNumberArea::setWeight(const QFont::Weight& weight)
 {
   m_weight = weight;
 }
 
-QColor LineNumberArea::back() const
+QColor StylesheetEditPrivate::LineNumberArea::back() const
 {
   return m_back;
 }
 
-void LineNumberArea::setBack(const QColor& back)
+void StylesheetEditPrivate::LineNumberArea::setBack(const QColor& back)
 {
   m_back = back;
 }
 
-QColor LineNumberArea::fore() const
+QColor StylesheetEditPrivate::LineNumberArea::fore() const
 {
   return m_fore;
 }
 
-void LineNumberArea::setFore(const QColor& fore)
+void StylesheetEditPrivate::LineNumberArea::setFore(const QColor& fore)
 {
   m_fore = fore;
 }

@@ -34,30 +34,6 @@ namespace StylesheetEditor {
 
 class StylesheetEdit;
 
-class LineNumberArea : public QWidget
-{
-public:
-  LineNumberArea(StylesheetEdit* editor);
-
-  QSize sizeHint() const override;
-
-  QColor fore() const;
-  void setFore(const QColor& fore);
-
-  QColor back() const;
-  void setBack(const QColor& back);
-
-  QFont::Weight weight() const;
-  void setWeight(const QFont::Weight& weight);
-
-protected:
-  void paintEvent(QPaintEvent* event) override;
-
-private:
-  StylesheetEdit* m_codeEditor;
-  QColor m_fore, m_back;
-  QFont::Weight m_weight;
-};
 
 struct StylesheetData
 {
@@ -67,20 +43,42 @@ struct StylesheetData
   QList<QTextCharFormat::UnderlineStyle> underline;
 };
 
-struct Data
+struct CursorData
 {
   QTextCursor cursor;
   Node* node = nullptr;
-  //    Node* nextNode = nullptr;
   Node* prevNode = nullptr;
   int start;
-  //    int valueIndex = -1;
-  //    int nextValueIndex = -1;
 };
 
 struct StylesheetEditPrivate
 {
   Q_DECLARE_PUBLIC(StylesheetEdit)
+
+  class LineNumberArea : public QWidget
+  {
+  public:
+    LineNumberArea(StylesheetEdit* editor);
+
+    QSize sizeHint() const override;
+
+    QColor fore() const;
+    void setFore(const QColor& fore);
+
+    QColor back() const;
+    void setBack(const QColor& back);
+
+    QFont::Weight weight() const;
+    void setWeight(const QFont::Weight& weight);
+
+  protected:
+    void paintEvent(QPaintEvent* event) override;
+
+  private:
+    StylesheetEdit* m_codeEditor;
+    QColor m_fore, m_back;
+    QFont::Weight m_weight;
+  };
 
   StylesheetEditPrivate(StylesheetEdit* parent);
 
@@ -152,12 +150,12 @@ struct StylesheetEditPrivate
   QString findNext(const QString& text, int& pos);
 
 
-  Data getNodeAtCursor(QTextCursor cursor);
-  Data getNodeAtCursor(int position);
-  void nodeAtCursorPosition(Data* data, int position);
+  CursorData getNodeAtCursor(QTextCursor cursor);
+  CursorData getNodeAtCursor(int position);
+  void nodeAtCursorPosition(CursorData* data, int position);
 
   QString getValueAtCursor(int anchor, const QString& text);
-  QString getOldNodeValue(Data* data);
+  QString getOldNodeValue(CursorData* data);
 
   void highlightCurrentLine();
   void updateLineNumberArea(const QRect& rect, int dy);

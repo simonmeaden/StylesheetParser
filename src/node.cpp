@@ -59,9 +59,73 @@ int Node::length() const
   return 0;
 }
 
+QTextCursor Node::textCursor()
+{
+  return m_start;
+}
+
 Node::Type Node::type() const
 {
   return m_type;
+}
+
+QString Node::toString() {
+  switch (m_type) {
+  case NodeType:
+    return "Node";
+
+  case BaseNodeType:
+    return "Base Node";
+
+  case CharNodeType:
+    return "Char Node";
+
+  case ColonNodeType:
+    return "Colon Node";
+
+  case NameType:
+    return "Name Node";
+
+  case WidgetType:
+    return "Widget Node";
+
+  case SubControlType:
+    return "Sub Control Node";
+
+  case SubControlMarkerType:
+    return "Sub Control Marker";
+
+  case PseudoStateType:
+    return "PseudoState Node";
+
+  case PseudoStateMarkerType:
+    return "PseudoState Marker";
+
+  case SemiColonType:
+    return "SemiColon Node";
+
+  case StartBraceType:
+    return "Start Brace Node";
+
+  case EndBraceType:
+    return "End Brace Node";
+
+  case NewlineType:
+    return "Newline Node";
+
+  case PropertyType:
+    return "Property Node";
+
+  case PropertyMarkerType:
+    return "Property End Marker";
+
+  case PropertyEndType:
+    return "Property End";
+
+  case BadNodeType:
+    return "Bad Node";
+  }
+
 }
 
 // Node *Node::previous() {
@@ -138,9 +202,14 @@ BadBlockNode::BadBlockNode(const QString& name,
   , m_errors(errors)
 {}
 
-QString BadBlockNode::value() const
+QString BadBlockNode::name() const
 {
   return m_name;
+}
+
+void BadBlockNode::setName(const QString &text)
+{
+  m_name = text;
 }
 
 int BadBlockNode::end() const
@@ -267,7 +336,7 @@ void PropertyNode::addValue(const QString& value, PropertyNode::Check check, int
 
 bool PropertyNode::setBadCheck(Check check, int index)
 {
-  if (index == -1) {
+  if (index == -1 && !m_checks.isEmpty()) {
     m_checks[m_checks.length() - 1] = check;
     return true;
 
@@ -296,6 +365,10 @@ PropertyNode::Check PropertyNode::isValid(int index)
 
 int PropertyNode::end() const
 {
+  if (m_offsets.isEmpty() || m_values.isEmpty()) {
+    return start();
+  }
+
   return start() + m_offsets.back() + m_values.last().length();
 }
 
@@ -419,7 +492,7 @@ void EndBraceNode::setBraceAtCursor(bool isFlagBrace)
   m_isBraceAtCursor = isFlagBrace;
 }
 
-StartCommentNode::StartCommentNode(QTextCursor start, QObject *parent, Node::Type type)
+StartCommentNode::StartCommentNode(QTextCursor start, QObject* parent, Node::Type type)
   : CharNode(start, parent, type)
 {}
 

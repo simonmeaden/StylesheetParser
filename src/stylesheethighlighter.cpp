@@ -26,21 +26,21 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   : QSyntaxHighlighter(editor->document())
   , m_editor(editor)
 {
-  m_back=editor->palette().brush(QPalette::Background);
-  setWidgetFormat(QColor("0x800080"), m_back, QFont::Light);
-  setPseudoStateFormat(QColor("0x808000"), m_back, QFont::Light);
+  m_back = QColor("white");/*editor->palette().brush(QPalette::Background)*/;
+  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
+  setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
   setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setSubControlFormat(QColor("0xCE5C00"), m_back, QFont::Light);
+  setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
   setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setValueFormat(QColor("0x008000"), m_back, QFont::Light);
+  setValueFormat(QColor("orangered"), m_back, QFont::Light);
   setBadValueFormat(QColor(Qt::black), m_back, QFont::Light, true,
                     QTextCharFormat::WaveUnderline, QColor(Qt::red));
-  setPropertyFormat(QColor("0x008000"), m_back, QFont::Light);
+  setPropertyFormat(QColor("mediumblue"), m_back, QFont::Light);
   setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
-  setCommentFormat(QColor("0000FF"),m_back, QFont::Light);
+  setCommentFormat(QColor("limegreen"), m_back, QFont::Light);
 }
 
 int StylesheetHighlighter::setNodeEnd(int nodeEnd, int blockEnd)
@@ -63,7 +63,7 @@ int StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
 
 void StylesheetHighlighter::highlightBlock(const QString& text)
 {
-  QMap<int, Node*>* nodes = m_editor->nodes();
+  auto nodes = m_editor->nodes();
 
   if (text.isEmpty() || nodes->isEmpty()) {
     return;

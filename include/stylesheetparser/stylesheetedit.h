@@ -23,6 +23,9 @@
 #include <QPlainTextEdit>
 #include <QPainter>
 #include <QToolTip>
+#include <QMenu>
+#include <QKeySequence>
+#include <QMessageBox>
 
 #include "datastore.h"
 #include "stylesheethighlighter.h"
@@ -77,16 +80,21 @@ public:
   void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
   //! Sets a new foreground/background/fontweight for the highlighter brace match format
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
-  QMap<int, Node*>* nodes();
+  QMap<QTextCursor, Node *> *nodes();
 
 
 protected:
   void resizeEvent(QResizeEvent* event) override;
-  bool event(QEvent* event);
+  void mouseMoveEvent(QMouseEvent *event) override;
+  void contextMenuEvent(QContextMenuEvent *event);
 
 private:
   StylesheetEditPrivate* d_ptr;
+  QAction *m_formatAct;
+  Node* m_hoverNode;
 
+  void initActions();
+  void format();
   void highlightCurrentLine();
   void updateLineNumberArea(const QRect& rect, int dy);
   void lineNumberAreaPaintEvent(QPaintEvent* event);
@@ -95,6 +103,7 @@ private:
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void updateLineNumberAreaWidth(int);
 
+//  void displayError(BadBlockNode *badNode, QPoint pos);
 };
 
 

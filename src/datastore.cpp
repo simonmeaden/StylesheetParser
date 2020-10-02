@@ -20,8 +20,8 @@
   SOFTWARE.
 */
 #include "datastore.h"
-#include "stylesheetparser/stylesheetedit.h"
 #include "stylesheetedit_p.h"
+#include "stylesheetparser/stylesheetedit.h"
 
 namespace StylesheetEditor {
 
@@ -59,7 +59,6 @@ DataStore::DataStore(QObject* parent)
   , m_subControls(initialiseSubControlMap())
   , m_attributes(initialiseAttributeMap())
   , m_stylesheetAttributes(initialiseStylesheetMap())
-    //  , m_attributeValues(initialiseValueMap())
 {}
 
 QStringList DataStore::widgets() const
@@ -659,12 +658,12 @@ bool DataStore::checkTextDecoration(const QString& value)
 
 bool DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
 {
-  if (checkColor(value)) {
+  if (data && checkColor(value)) {
     data->colors.append(value);
     return true;
   }
 
-  if (checkStylesheetFontWeight(value,data)) {
+  if (checkStylesheetFontWeight(value, data)) {
     return true;
   }
 
@@ -673,46 +672,48 @@ bool DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
 
 bool DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* data)
 {
-  if (checkColor(value)) {
-    data->colors.append(QColor(value));
-    return true;
-  }
+  if (data) {
+    if (checkColor(value)) {
+      data->colors.append(QColor(value));
+      return true;
+    }
 
-  if (checkStylesheetFontWeight(value, data)) {
-    return true;
-  }
+    if (checkStylesheetFontWeight(value, data)) {
+      return true;
+    }
 
-  if (value == "none") {
-    data->underline.append(QTextCharFormat::NoUnderline);
-    return true;
+    if (value == "none") {
+      data->underline.append(QTextCharFormat::NoUnderline);
+      return true;
 
-  } else if (value == "single") {
-    data->underline.append(QTextCharFormat::SingleUnderline);
-    return true;
+    } else if (value == "single") {
+      data->underline.append(QTextCharFormat::SingleUnderline);
+      return true;
 
-  } else if (value == "dash") {
-    data->underline.append(QTextCharFormat::DashUnderline);
-    return true;
+    } else if (value == "dash") {
+      data->underline.append(QTextCharFormat::DashUnderline);
+      return true;
 
-  } else if (value == "dot") {
-    data->underline.append(QTextCharFormat::DotLine);
-    return true;
+    } else if (value == "dot") {
+      data->underline.append(QTextCharFormat::DotLine);
+      return true;
 
-  } else if (value == "dashdot") {
-    data->underline.append(QTextCharFormat::DashDotLine);
-    return true;
+    } else if (value == "dashdot") {
+      data->underline.append(QTextCharFormat::DashDotLine);
+      return true;
 
-  } else if (value == "dashdotdot") {
-    data->underline.append(QTextCharFormat::DashDotDotLine);
-    return true;
+    } else if (value == "dashdotdot") {
+      data->underline.append(QTextCharFormat::DashDotDotLine);
+      return true;
 
-  } else if (value == "wave") {
-    data->underline.append(QTextCharFormat::WaveUnderline);
-    return true;
+    } else if (value == "wave") {
+      data->underline.append(QTextCharFormat::WaveUnderline);
+      return true;
 
-  } else if (value == "spellcheck") {
-    data->underline.append(QTextCharFormat::SpellCheckUnderline);
-    return true;
+    } else if (value == "spellcheck") {
+      data->underline.append(QTextCharFormat::SpellCheckUnderline);
+      return true;
+    }
   }
 
   return false;
@@ -720,41 +721,43 @@ bool DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* dat
 
 bool DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* data)
 {
-  if (value == "thin") {
-    data->weights.append(QFont::Thin);
-    return true;
+  if (data) {
+    if (value == "thin") {
+      data->weights.append(QFont::Thin);
+      return true;
 
-  } else if (value == "extralight") {
-    data->weights.append(QFont::ExtraLight);
-    return true;
+    } else if (value == "extralight") {
+      data->weights.append(QFont::ExtraLight);
+      return true;
 
-  } else if (value == "light") {
-    data->weights.append(QFont::Light);
-    return true;
+    } else if (value == "light") {
+      data->weights.append(QFont::Light);
+      return true;
 
-  } else if (value == "normal") {
-    data->weights.append(QFont::Normal);
-    return true;
+    } else if (value == "normal") {
+      data->weights.append(QFont::Normal);
+      return true;
 
-  } else if (value == "medium") {
-    data->weights.append(QFont::Medium);
-    return true;
+    } else if (value == "medium") {
+      data->weights.append(QFont::Medium);
+      return true;
 
-  } else if (value == "demibold") {
-    data->weights.append(QFont::DemiBold);
-    return true;
+    } else if (value == "demibold") {
+      data->weights.append(QFont::DemiBold);
+      return true;
 
-  } else if (value == "bold") {
-    data->weights.append(QFont::Bold);
-    return true;
+    } else if (value == "bold") {
+      data->weights.append(QFont::Bold);
+      return true;
 
-  } else if (value == "extrabold") {
-    data->weights.append(QFont::ExtraBold);
-    return true;
+    } else if (value == "extrabold") {
+      data->weights.append(QFont::ExtraBold);
+      return true;
 
-  } else if (value == "black") {
-    data->weights.append(QFont::Black);
-    return true;
+    } else if (value == "black") {
+      data->weights.append(QFont::Black);
+      return true;
+    }
   }
 
   return false;
@@ -895,7 +898,7 @@ bool DataStore::isValidPropertyValue(const QString& propertyname,
   }
 
   AttributeType propertyAttribute = m_attributes.value(propertyname);
-  return checkPropertyValue(propertyAttribute, valuename);
+  return checkPropertyValue(propertyAttribute, valuename, new StylesheetData());
 }
 
 QList<bool> DataStore::isValidPropertyValues(const QString& name, const QStringList& values)
@@ -1118,7 +1121,7 @@ QStringList DataStore::initialiseWidgetList()
        << "QTreeView"
        << "QTreeWidget"
        << "QWidget"
-       // I might as well add stylesheet stuff for this widget.
+       // I might as well add stylesheetedit stuff to this widget.
        << "StylesheetEdit";
   return list;
 }
@@ -1272,7 +1275,19 @@ QStringList DataStore::initialisePropertyList()
        << "-qt-background-role"
        << "-qt-style-features"
        // I might as well add stylesheet stuff for this widget.
-       << "color";
+       << "widget"
+       << "subcontrol"
+       << "subcontrolmarker"
+       << "pseudostate"
+       << "pseudostatemarker"
+       << "property"
+       << "propertymarker"
+       << "value"
+       << "startbrace"
+       << "endbrace"
+       << "bracematch"
+       << "comment"
+       << "bad";
   return list;
 }
 
@@ -1413,6 +1428,19 @@ QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
   map.insert("-qt-background-role", PaletteRole);
   map.insert("-qt-style-features", List);
   // Below this is the attributes available for this stylesheet editor.
+  map.insert("widget", StylesheetEdit);
+  map.insert("subcontrol", StylesheetEdit);
+  map.insert("pseudostate", StylesheetEdit);
+  map.insert("subcontrolmarker", StylesheetEdit);
+  map.insert("pseudostatemarker", StylesheetEdit);
+  map.insert("property", StylesheetEdit);
+  map.insert("propertymarker", StylesheetEdit);
+  map.insert("value", StylesheetEdit);
+  map.insert("startbrace", StylesheetEdit);
+  map.insert("endbrace", StylesheetEdit);
+  map.insert("bracematch", StylesheetEdit);
+  map.insert("comment", StylesheetEdit);
+  map.insert("bad", StylesheetEditBad);
 
   return map;
 }

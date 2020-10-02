@@ -21,35 +21,6 @@ include("CMakeLists.qt5.in")
 
 find_package(Qt5 COMPONENTS Core REQUIRED)
 
-#add_library(parser SHARED)
-#target_sources(parser
-#   PUBLIC
-
-#      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/StylesheetParser_global.h>
-#      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheetparser.h>
-#      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/parsererror.h>
-#      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/node.h>
-
-#      $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
-#      $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetparser.h>
-#      $<INSTALL_INTERFACE:include/stylesheetparser/parsererror.h>
-#      $<INSTALL_INTERFACE:include/stylesheetparser/node.h>
-
-#   PRIVATE
-#      src/stylesheetparser.cpp
-#      src/parsererror.cpp
-#      src/node.cpp
-
-#   )
-#target_include_directories(parser
-#    PUBLIC
-#        $<INSTALL_INTERFACE:include>
-#        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#    PRIVATE
-#        ${CMAKE_CURRENT_SOURCE_DIR}/src
-#)
-#target_compile_definitions(stylesheetparser PRIVATE STYLESHEETPARSER_LIBRARY)
-
 add_executable(tst_parser "")
 target_sources(tst_parser
    PUBLIC

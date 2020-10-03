@@ -36,8 +36,7 @@ public:
 
   void highlightBlock(const QString& text);
 
-  //  void setNormalFormat(QColor color, QColor back, QFont::Weight weight);
-  void setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight);
+ void setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPseudoStateFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPseudoStateMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setSubControlFormat(QBrush color, QBrush back, QFont::Weight weight);
@@ -48,6 +47,7 @@ public:
                          QColor underlineColor);
   void setPropertyFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPropertyMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setPropertyEndMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setStartBraceFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setEndBraceFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setBraceMatchFormat(QBrush color, QBrush back, QFont::Weight weight);
@@ -100,6 +100,7 @@ private:
   QTextCharFormat m_subControlMarkerFormat;
   QTextCharFormat m_propertyFormat;
   QTextCharFormat m_propertyMarkerFormat;
+  QTextCharFormat m_propertyEndMarkerFormat;
   QTextCharFormat m_startBraceFormat;
   QTextCharFormat m_endBraceFormat;
   QTextCharFormat m_braceMatchFormat;

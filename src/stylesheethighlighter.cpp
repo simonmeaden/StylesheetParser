@@ -37,6 +37,7 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
                     QTextCharFormat::WaveUnderline, QColor(Qt::red));
   setPropertyFormat(QColor("mediumblue"), m_back, QFont::Light);
   setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
@@ -146,7 +147,7 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
 
       PropertyNode* pNode = qobject_cast<PropertyNode*>(node);
 
-      if (pNode->propertyMarkerExists()) {
+      if (pNode->hasPropertyMarker()) {
         setFormat(nodeStart, length, m_propertyFormat);
 
       } else {
@@ -183,6 +184,10 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
 
     case Node::PropertyMarkerType:
       setFormat(nodeStart, length, m_propertyMarkerFormat);
+      break;
+
+    case Node::PropertyEndMarkerType:
+      setFormat(nodeStart, length, m_propertyEndMarkerFormat);
       break;
 
     case Node::StartBraceType: {
@@ -285,6 +290,13 @@ void StylesheetHighlighter::setPropertyMarkerFormat(QBrush color, QBrush back, Q
   m_propertyMarkerFormat.setFontWeight(weight);
   m_propertyMarkerFormat.setForeground(color);
   m_propertyMarkerFormat.setBackground(back);
+}
+
+void StylesheetHighlighter::setPropertyEndMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)
+{
+  m_propertyEndMarkerFormat.setFontWeight(weight);
+  m_propertyEndMarkerFormat.setForeground(color);
+  m_propertyEndMarkerFormat.setBackground(back);
 }
 
 void StylesheetHighlighter::setStartBraceFormat(QBrush color, QBrush back, QFont::Weight weight)

@@ -55,6 +55,7 @@ public:
     PropertyType,
     PropertyMarkerType,
     PropertyEndType,
+    PropertyEndMarkerType,
     BadNodeType,
     BadSubControlMarkerType,
     BadPseudoStateMarkerType,
@@ -83,78 +84,101 @@ protected:
 
 };
 
-class BaseNode : public Node
+class NameNode
 {
-  Q_OBJECT
 public:
-  explicit BaseNode(const QString& value, QTextCursor start, QObject* parent, Type type = BaseNodeType);
-
-  QString value() const;
-  int end() const override;
-  int length() const override;
-
-protected:
-  QString m_value;
-};
-//using NodeList = QList<Node*>;
-
-class NameNode : public Node
-{
-  Q_OBJECT
-public:
-  explicit NameNode(const QString& name, QTextCursor start, QObject* parent, Type type = NameType);
-
-  QString value() const;
-  int end() const override;
-  int length() const override;
-
-private:
-  QString m_name;
-
-};
-
-class BadBlockNode: public Node
-{
-  Q_OBJECT
-public:
-  explicit BadBlockNode(const QString& name, QTextCursor start, ParserState::Errors errors, QObject* parent,
-                        Type type = BadNodeType);
+  explicit NameNode(const QString& name);
 
   QString name() const;
-  void setName(const QString& text);
-  int end() const override;
-  int length() const override;
+  void setName(const QString &value);
+
+protected:
+  QString m_name;
+};
+
+class BadNode
+{
+public:
+  explicit BadNode(ParserState::Errors errors);
 
   ParserState::Errors errors() const;
   void setError(const ParserState::Errors& errors);
 
 private:
-  QString m_name;
   ParserState::Errors m_errors;
+
 };
 
-class BadSubControlMarkerNode :public BadBlockNode {
+class BadBlockNode: public Node, public NameNode, public BadNode
+{
   Q_OBJECT
 public:
-  BadSubControlMarkerNode(const QString& name, QTextCursor start, ParserState::Errors errors, QObject* parent,
-                          Type type = BadSubControlMarkerType);
+  explicit BadBlockNode(const QString& name, QTextCursor start, ParserState::Errors errors, QObject* parent,
+                        Node::Type type = Node::BadNodeType);
+
+  int end() const override;
+  int length() const override;
 };
 
-class BadPseudoStateMarkerNode :public BadBlockNode {
+class CharNode : public Node
+{
   Q_OBJECT
 public:
-  BadPseudoStateMarkerNode(const QString& name, QTextCursor start, ParserState::Errors errors, QObject* parent,
-                          Type type = BadPseudoStateMarkerType);
+  explicit CharNode(QString value, QTextCursor start, QObject* parent, Type type = CharNodeType);
+
+  int end() const override;
+  int length() const override;
+
+private:
+  QString m_value;
 };
 
-class WidgetNode : public BaseNode
+class SubControlMarkerNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit SubControlMarkerNode(QTextCursor start, QObject* parent, Type type = SubControlMarkerType);
+
+  int end() const override;
+  int length() const override;
+};
+
+class ColonNode : public CharNode
+{
+  Q_OBJECT
+public:
+  explicit ColonNode(QTextCursor start, QObject* parent, Type type = ColonNodeType);
+};
+
+class BadSubControlMarkerNode : public SubControlMarkerNode, public BadNode
+{
+  Q_OBJECT
+public: BadSubControlMarkerNode(QTextCursor start, ParserState::Errors errors, QObject* parent,
+                                  Type type = BadSubControlMarkerType);
+};
+
+class PseudoStateMarkerNode : public ColonNode
+{
+  Q_OBJECT
+public:
+  explicit PseudoStateMarkerNode(QTextCursor start, QObject* parent, Type type = PseudoStateMarkerType);
+};
+
+class BadPseudoStateMarkerNode : public PseudoStateMarkerNode, public BadNode
+{
+  Q_OBJECT
+public: BadPseudoStateMarkerNode(QTextCursor start, ParserState::Errors errors, QObject* parent,
+                                   Type type = BadPseudoStateMarkerType);
+};
+
+class WidgetNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit WidgetNode(const QString& name, QTextCursor start, QObject* parent, Type type = WidgetType);
 };
 
-class PropertyNode : public BaseNode
+class PropertyNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
@@ -195,7 +219,7 @@ public:
   Check isValid(int index);
   int end() const override;
 
-  bool propertyMarkerExists() const;
+  bool hasPropertyMarker() const;
   void setPropertyMarkerExists(bool propertyMarker);
 
 private:
@@ -205,21 +229,35 @@ private:
   bool m_propertyMarkerExists;
 };
 
-class SubControlNode : public NameNode
+class BadPropertyNode : public PropertyNode, public BadNode
+{
+  Q_OBJECT
+public:
+
+};
+
+
+class SubControlNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit SubControlNode(const QString& name, QTextCursor start, QObject* parent, Type type = SubControlType);
+
+  int end() const override;
+  int length() const override;
 };
 
-class PseudoStateNode : public NameNode
+class PseudoStateNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit PseudoStateNode(const QString& name, QTextCursor start, QObject* parent, Type type = PseudoStateType);
+
+  int end() const override;
+  int length() const override;
 };
 
-class CommentNode : public BaseNode
+class CommentNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
@@ -229,33 +267,6 @@ public:
   void append(QString text);
   int end() const override;
   int length() const override;
-
-private:
-  QString m_value;
-};
-
-class CharNode : public Node
-{
-  Q_OBJECT
-public:
-  explicit CharNode(QTextCursor start, QObject* parent, Type type = CharNodeType);
-
-  int end() const override;
-  int length() const override;
-};
-
-class ColonNode : public CharNode
-{
-  Q_OBJECT
-public:
-  explicit ColonNode(QTextCursor start, QObject* parent, Type type = ColonNodeType);
-};
-
-class PseudoStateMarkerNode : public ColonNode
-{
-  Q_OBJECT
-public:
-  explicit PseudoStateMarkerNode(QTextCursor start, QObject* parent, Type type = PseudoStateMarkerType);
 };
 
 class PropertyMarkerNode : public ColonNode
@@ -276,7 +287,7 @@ class PropertyEndMarkerNode : public SemiColonNode
 {
   Q_OBJECT
 public:
-  explicit PropertyEndMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyEndType);
+  explicit PropertyEndMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyEndMarkerType);
 };
 
 class PropertyEndNode : public Node
@@ -285,17 +296,6 @@ class PropertyEndNode : public Node
 public:
   explicit PropertyEndNode(QTextCursor start, QObject* parent, Type type = PropertyEndType);
 };
-
-class SubControlMarkerNode : public CharNode
-{
-  Q_OBJECT
-public:
-  explicit SubControlMarkerNode(QTextCursor start, QObject* parent, Type type = SubControlMarkerType);
-
-  int end() const override;
-  int length() const override;
-};
-
 
 class NewlineNode : public CharNode
 {

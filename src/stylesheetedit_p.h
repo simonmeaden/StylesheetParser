@@ -50,7 +50,7 @@ struct CursorData
   QTextCursor cursor;
   Node* node = nullptr;
   Node* prevNode = nullptr;
-//  int start;
+  //  int start;
 };
 
 struct StylesheetEditPrivate
@@ -92,7 +92,7 @@ struct StylesheetEditPrivate
     int width() const;
 
     QString text() const;
-    void setText(const QString &text);
+    void setText(const QString& text);
 
   protected:
     void paintEvent(QPaintEvent*) override;
@@ -123,7 +123,7 @@ struct StylesheetEditPrivate
 
   void setPlainText(const QString& text);
 
-  QMap<QTextCursor, Node *> *nodes();
+  QMap<QTextCursor, Node*>* nodes();
 
   void showNewlineMarkers(bool show);
 
@@ -164,6 +164,9 @@ struct StylesheetEditPrivate
   void setPropertyMarkerFormat(QColor color,
                                QColor back,
                                QFont::Weight weight = QFont::Normal);
+  void setPropertyEndMarkerFormat(QColor color,
+                                  QColor back,
+                                  QFont::Weight weight = QFont::Normal);
   void setLineNumberFormat(QColor foreground,
                            QColor back,
                            QFont::Weight weight = QFont::Light);
@@ -188,11 +191,11 @@ struct StylesheetEditPrivate
   int lineNumberAreaWidth();
 
   void resizeEvent(QRect cr);
-//  bool event(QEvent* event);
+  //  bool event(QEvent* event);
   void drawHoverWidget(QPoint pos, QString text);
   void hideHoverWidget();
   void handleMouseMove(QPoint pos);
-  void displayError(BadBlockNode *badNode, QPoint pos);
+  void displayError(BadBlockNode* badNode, QPoint pos);
 
   void onCursorPositionChanged(QTextCursor textCursor);
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
@@ -200,22 +203,30 @@ struct StylesheetEditPrivate
   Node* previousNode(QTextCursor cursor);
 
   void parseInitialText(const QString& text, int pos = 0);
-  int parseProperty(const QString& text,
-                    int start,
-                    int& pos,
-                    QString& block,
-                    Node** endnode);
+  int parseProperties(
+    const QString& text,
+    int start,
+    int& pos,
+    QString& block);
+  int parsePropertyWithValues(QTextCursor cursor, PropertyNode *property,
+    const QString& text,
+    int start,
+    int& pos,
+    QString& block,
+    Node** endnode);
   void parseComment(const QString& text, int& pos);
-  void stashWidget(int position, const QString &block);
-  void stashBadNode(int position, const QString &block, ParserState::Error error);
-  void stashBadSubControlMarkerNode(int position, const QString &block, ParserState::Error error);
-  void stashBadPseudoStateMarkerNode(int position, const QString &block, ParserState::Error error);
-  void stashPseudoState(int position, const QString &block);
-  void stashSubControl(int position, const QString &block);
+  void stashWidget(int position, const QString& block);
+  void stashBadNode(int position, const QString& block, ParserState::Error error);
+  void stashBadSubControlMarkerNode(int position, ParserState::Error error);
+  void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
+  void stashPseudoState(int position, const QString& block);
+  void stashSubControl(int position, const QString& block);
   void stashEndBrace(int position);
   void stashStartBrace(int position);
   void stashPseudoStateMarker(int position);
   void stashSubControlMarker(int position);
+  void stashPropertyEndNode(int position, Node** endnode);
+  void stashPropertyEndMarkerNode(int position, Node** endnode);
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank
   // character.
   void skipBlanks(const QString& text, int& pos);
@@ -237,6 +248,9 @@ struct StylesheetEditPrivate
                              QColor& color2,
                              QColor& color3);
 
+
+private:
+  void updatePropertyValues(int pos, PropertyNode* property, int charsAdded, int charsRemoved, const QString& newValue);
 };
 
 } // end of StylesheetParser

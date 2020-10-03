@@ -212,8 +212,8 @@ struct StylesheetEditPrivate
   void stashBadPseudoStateMarkerNode(int position, const QString &block, ParserState::Error error);
   void stashPseudoState(int position, const QString &block);
   void stashSubControl(int position, const QString &block);
-  void stashEndBrace(int position, const QString &block);
-  void stashStartBrace(int position, const QString &block);
+  void stashEndBrace(int position);
+  void stashStartBrace(int position);
   void stashPseudoStateMarker(int position);
   void stashSubControlMarker(int position);
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank

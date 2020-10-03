@@ -913,9 +913,51 @@ void StylesheetEditPrivate::onDocumentChanged(int pos,
     QString value, newValue;
 
     switch (node->type()) {
-    case Node::WidgetType: {
-      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
-      value = widget->value();
+    //    case Node::WidgetType: {
+    //      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
+    //      value = widget->value();
+    //      break;
+    //    }
+
+    case Node::PropertyType: {
+      PropertyNode* property = qobject_cast<PropertyNode*>(node);
+      auto values = property->values();
+      auto offsets = property->offsets();
+      auto checks = property->checks();
+
+      QTextCursor cursor = q_ptr->textCursor();
+      cursor.select(QTextCursor::WordUnderCursor);
+      newValue = cursor.selectedText();
+      auto pos = cursor.anchor();
+      bool updated = false;
+
+      for (int i = 0; i < offsets.size(); i++) {
+        auto offset = offsets[i];
+        auto value = values[i];
+        auto start = property->start() + offset;
+        auto end = start + value.length();
+
+        if (updated) {
+          offsets[i] += charsAdded;
+          offsets[i] -= charsRemoved;
+          continue;
+        }
+
+        if (pos >= start && pos < end) {
+          values.replace(i, newValue);
+
+          if (m_datastore->isValidPropertyValue(property->value(), newValue)) {
+            checks.replace(i, PropertyNode::GoodValue);
+          }
+
+          updated = true;
+        }
+      }
+
+      property->setValues(values);
+      property->setChecks(checks);
+      property->setOffsets(offsets);
+
       break;
     }
 
@@ -933,43 +975,50 @@ void StylesheetEditPrivate::onDocumentChanged(int pos,
           Node* widget = new WidgetNode(newValue, badNode->cursor(), q_ptr);
           m_nodes->insert(badNode->cursor(), widget);
           Node* next = nextNode(badNode->cursor());
+
           if (next) {
-            if (next->type()==Node::BadSubControlMarkerType) {
+            if (next->type() == Node::BadSubControlMarkerType) {
               Node* subcontrolmarker = new SubControlMarkerNode(next->cursor(), q_ptr);
               m_nodes->insert(next->cursor(), subcontrolmarker);
               next->deleteLater();
-            } else if (next->type()==Node::BadPseudoStateMarkerType) {
+
+            } else if (next->type() == Node::BadPseudoStateMarkerType) {
               Node* pseudostatemarker = new PseudoStateMarkerNode(next->cursor(), q_ptr);
               m_nodes->insert(next->cursor(), pseudostatemarker);
               next->deleteLater();
             }
           }
+
           badNode->deleteLater();
 
         } else if (m_datastore->containsSubControl(newValue)) {
           Node* subcontrol = new SubControlNode(newValue, badNode->cursor(), q_ptr);
           m_nodes->insert(badNode->cursor(), subcontrol);
           Node* prev = previousNode(badNode->cursor());
+
           if (prev) {
-            if (prev->type()==Node::BadSubControlMarkerType) {
+            if (prev->type() == Node::BadSubControlMarkerType) {
               Node* subcontrolmarker = new SubControlMarkerNode(prev->cursor(), q_ptr);
               m_nodes->insert(prev->cursor(), subcontrolmarker);
               prev->deleteLater();
             }
           }
+
           badNode->deleteLater();
 
         } else if (m_datastore->containsPseudoState(newValue)) {
           Node* pseudostate = new PseudoStateNode(newValue, badNode->cursor(), q_ptr);
           m_nodes->insert(badNode->cursor(), pseudostate);
           Node* prev = previousNode(badNode->cursor());
+
           if (prev) {
-            if (prev->type()==Node::BadPseudoStateMarkerType) {
+            if (prev->type() == Node::BadPseudoStateMarkerType) {
               Node* pseudostatemarker = new PseudoStateMarkerNode(prev->cursor(), q_ptr);
               m_nodes->insert(prev->cursor(), pseudostatemarker);
               prev->deleteLater();
             }
           }
+
           badNode->deleteLater();
 
         } else {
@@ -1023,10 +1072,11 @@ void StylesheetEditPrivate::onDocumentChanged(int pos,
         }
       }
 
-      m_highlighter->rehighlight();
       break;
     }
     }
+
+    m_highlighter->rehighlight();
   }
 }
 
@@ -1046,7 +1096,6 @@ int StylesheetEditPrivate::parseProperty(const QString& text,
     if (block == ":") {
       if (!property->propertyMarkerExists()) {
         cursor = getCursorForNode(start + property->length());
-        ;
         Node* marker = new PropertyMarkerNode(cursor, q_ptr);
         m_nodes->insert(cursor, marker);
         property->setPropertyMarkerExists(true);
@@ -1057,7 +1106,6 @@ int StylesheetEditPrivate::parseProperty(const QString& text,
 
     } else if (block == ";") {
       cursor = getCursorForNode(property->end());
-      ;
       *endnode = new PropertyEndMarkerNode(cursor, q_ptr);
       m_nodes->insert(cursor, *endnode);
       continue;
@@ -1065,10 +1113,11 @@ int StylesheetEditPrivate::parseProperty(const QString& text,
     } else if (block == "}") {
       if (!(*endnode)) { // already a property end node (;)
         cursor = getCursorForNode(property->end());
-        ;
         *endnode = new PropertyEndNode(cursor, q_ptr);
         m_nodes->insert(cursor, *endnode);
       }
+
+      stashEndBrace(cursor.anchor());
 
       pos--; // step back from endbrace
       break;
@@ -1090,6 +1139,10 @@ int StylesheetEditPrivate::parseProperty(const QString& text,
 
           parseProperty(text, pos - block.length(), pos, block, endnode);
           return property->end();
+
+        } else {
+          property->addValue(
+            block, PropertyNode::BadValue, (pos - block.length()) - start);
         }
       }
     }
@@ -1145,8 +1198,8 @@ void StylesheetEditPrivate::stashBadNode(int position,
 }
 
 void StylesheetEditPrivate::stashBadSubControlMarkerNode(int position,
-                                                    const QString& block,
-                                                    ParserState::Error error)
+    const QString& block,
+    ParserState::Error error)
 {
   QTextCursor cursor = getCursorForNode(position);
   Node* badblock = new BadSubControlMarkerNode(block, cursor, error, q_ptr);
@@ -1154,9 +1207,9 @@ void StylesheetEditPrivate::stashBadSubControlMarkerNode(int position,
 }
 
 void StylesheetEditPrivate::stashBadPseudoStateMarkerNode(int position,
-                                                     const QString &block,
-                                                     ParserState::Error error
-                                                    )
+    const QString& block,
+    ParserState::Error error
+                                                         )
 {
   QTextCursor cursor = getCursorForNode(position);
   Node* badblock = new BadPseudoStateMarkerNode(block, cursor, error, q_ptr);
@@ -1179,8 +1232,7 @@ void StylesheetEditor::StylesheetEditPrivate::stashSubControl(int position,
   m_nodes->insert(cursor, subcontrol);
 }
 
-void StylesheetEditor::StylesheetEditPrivate::stashEndBrace(int position,
-    const QString& block)
+void StylesheetEditor::StylesheetEditPrivate::stashEndBrace(int position)
 {
   m_braceCount--;
   QTextCursor cursor = getCursorForNode(position);
@@ -1189,8 +1241,7 @@ void StylesheetEditor::StylesheetEditPrivate::stashEndBrace(int position,
   m_endbraces.append(brace);
 }
 
-void StylesheetEditor::StylesheetEditPrivate::stashStartBrace(int position,
-    const QString& block)
+void StylesheetEditor::StylesheetEditPrivate::stashStartBrace(int position)
 {
   m_braceCount++;
   QTextCursor cursor = getCursorForNode(position);
@@ -1214,7 +1265,7 @@ void StylesheetEditor::StylesheetEditPrivate::stashSubControlMarker(int position
 }
 
 void StylesheetEditor::StylesheetEditPrivate::stashWidget(int position,
-                                                     const QString& block)
+    const QString& block)
 {
   QTextCursor cursor = getCursorForNode(position);
   WidgetNode* widgetnode = new WidgetNode(block, cursor, q_ptr);
@@ -1271,10 +1322,10 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
           }
 
         } else if (block == "{") { // start of widget block
-          stashStartBrace(pos - block.length(), block);
+          stashStartBrace(pos - block.length());
 
         } else if (block == "}") { // end of widget block
-          stashEndBrace(pos - block.length(), block);
+          stashEndBrace(pos - block.length());
           break;
 
         } else if (m_datastore->containsProperty(block)) {
@@ -1327,10 +1378,10 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
 
 
     } else if (block == "{") {
-      stashStartBrace(pos - block.length(), block);
+      stashStartBrace(pos - block.length());
 
     } else if (block == "}") {
-      stashEndBrace(pos - block.length(), block);
+      stashEndBrace(pos - block.length());
 
     } else if (m_datastore->containsProperty(block)) {
       Node* endnode = nullptr;

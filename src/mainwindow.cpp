@@ -41,7 +41,7 @@ QWidget* MainWindow::initGui()
   //  text =  "color: red; background: green";
   //  text =  "color: red; background: green;";
   //  text =  "color: red; border: green solid 1px;";
-  //    text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
+  //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
 
   //  text = "QTabWidget::branch {color: red}";
   //  text = "QTabWidget::branch {color: red; background: green}";
@@ -77,9 +77,16 @@ QWidget* MainWindow::initGui()
   //  text = "QTabWidget:actve {}"; // BAD pseudostate
   //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
   //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
-//  text = "QTabWidget::branh {}"; // BAD subcontrol
+  //  text = "QTabWidget::branh {}"; // BAD subcontrol
   //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
-    text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
+  //  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
+
+//    text =   "color: rd";
+  //  text =   "color: red;";
+  //  text =  "color: red; background: green";
+  //  text =  "color: red; background: green;";
+    text =  "  color: rd; border: gren slid 1x;";
+  //    text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
 
   QString stylesheet =
     "StylesheetEdit {"

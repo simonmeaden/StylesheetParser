@@ -196,6 +196,8 @@ struct StylesheetEditPrivate
 
   void onCursorPositionChanged(QTextCursor textCursor);
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  Node* nextNode(QTextCursor cursor);
+  Node* previousNode(QTextCursor cursor);
 
   void parseInitialText(const QString& text, int pos = 0);
   int parseProperty(const QString& text,
@@ -204,6 +206,16 @@ struct StylesheetEditPrivate
                     QString& block,
                     Node** endnode);
   void parseComment(const QString& text, int& pos);
+  void stashWidget(int position, const QString &block);
+  void stashBadNode(int position, const QString &block, ParserState::Error error);
+  void stashBadSubControlMarkerNode(int position, const QString &block, ParserState::Error error);
+  void stashBadPseudoStateMarkerNode(int position, const QString &block, ParserState::Error error);
+  void stashPseudoState(int position, const QString &block);
+  void stashSubControl(int position, const QString &block);
+  void stashEndBrace(int position, const QString &block);
+  void stashStartBrace(int position, const QString &block);
+  void stashPseudoStateMarker(int position);
+  void stashSubControlMarker(int position);
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank
   // character.
   void skipBlanks(const QString& text, int& pos);
@@ -224,6 +236,7 @@ struct StylesheetEditPrivate
                              QColor& color1,
                              QColor& color2,
                              QColor& color3);
+
 };
 
 } // end of StylesheetParser

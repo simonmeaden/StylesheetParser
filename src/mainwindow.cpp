@@ -35,43 +35,51 @@ QWidget* MainWindow::initGui()
   f->setLayout(layout);
 
   QString text;
+  // Correct stuff
   //  text =   "color: red";
   //  text =   "color: red;";
   //  text =  "color: red; background: green";
   //  text =  "color: red; background: green;";
   //  text =  "color: red; border: green solid 1px;";
-//    text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
-    text = "QTabWidget::rubbish {}";
+  //    text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
+
   //  text = "QTabWidget::branch {color: red}";
   //  text = "QTabWidget::branch {color: red; background: green}";
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;";
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;}";
-//  text = "QTabWidget::branch {\ncolor: red;\n}\n"
-//         "QWidget:active {\nborder: blue;}";
-//  text = "QTabWidget:active {\ncolor: red;\n"
-//         "/* An inline comment */\n}\n"
-//         "/* This is another\n comment */"
-//         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
+  //  text = "QTabWidget::branch {\ncolor: red;\n}\n"
+  //         "QWidget:active {\nborder: blue;}";
+  //  text = "QTabWidget:active {\ncolor: red;\n"
+  //         "/* An inline comment */\n}\n"
+  //         "/* This is another\n comment */"
+  //         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
 
-//  text = "StylesheetEdit {\n"
-//         "widget: blue light yellow;\n"
-//         "subcontrol: yellow blue normal;\n"
-//         "subcontrolmarker: blue black yellow;\n"
-//         "pseudostate: red lightgrey light;\n"
-//         "pseudostatemarker: lightgrey red extrabold;\n"
-//         "property: darkgrey lightblue bold;\n"
-//         "propertymarker: lightblue medium;\n"
-//         "value: darkgrey pink demibold;\n"
-//         "startbrace: red;\n"
-//         "endbrace: yellow normal;\n"
-//         "bracematch: blue lightgreen bold;\n"
-//         "comment: blue yellow thin;\n"
-//         "bad: red blue extralight;\n"
-//         "}";
+  // Test StylesheetEdit properties.
+  //  text = "StylesheetEdit {\n"
+  //         "widget: blue light yellow;\n"
+  //         "subcontrol: yellow blue normal;\n"
+  //         "subcontrolmarker: blue black yellow;\n"
+  //         "pseudostate: red lightgrey light;\n"
+  //         "pseudostatemarker: lightgrey red extrabold;\n"
+  //         "property: darkgrey lightblue bold;\n"
+  //         "propertymarker: lightblue medium;\n"
+  //         "value: darkgrey pink demibold;\n"
+  //         "startbrace: red;\n"
+  //         "endbrace: yellow normal;\n"
+  //         "bracematch: blue lightgreen bold;\n"
+  //         "comment: blue yellow thin;\n"
+  //         "bad: red blue extralight;\n"
+  //         "}";
 
   // Errors
-//  text =  "color: red border: green solid 1px;"; // missing first end property char.
-//  text =  "color red; border: green solid 1px;"; // missing first end property marker.
+  //  text =  "color: red border: green solid 1px;"; // missing first end property char.
+  //  text =  "color red; border: green solid 1px;"; // missing first end property marker.
+  //  text = "QTabWidget:actve {}"; // BAD pseudostate
+  //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
+  //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
+//  text = "QTabWidget::branh {}"; // BAD subcontrol
+  //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
+    text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
 
   QString stylesheet =
     "StylesheetEdit {"

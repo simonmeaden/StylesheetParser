@@ -54,6 +54,10 @@ public:
     PreviousBadNode                     = 0x400000,
     InvalidPropertyValue                = 0x800000,
     ValueIsAProperty                    = 0x1000000,
+    AnomalousType                       = 0x2000000,
+    AnomalousMarkerType                 = 0x4000000,
+    InvalidSubControlMarker             = 0x8000000,
+    InvalidPseudoStateMarker            = 0x10000000,
   };
   Q_DECLARE_FLAGS(Errors, Error)
   Q_FLAG(Errors)

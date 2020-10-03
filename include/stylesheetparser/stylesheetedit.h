@@ -85,7 +85,10 @@ public:
 
 protected:
   void resizeEvent(QResizeEvent* event) override;
+  void mousePressEvent(QMouseEvent *event);
   void mouseMoveEvent(QMouseEvent *event) override;
+  void mouseReleaseEvent(QMouseEvent *event);
+  void mouseDoubleClickEvent(QMouseEvent *event);
   void contextMenuEvent(QContextMenuEvent *event);
 
 private:

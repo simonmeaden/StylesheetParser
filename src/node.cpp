@@ -59,7 +59,7 @@ int Node::length() const
   return 0;
 }
 
-QTextCursor Node::textCursor()
+QTextCursor Node::cursor()
 {
   return m_start;
 }
@@ -69,7 +69,8 @@ Node::Type Node::type() const
   return m_type;
 }
 
-QString Node::toString() {
+QString Node::toString()
+{
   switch (m_type) {
   case NodeType:
     return "Node";
@@ -207,7 +208,7 @@ QString BadBlockNode::name() const
   return m_name;
 }
 
-void BadBlockNode::setName(const QString &text)
+void BadBlockNode::setName(const QString& text)
 {
   m_name = text;
 }
@@ -222,6 +223,20 @@ int BadBlockNode::length() const
   return m_name.length();
 }
 
+BadSubControlMarkerNode::BadSubControlMarkerNode(const QString& name, QTextCursor start,
+                             ParserState::Errors errors, QObject* parent, Node::Type type)
+  : BadBlockNode(name, start, errors, parent, type)
+{
+
+}
+
+BadPseudoStateMarkerNode::BadPseudoStateMarkerNode(const QString &name, QTextCursor start,
+                                                   ParserState::Errors errors, QObject *parent,
+                                                   Node::Type type)
+  : BadBlockNode(name, start, errors, parent, type)
+{
+
+}
 ParserState::Errors BadBlockNode::errors() const
 {
   return m_errors;
@@ -543,6 +558,9 @@ PropertyEndNode::PropertyEndNode(QTextCursor start,
                                  Node::Type type)
   : Node(start, parent, type)
 {}
+
+
+
 
 
 

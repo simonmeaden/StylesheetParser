@@ -83,6 +83,12 @@ public:
   QMap<QTextCursor, Node *> *nodes();
 
 
+  QList<int> bookmarks();
+  void setBookmarks(QList<int> bookmarks);
+  void addBookmark(int bookmark);
+  void removeBookmark(int bookmark);
+  void clearBookmarks();
+
 protected:
   void resizeEvent(QResizeEvent* event) override;
   void mousePressEvent(QMouseEvent *event);
@@ -98,15 +104,16 @@ private:
 
   void initActions();
   void format();
-  void highlightCurrentLine();
-  void updateLineNumberArea(const QRect& rect, int dy);
-  void lineNumberAreaPaintEvent(QPaintEvent* event);
+  void updateLeftArea(const QRect& rect, int dy);
+//  void updateLineNumberArea(const QRect& rect, int dy);
+  int bookmarkAreaWidth();
   int lineNumberAreaWidth();
   void onCursorPositionChanged();
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
-  void updateLineNumberAreaWidth(int);
+  void handleTextChanged();
+//  void updateLineNumberAreaWidth(int);
+  void updateLeftAreaWidth(int);
 
-//  void displayError(BadBlockNode *badNode, QPoint pos);
 };
 
 

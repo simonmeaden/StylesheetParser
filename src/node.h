@@ -72,7 +72,6 @@ public:
   void setStart(int position);
   void moveStart(int count);
   virtual int end() const;
-  virtual int length() const;
   QTextCursor cursor();
 
   Type type() const;
@@ -91,6 +90,7 @@ public:
 
   QString name() const;
   void setName(const QString &value);
+  virtual int length() const;
 
 protected:
   QString m_name;
@@ -117,33 +117,18 @@ public:
                         Node::Type type = Node::BadNodeType);
 
   int end() const override;
-  int length() const override;
 };
 
-class CharNode : public Node
-{
-  Q_OBJECT
-public:
-  explicit CharNode(QString value, QTextCursor start, QObject* parent, Type type = CharNodeType);
-
-  int end() const override;
-  int length() const override;
-
-private:
-  QString m_value;
-};
-
-class SubControlMarkerNode : public CharNode
+class SubControlMarkerNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit SubControlMarkerNode(QTextCursor start, QObject* parent, Type type = SubControlMarkerType);
 
   int end() const override;
-  int length() const override;
 };
 
-class ColonNode : public CharNode
+class ColonNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
@@ -215,7 +200,7 @@ public:
 
   //! Returns the number of values in the property.
   int count();
-  // indicates wheter the value at index is a valid value.
+  // indicates whether the value at index is a valid value.
   Check isValid(int index);
   int end() const override;
 
@@ -236,7 +221,6 @@ public:
 
 };
 
-
 class SubControlNode : public Node, public NameNode
 {
   Q_OBJECT
@@ -244,7 +228,6 @@ public:
   explicit SubControlNode(const QString& name, QTextCursor start, QObject* parent, Type type = SubControlType);
 
   int end() const override;
-  int length() const override;
 };
 
 class PseudoStateNode : public Node, public NameNode
@@ -254,7 +237,6 @@ public:
   explicit PseudoStateNode(const QString& name, QTextCursor start, QObject* parent, Type type = PseudoStateType);
 
   int end() const override;
-  int length() const override;
 };
 
 class CommentNode : public Node, public NameNode
@@ -266,7 +248,6 @@ public:
   void append(QChar c);
   void append(QString text);
   int end() const override;
-  int length() const override;
 };
 
 class PropertyMarkerNode : public ColonNode
@@ -276,7 +257,7 @@ public:
   explicit PropertyMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyMarkerType);
 };
 
-class SemiColonNode : public CharNode
+class SemiColonNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
@@ -297,14 +278,14 @@ public:
   explicit PropertyEndNode(QTextCursor start, QObject* parent, Type type = PropertyEndType);
 };
 
-class NewlineNode : public CharNode
+class NewlineNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit NewlineNode(QTextCursor start, QObject* parent, Type type = NewlineType);
 };
 
-class StartBraceNode : public CharNode
+class StartBraceNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
@@ -317,7 +298,7 @@ private:
   bool m_isBraceAtCursor;
 };
 
-class EndBraceNode : public CharNode
+class EndBraceNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
@@ -330,24 +311,22 @@ private:
   bool m_isBraceAtCursor;
 };
 
-class StartCommentNode : public CharNode
+class StartCommentNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit StartCommentNode(QTextCursor start, QObject* parent, Type type = CommentStartMarkerType);
 
   int end() const override;
-  int length() const override;
 };
 
-class EndCommentNode : public CharNode
+class EndCommentNode : public Node, public NameNode
 {
   Q_OBJECT
 public:
   explicit EndCommentNode(QTextCursor start, QObject* parent, Type type = CommentEndMarkerType);
 
   int end() const override;
-  int length() const override;
 };
 
 

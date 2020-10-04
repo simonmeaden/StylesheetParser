@@ -57,29 +57,77 @@ struct StylesheetEditPrivate
 {
   Q_DECLARE_PUBLIC(StylesheetEdit)
 
-  class LineNumberArea : public QWidget
+  class BookmarkArea : public QWidget
   {
   public:
-    LineNumberArea(StylesheetEdit* editor);
+    BookmarkArea(StylesheetEdit*parent=nullptr);
 
     QSize sizeHint() const override;
 
-    QColor fore() const;
-    void setFore(const QColor& fore);
-
+    QColor foreSelected() const;
+    void setForeSelected(const QColor& fore);
+    QColor foreUnselected() const;
+    void setForeUnselected(const QColor& fore);
     QColor back() const;
     void setBack(const QColor& back);
 
-    QFont::Weight weight() const;
-    void setWeight(const QFont::Weight& weight);
+    int bookmarkAreaWidth() const;
+    void setWidth(int width);
+
+    int left() const;
+    void setLeft(int left);
+
+    QList<int> bookmarks();
+    void setBookmarks(QList<int> bookmarks);
+    void addBookmark(int bookmark);
+    void removeBookmark(int bookmark);
+    void clearBookmarks();
 
   protected:
     void paintEvent(QPaintEvent* event) override;
 
   private:
     StylesheetEdit* m_codeEditor;
-    QColor m_fore, m_back;
+    QColor m_foreSelected, m_foreUnselected, m_back;
     QFont::Weight m_weight;
+    int m_width, m_left;
+    QList<int> m_bookmarks;
+
+  };
+  class LineNumberArea : public QWidget
+  {
+  public:
+    LineNumberArea(StylesheetEdit* editor=nullptr);
+
+    QSize sizeHint() const override;
+
+    QColor foreSelected() const;
+    void setForeSelected(const QColor& fore);
+    QColor foreUnselected() const;
+    void setForeUnselected(const QColor& fore);
+    QColor back() const;
+    void setBack(const QColor& back);
+
+    void setCurrentLineNumber(int lineNumber);
+    int lineNumber() const;
+    int lineNumberAreaWidth();
+
+    QFont::Weight weight() const;
+    void setWeight(const QFont::Weight& weight);
+
+    int left() const;
+    void setLeft(int left);
+
+    int lineCount() const;
+
+  protected:
+    void paintEvent(QPaintEvent* event) override;
+
+  private:
+    StylesheetEdit* m_codeEditor;
+    QColor m_foreSelected, m_foreUnselected, m_back;
+    QFont::Weight m_weight;
+    int m_lineNumber, m_left, m_lineCount;
   };
 
   class HoverWidget : public QWidget
@@ -105,6 +153,7 @@ struct StylesheetEditPrivate
   StylesheetEditPrivate(StylesheetEdit* parent);
 
   StylesheetEdit* q_ptr;
+  BookmarkArea* m_bookmarkArea;
   LineNumberArea* m_lineNumberArea;
   DataStore* m_datastore;
   //  Parser* m_parser;
@@ -126,6 +175,13 @@ struct StylesheetEditPrivate
   QMap<QTextCursor, Node*>* nodes();
 
   void showNewlineMarkers(bool show);
+  void setCurrentLineNumber(int lineNumber);
+
+  QList<int> bookmarks();
+  void setBookmarks(QList<int> bookmarks);
+  void addBookmark(int bookmark);
+  void removeBookmark(int bookmark);
+  void clearBookmarks();
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
@@ -181,14 +237,10 @@ struct StylesheetEditPrivate
   void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
 
-  void lineNumberAreaPaintEvent(QTextBlock block,
-                                int blockNumber,
-                                int top,
-                                int bottom,
-                                int height,
-                                double blockHeight,
-                                QRect rect);
+  int bookmarkAreaWidth();
   int lineNumberAreaWidth();
+  void calculateLineNumber(QTextCursor textCursor);
+  void updateLeftArea(const QRect& rect, int dy);
 
   void resizeEvent(QRect cr);
   //  bool event(QEvent* event);
@@ -196,24 +248,21 @@ struct StylesheetEditPrivate
   void hideHoverWidget();
   void handleMouseMove(QPoint pos);
   void displayError(BadBlockNode* badNode, QPoint pos);
+  void displayError(PropertyNode* property, QPoint pos);
 
   void onCursorPositionChanged(QTextCursor textCursor);
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  void handleTextChanged();
   Node* nextNode(QTextCursor cursor);
   Node* previousNode(QTextCursor cursor);
 
   void parseInitialText(const QString& text, int pos = 0);
-  int parseProperties(
-    const QString& text,
-    int start,
-    int& pos,
-    QString& block);
-  int parsePropertyWithValues(QTextCursor cursor, PropertyNode *property,
-    const QString& text,
-    int start,
-    int& pos,
-    QString& block,
-    Node** endnode);
+  int parsePropertyWithValues(QTextCursor cursor, PropertyNode* property,
+                              const QString& text,
+                              int start,
+                              int& pos,
+                              QString& block,
+                              Node** endnode);
   void parseComment(const QString& text, int& pos);
   void stashWidget(int position, const QString& block);
   void stashBadNode(int position, const QString& block, ParserState::Error error);
@@ -227,6 +276,9 @@ struct StylesheetEditPrivate
   void stashSubControlMarker(int position);
   void stashPropertyEndNode(int position, Node** endnode);
   void stashPropertyEndMarkerNode(int position, Node** endnode);
+  void updatePropertyValues(int pos, PropertyNode* property, int charsAdded, int charsRemoved, const QString& newValue);
+  int calculateWidth(QString name, int offset, QFontMetrics fm);
+
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank
   // character.
   void skipBlanks(const QString& text, int& pos);
@@ -240,8 +292,6 @@ struct StylesheetEditPrivate
   QString getValueAtCursor(int anchor, const QString& text);
   QString getOldNodeValue(CursorData* data);
 
-  void highlightCurrentLine();
-  void updateLineNumberArea(const QRect& rect, int dy);
 
   bool checkStylesheetColors(StylesheetData* data,
                              QColor& color1,
@@ -250,7 +300,6 @@ struct StylesheetEditPrivate
 
 
 private:
-  void updatePropertyValues(int pos, PropertyNode* property, int charsAdded, int charsRemoved, const QString& newValue);
 };
 
 } // end of StylesheetParser

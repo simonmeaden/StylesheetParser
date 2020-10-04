@@ -78,7 +78,12 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
   for (auto key : nodes->keys()) {
     auto node = nodes->value(key);
     auto type = node->type();
-    auto length = node->length();
+
+    if (type == Node::PropertyEndType) {
+      continue;
+    }
+
+    auto length = dynamic_cast<NameNode*>(node)->length();
     auto nodeStart = node->start();
     auto nodeEnd = nodeStart + length;
 

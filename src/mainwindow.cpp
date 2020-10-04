@@ -41,11 +41,9 @@ QWidget* MainWindow::initGui()
   //  text =  "color: red; background: green";
   //  text =  "color: red; background: green;";
   //  text =  "color: red; border: green solid 1px;";
-  //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
 
   //  text = "QTabWidget::branch {color: red}";
   //  text = "QTabWidget::branch {color: red; background: green}";
-  //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;";
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;}";
   //  text = "QTabWidget::branch {\ncolor: red;\n}\n"
   //         "QWidget:active {\nborder: blue;}";
@@ -55,25 +53,34 @@ QWidget* MainWindow::initGui()
   //         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
 
   // Test StylesheetEdit properties.
-  text = "StylesheetEdit {\n"
-         "widget: blue light yellow;\n"
-         "subcontrol: yellow blue normal;\n"
-         "subcontrolmarker: blue black yellow;\n"
-         "pseudostate: red lightgrey light;\n"
-         "pseudostatemarker: lightgrey red extrabold;\n"
-         "property: darkgrey lightblue bold;\n"
-         "propertymarker: lightblue medium;\n"
-         "value: darkgrey pink demibold;\n"
-         "startbrace: red;\n"
-         "endbrace: yellow normal;\n"
-         "bracematch: blue lightgreen bold;\n"
-         "comment: blue yellow thin;\n"
-         "bad: red blue extralight;\n"
-         "}";
+    text = "StylesheetEdit {\n"
+           "widget: blue light yellow;\n"
+           "subcontrol: yellow blue normal;\n"
+           "subcontrolmarker: blue black yellow;\n"
+           "pseudostate: red lightgrey light;\n"
+           "pseudostatemarker: lightgrey red extrabold;\n"
+           "property: darkgrey lightblue bold;\n"
+           "propertymarker: lightblue medium;\n"
+           "value: darkgrey pink demibold;\n"
+           "startbrace: red;\n"
+           "endbrace: yellow normal;\n"
+           "bracematch: blue lightgreen bold;\n"
+           "comment: blue yellow thin;\n"
+           "bad: red blue extralight;\n"
+           "}";
 
   // Errors
-  //  text =  "color: red border: green solid 1px;"; // missing first end property char.
-  //  text =  "color red; border: green solid 1px;"; // missing first end property marker.
+//    text =  "color: red border: green solid 1px;"; // missing first end property char.
+//    text =  "color red; border: green solid 1px;"; // missing first end property marker.
+  //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
+  //  text =   "color: rd";
+  //  text =   "color: red;";
+  //  text =  "color: red; background: green";
+  //  text =  "color: red; background: green;";
+//    text =  "  color rd; border: gren solid 1x;";
+  //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
+
+  //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;"; // missing end brace
   //  text = "QTabWidget:actve {}"; // BAD pseudostate
   //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
   //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
@@ -81,27 +88,24 @@ QWidget* MainWindow::initGui()
   //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
   //  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
 
-  //    text =   "color: rd";
-  //  text =   "color: red;";
-  //  text =  "color: red; background: green";
-  //  text =  "color: red; background: green;";
-  //    text =  "  color: rd; border: gren slid 1x;";
-//      text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
-  text = "StylesheetEdit {\n"
-         "wiget: blue liht yellow;\n"
-         "subcntrol: yelow blue normal;\n"
-         "subcntrolmarker: blue blck yellow;\n"
-         "}";
+  //  text = "StylesheetEdit {\n"
+  //         "wiget: blue liht yellow;\n"
+  //         "subcntrol: yelow blue normal;\n"
+  //         "subcntrolmarker: blue blck yellow;\n"
+  //         "}";
 
-  QString stylesheet =
-    "StylesheetEdit {"
-    "widget: blue light yellow;"
-    "}";
+//  QString stylesheet =
+//    "StylesheetEdit {"
+//    "widget: green light white;"
+//    "}";
 
   m_editor = new StylesheetEdit(this);
   m_editor->setPlainText(text);
   m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  m_editor->setStyleSheet(stylesheet);
+//  m_editor->setStyleSheet(stylesheet);
+  QList<int> bookmarks;
+  bookmarks << 1 << 5 << 10;
+  m_editor->setBookmarks(bookmarks);
   layout->addWidget(m_editor, 0, 0);
 
   return f;

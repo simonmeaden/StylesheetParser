@@ -22,6 +22,7 @@
 
 #include <QMainWindow>
 #include <QGridLayout>
+#include <QToolBar>
 
 #include "stylesheetedit.h"
 
@@ -37,9 +38,11 @@ public:
 signals:
 
 private:
+  QToolBar *m_toolBar;
   StylesheetEdit *m_editor;
 
   QWidget *initGui();
+//  void handleGoToBookmark(bool);
 
 };
 

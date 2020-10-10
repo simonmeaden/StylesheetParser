@@ -6,7 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -20,6 +20,7 @@ include("CMakeLists.qt5.in")
 #==== end of standard includes====================================
 
 find_package(Qt5 COMPONENTS Core REQUIRED)
+# TODO remove later when I combine this with sm_widgets
 
 add_executable(tst_parser "")
 target_sources(tst_parser
@@ -30,19 +31,25 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheeteditdialog.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/abstractlabelledwidget.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/labelledlineedit.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/labelledspinbox.h>
 
       $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetedit.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheeteditdialog.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/x11colors.h>
+      $<INSTALL_INTERFACE:include/stylesheetparser/abstractlabelledwidget.h>
+      $<INSTALL_INTERFACE:include/stylesheetparser/labelledlineedit.h>
+      $<INSTALL_INTERFACE:include/stylesheetparser/labelledspinbox.h>
 
    PRIVATE
       src/main.cpp
       src/parserstate.h
       src/parserstate.cpp
       src/node.cpp
-      src/stylesheetedit_p.h
+      src/stylesheetedit.qrc
       src/stylesheetedit.cpp
       src/stylesheeteditdialog.cpp
       src/stylesheethighlighter.h
@@ -51,6 +58,9 @@ target_sources(tst_parser
       src/datastore.h
       src/datastore.cpp
       src/x11colors.cpp
+      src/abstractlabelledwidget.cpp
+      src/labelledlineedit.cpp
+      src/labelledspinbox.cpp
 
    )
 target_include_directories(tst_parser

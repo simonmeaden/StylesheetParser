@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="bookmark">bookmark.png</file>
+        <file alias="end">go-bottom.png</file>
+        <file alias="down">go-down.png</file>
+        <file alias="left">go-previous.png</file>
+        <file alias="start">go-top.png</file>
+        <file alias="up">go-up.png</file>
+        <file alias="right">go-next.png</file>
+        <file alias="endline">go-end.png</file>
+        <file alias="startline">go-start.png</file>
+        <file alias="jump">go-jump.png</file>
+    </qresource>
+</RCC>

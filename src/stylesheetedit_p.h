@@ -22,8 +22,13 @@
 #ifndef STYLESHEETEDIT_P_H
 #define STYLESHEETEDIT_P_H
 
+#include <QAbstractTableModel>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QGroupBox>
 #include <QLabel>
 #include <QList>
+#include <QTableView>
 #include <QResizeEvent>
 #include <QTextCharFormat>
 #include <QWidget>
@@ -32,10 +37,65 @@
 #include "node.h"
 #include "parserstate.h"
 #include "stylesheethighlighter.h"
+#include "stylesheetparser/labelledlineedit.h"
+#include "stylesheetparser/labelledspinbox.h"
 
 namespace StylesheetEditor {
 
 class StylesheetEdit;
+
+class BookmarkEditDialog : public QDialog
+{
+  Q_OBJECT
+public:
+  explicit BookmarkEditDialog(QWidget* parent = nullptr);
+
+  void setText(const QString& text);
+  QString text();
+  void setLineNumber(int linenumber);
+  int lineNumber();
+
+private:
+  LabelledSpinBox* m_linenumberEdit;
+  LabelledLineEdit* m_textEdit;
+  QDialogButtonBox* m_buttonBox;
+};
+
+class BookmarkModel : public QAbstractTableModel
+{
+public:
+  explicit BookmarkModel(QMap<int, QString> bookmarks);
+  int columnCount(const QModelIndex& = QModelIndex()) const;
+  int rowCount(const QModelIndex& = QModelIndex()) const;
+  QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+  Qt::ItemFlags flags(const QModelIndex& index) const;
+  QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
+//  bool setBookmark(int bookmark);
+
+private:
+  QMap<int, QString> m_bookmarks;
+};
+
+class GoToBookmarkDialog : public QDialog
+{
+  Q_OBJECT
+public:
+  explicit GoToBookmarkDialog(QMap<int, QString> bookmarks,
+                              QWidget* parent = nullptr);
+
+  int bookmark();
+  QString text();
+//  bool setBookmark(int bookmark);
+
+private:
+  QGroupBox* m_group;
+  QTableView* m_bookmarkView;
+  QDialogButtonBox* m_buttonBox;
+  int m_bookmark;
+  QString m_text;
+
+  void handleClicked(const QModelIndex& index);
+};
 
 struct StylesheetData
 {
@@ -60,7 +120,7 @@ struct StylesheetEditPrivate
   class BookmarkArea : public QWidget
   {
   public:
-    BookmarkArea(StylesheetEdit*parent=nullptr);
+    BookmarkArea(StylesheetEdit* parent = nullptr);
 
     QSize sizeHint() const override;
 
@@ -77,27 +137,37 @@ struct StylesheetEditPrivate
     int left() const;
     void setLeft(int left);
 
-    QList<int> bookmarks();
-    void setBookmarks(QList<int> bookmarks);
-    void addBookmark(int bookmark);
+    QMap<int, QString> bookmarks();
+    void setBookmarks(QMap<int, QString> bookmarks);
+    void insertBookmark(int bookmark, const QString& text = QString());
+    void toggleBookmark(int bookmark);
     void removeBookmark(int bookmark);
+    void editBookmark(int bookmark);
     void clearBookmarks();
+    bool hasBookmark(int bookmark);
+    bool hasBookmarkText(int bookmark);
+    QString bookmarkText(int bookmark);
+    int count();
 
   protected:
     void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event);
+    void contextMenuEvent(QContextMenuEvent* event);
 
   private:
     StylesheetEdit* m_codeEditor;
     QColor m_foreSelected, m_foreUnselected, m_back;
     QFont::Weight m_weight;
     int m_width, m_left;
-    QList<int> m_bookmarks;
-
+    QMap<int, QString> m_bookmarks;
+    QMap<int, QString> m_oldBookmarks;
   };
   class LineNumberArea : public QWidget
   {
   public:
-    LineNumberArea(StylesheetEdit* editor=nullptr);
+    LineNumberArea(StylesheetEdit* editor = nullptr);
 
     QSize sizeHint() const override;
 
@@ -108,7 +178,7 @@ struct StylesheetEditPrivate
     QColor back() const;
     void setBack(const QColor& back);
 
-    void setCurrentLineNumber(int lineNumber);
+    void setLineNumber(int lineNumber);
     int lineNumber() const;
     int lineNumberAreaWidth();
 
@@ -127,7 +197,7 @@ struct StylesheetEditPrivate
     StylesheetEdit* m_codeEditor;
     QColor m_foreSelected, m_foreUnselected, m_back;
     QFont::Weight m_weight;
-    int m_lineNumber, m_left, m_lineCount;
+    int m_currentLineNumber, m_left, m_lineCount;
   };
 
   class HoverWidget : public QWidget
@@ -169,19 +239,44 @@ struct StylesheetEditPrivate
   StylesheetData m_stylesheetData;
   bool m_startComment;
   HoverWidget* m_hoverWidget;
+  bool m_manualMove;
 
   void setPlainText(const QString& text);
 
   QMap<QTextCursor, Node*>* nodes();
 
   void showNewlineMarkers(bool show);
-  void setCurrentLineNumber(int lineNumber);
 
-  QList<int> bookmarks();
-  void setBookmarks(QList<int> bookmarks);
-  void addBookmark(int bookmark);
-  void removeBookmark(int bookmark);
+  int lineNumber() const;
+  void setLineNumber(int lineNumber);
+  void up(int n = 1);
+  void down(int n = 1);
+  void left(int n = 1);
+  void right(int n = 1);
+  void start();
+  void end();
+  void startOfLine();
+  void endOfLine();
+  //  void goToLine(int lineNumber);
+
+  int m_bookmarkLineNumber;
+  int bookmarkLineNumber() const;
+  void setBookmarkLineNumber(int bookmarkLineNumber);
+  QMap<int, QString> bookmarks();
+  void setBookmarks(QMap<int, QString> bookmarks);
+  void insertBookmark(int bookmark = -1, const QString& text = QString());
+  void toggleBookmark(int bookmark);
+  void removeBookmark(int bookmark = -1);
   void clearBookmarks();
+  bool hasBookmark(int linenumber);
+  bool hasBookmarkText(int bookmark);
+  void editBookmark(int bookmark = -1);
+  QString bookmarkText(int bookmark);
+  int bookmarkCount();
+  void gotoBookmark(int bookmark = -1);
+  void handleRemoveBookmark(bool);
+  void handleEditBookmark(bool);
+  void handleGotoBookmark(bool);
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
@@ -239,7 +334,7 @@ struct StylesheetEditPrivate
 
   int bookmarkAreaWidth();
   int lineNumberAreaWidth();
-  void calculateLineNumber(QTextCursor textCursor);
+  int calculateLineNumber(QTextCursor textCursor);
   void updateLeftArea(const QRect& rect, int dy);
 
   void resizeEvent(QRect cr);
@@ -250,14 +345,15 @@ struct StylesheetEditPrivate
   void displayError(BadBlockNode* badNode, QPoint pos);
   void displayError(PropertyNode* property, QPoint pos);
 
-  void onCursorPositionChanged(QTextCursor textCursor);
+  void handleCursorPositionChanged(QTextCursor textCursor);
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
   Node* nextNode(QTextCursor cursor);
   Node* previousNode(QTextCursor cursor);
 
   void parseInitialText(const QString& text, int pos = 0);
-  int parsePropertyWithValues(QTextCursor cursor, PropertyNode* property,
+  int parsePropertyWithValues(QTextCursor cursor,
+                              PropertyNode* property,
                               const QString& text,
                               int start,
                               int& pos,
@@ -265,7 +361,9 @@ struct StylesheetEditPrivate
                               Node** endnode);
   void parseComment(const QString& text, int& pos);
   void stashWidget(int position, const QString& block);
-  void stashBadNode(int position, const QString& block, ParserState::Error error);
+  void stashBadNode(int position,
+                    const QString& block,
+                    ParserState::Error error);
   void stashBadSubControlMarkerNode(int position, ParserState::Error error);
   void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
   void stashPseudoState(int position, const QString& block);
@@ -276,7 +374,11 @@ struct StylesheetEditPrivate
   void stashSubControlMarker(int position);
   void stashPropertyEndNode(int position, Node** endnode);
   void stashPropertyEndMarkerNode(int position, Node** endnode);
-  void updatePropertyValues(int pos, PropertyNode* property, int charsAdded, int charsRemoved, const QString& newValue);
+  void updatePropertyValues(int pos,
+                            PropertyNode* property,
+                            int charsAdded,
+                            int charsRemoved,
+                            const QString& newValue);
   int calculateWidth(QString name, int offset, QFontMetrics fm);
 
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank
@@ -292,12 +394,10 @@ struct StylesheetEditPrivate
   QString getValueAtCursor(int anchor, const QString& text);
   QString getOldNodeValue(CursorData* data);
 
-
   bool checkStylesheetColors(StylesheetData* data,
                              QColor& color1,
                              QColor& color2,
                              QColor& color3);
-
 
 private:
 };

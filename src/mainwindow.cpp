@@ -18,6 +18,7 @@
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "stylesheetparser/mainwindow.h"
+#include <QtDebug>
 
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
@@ -30,9 +31,52 @@ MainWindow::~MainWindow() {}
 
 QWidget* MainWindow::initGui()
 {
-  QFrame* f = new QFrame(this);
-  QGridLayout* layout = new QGridLayout;
-  f->setLayout(layout);
+//  QFrame* f = new QFrame(this);
+//  QGridLayout* layout = new QGridLayout;
+//  f->setLayout(layout);
+
+  m_toolBar = addToolBar(tr("Main"));
+
+  m_editor = new StylesheetEdit(this);
+  m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+  const QIcon leftIcon(":/icons/left");
+  QAction *leftAct = new QAction(leftIcon, tr("&Left"), this);
+  connect(leftAct, &QAction::triggered, m_editor, &StylesheetEdit::left);
+  const QIcon rightIcon(":/icons/right");
+  QAction *rightAct = new QAction(rightIcon, tr("&Right"), this);
+  connect(rightAct, &QAction::triggered, m_editor, &StylesheetEdit::right);
+  const QIcon upIcon(":/icons/up");
+  QAction *upAct = new QAction(upIcon, tr("&Up"), this);
+  connect(upAct, &QAction::triggered, m_editor, &StylesheetEdit::up);
+  const QIcon downIcon(":/icons/down");
+  QAction *downAct = new QAction(downIcon, tr("&Down"), this);
+  connect(downAct, &QAction::triggered, m_editor, &StylesheetEdit::down);
+  const QIcon startIcon(":/icons/start");
+  QAction *startAct = new QAction(startIcon, tr("&Start"), this);
+  connect(startAct, &QAction::triggered, m_editor, &StylesheetEdit::start);
+  const QIcon endIcon(":/icons/end");
+  QAction *endAct = new QAction(endIcon, tr("&End"), this);
+  connect(endAct, &QAction::triggered, m_editor, &StylesheetEdit::end);
+  const QIcon startLineIcon(":/icons/startline");
+  QAction *startLineAct = new QAction(startLineIcon, tr("&Start of line"), this);
+  connect(startLineAct, &QAction::triggered, m_editor, &StylesheetEdit::startOfLine);
+  const QIcon endLineIcon(":/icons/endline");
+  QAction *endLineAct = new QAction(endLineIcon, tr("&End of line"), this);
+  connect(endLineAct, &QAction::triggered, m_editor, &StylesheetEdit::endOfLine);
+  const QIcon goToIcon(":/icons/jump");
+  QAction *goToAct = new QAction(goToIcon, tr("&Go To Line"), this);
+  connect(goToAct, &QAction::triggered, m_editor, &StylesheetEdit::gotoBookmarkDialog);
+
+  m_toolBar->addAction(startAct);
+  m_toolBar->addAction(startLineAct);
+  m_toolBar->addAction(leftAct);
+  m_toolBar->addAction(upAct);
+  m_toolBar->addAction(downAct);
+  m_toolBar->addAction(rightAct);
+  m_toolBar->addAction(endLineAct);
+  m_toolBar->addAction(endAct);
+  m_toolBar->addAction(goToAct);
 
   QString text;
   // Correct stuff
@@ -53,31 +97,31 @@ QWidget* MainWindow::initGui()
   //         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
 
   // Test StylesheetEdit properties.
-    text = "StylesheetEdit {\n"
-           "widget: blue light yellow;\n"
-           "subcontrol: yellow blue normal;\n"
-           "subcontrolmarker: blue black yellow;\n"
-           "pseudostate: red lightgrey light;\n"
-           "pseudostatemarker: lightgrey red extrabold;\n"
-           "property: darkgrey lightblue bold;\n"
-           "propertymarker: lightblue medium;\n"
-           "value: darkgrey pink demibold;\n"
-           "startbrace: red;\n"
-           "endbrace: yellow normal;\n"
-           "bracematch: blue lightgreen bold;\n"
-           "comment: blue yellow thin;\n"
-           "bad: red blue extralight;\n"
-           "}";
+  text = "StylesheetEdit {\n"
+         "widget: blue light yellow;\n"
+         "subcontrol: yellow blue normal;\n"
+         "subcontrolmarker: blue black yellow;\n"
+         "pseudostate: red lightgrey light;\n"
+         "pseudostatemarker: lightgrey red extrabold;\n"
+         "property: darkgrey lightblue bold;\n"
+         "propertymarker: lightblue medium;\n"
+         "value: darkgrey pink demibold;\n"
+         "startbrace: red;\n"
+         "endbrace: yellow normal;\n"
+         "bracematch: blue lightgreen bold;\n"
+         "comment: blue yellow thin;\n"
+         "bad: red blue extralight;\n"
+         "}";
 
   // Errors
-//    text =  "color: red border: green solid 1px;"; // missing first end property char.
-//    text =  "color red; border: green solid 1px;"; // missing first end property marker.
+  //    text =  "color: red border: green solid 1px;"; // missing first end property char.
+  //    text =  "color red; border: green solid 1px;"; // missing first end property marker.
   //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
   //  text =   "color: rd";
   //  text =   "color: red;";
   //  text =  "color: red; background: green";
   //  text =  "color: red; background: green;";
-//    text =  "  color rd; border: gren solid 1x;";
+  //    text =  "  color rd; border: gren solid 1x;";
   //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
 
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;"; // missing end brace
@@ -94,19 +138,39 @@ QWidget* MainWindow::initGui()
   //         "subcntrolmarker: blue blck yellow;\n"
   //         "}";
 
-//  QString stylesheet =
-//    "StylesheetEdit {"
-//    "widget: green light white;"
-//    "}";
+  //  QString stylesheet =
+  //    "StylesheetEdit {"
+  //    "widget: green light white;"
+  //    "}";
 
-  m_editor = new StylesheetEdit(this);
+  //  m_editor->setStyleSheet(stylesheet);
   m_editor->setPlainText(text);
-  m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-//  m_editor->setStyleSheet(stylesheet);
-  QList<int> bookmarks;
-  bookmarks << 1 << 5 << 10;
-  m_editor->setBookmarks(bookmarks);
-  layout->addWidget(m_editor, 0, 0);
 
-  return f;
+  QMap<int, QString> bookmarks;
+  bookmarks.insert(1, QString());
+  bookmarks.insert(5, "Test string");
+  bookmarks.insert(10, QString());
+  m_editor->setBookmarks(bookmarks);
+//  layout->addWidget(m_editor, 0, 0);
+
+  bool hasntText = m_editor->hasBookmarkText(1);
+  bool hasText = m_editor->hasBookmarkText(5);
+  QString bookmarkText = m_editor->bookmarkText(5);
+  int count = m_editor->bookmarkCount();
+
+  if (!hasntText && hasText && bookmarkText == "Test string" && count == 3) {
+    qWarning() << tr("Tested Good");
+
+  } else {
+    qWarning() << tr("Tested Bad");
+  }
+
+  m_editor->setLineNumber(8);
+
+  return m_editor;
 }
+
+//void MainWindow::handleGoToBookmark(bool)
+//{
+//  m_editor->gotoBookmark();
+//}

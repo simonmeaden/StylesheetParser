@@ -26,6 +26,8 @@
 #include <QMenu>
 #include <QKeySequence>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QHeaderView>
 
 #include "datastore.h"
 #include "stylesheethighlighter.h"
@@ -36,8 +38,7 @@ class StylesheetEditPrivate;
 
 class StylesheetEdit : public QPlainTextEdit
 {
-  Q_OBJECT
-  Q_DECLARE_PRIVATE(StylesheetEdit)
+  Q_OBJECT Q_DECLARE_PRIVATE(StylesheetEdit)
 public:
 
   explicit StylesheetEdit(QWidget* parent = nullptr);
@@ -45,6 +46,7 @@ public:
   //! Reimplemented from QPlainText::setPlainText()
   void setPlainText(const QString& text);
 
+  // TODO
   void showNewlineMarkers(bool show);
 
   //! Reimplemented from QPlainText::stylesheet()
@@ -80,39 +82,92 @@ public:
   void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
   //! Sets a new foreground/background/fontweight for the highlighter brace match format
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
-  QMap<QTextCursor, Node *> *nodes();
+  QMap<QTextCursor, Node*>* nodes();
 
-
-  QList<int> bookmarks();
-  void setBookmarks(QList<int> bookmarks);
-  void addBookmark(int bookmark);
+  //! Returns the bookmarks with associated text, if any.
+  //!
+  //! The bookmarks are stored in the key list of a map.
+  QMap<int, QString> bookmarks();
+  //! Sets the bookmarks with associated text, if any.
+  void setBookmarks(QMap<int, QString> bookmarks);
+  //! Inserts a new bookmark, with an optional text component. The current text is stored
+  //! until the text is replaced again.
+  void insertBookmark(int bookmark, const QString& text = QString());
+  //! Toggles the bookmark.
+  //!
+  //! Note that if you remove it the last set of text will be stored.
+  void toggleBookmark(int bookmark);
+  //! Edit the bookmark text, and optionally the line number.
+  void editBookmark(int bookmark = -1);
+  //! Remove the bookmark.
   void removeBookmark(int bookmark);
+  //! Remove ALL bookmarks.
   void clearBookmarks();
+  //! Returns true if the supplied line number has an existing bookmark, otherwise false.
+  bool hasBookmark(int linenumber);
+  //! Returns true if the supplied line number has any text associated with it, otherwise false.
+  //!
+  //! Note that it also returns false if the bookmark does not exist.
+  bool hasBookmarkText(int bookmark);
+  //! Returns the text for the supplied bookmark, or an empty string if no text exists.
+  QString bookmarkText(int bookmark);
+  //! Returns the number of bookmarks stored.
+  int bookmarkCount();
+  //! Moves the current line number to the supplied number.
+  void gotoBookmark(int bookmark);
+  void gotoBookmarkDialog(bool);
+
+  //! Pretty print the text.
+  void format();
+
+  int lineNumber() const;
+  void setLineNumber(int lineNumber);
+  void up(int n=1);
+  void down(int n=1);
+  void left(int n=1);
+  void right(int n=1);
+  void start();
+  void end();
+  void startOfLine();
+  void endOfLine();
+  void goToLine(int lineNumber);
 
 protected:
+  void contextMenuEvent(QContextMenuEvent* event);
+  void contextBookmarkMenuEvent(QContextMenuEvent* event);
+
   void resizeEvent(QResizeEvent* event) override;
-  void mousePressEvent(QMouseEvent *event);
-  void mouseMoveEvent(QMouseEvent *event) override;
-  void mouseReleaseEvent(QMouseEvent *event);
-  void mouseDoubleClickEvent(QMouseEvent *event);
-  void contextMenuEvent(QContextMenuEvent *event);
+  void mousePressEvent(QMouseEvent* event);
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event);
+  void mouseDoubleClickEvent(QMouseEvent* event);
+  void drawHoverWidget(QPoint pos, QString text);
 
 private:
   StylesheetEditPrivate* d_ptr;
-  QAction *m_formatAct;
   Node* m_hoverNode;
+  QAction* m_formatAct;
+  QAction* m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct, *m_clearBookmarksAct, *m_gotoBookmarkAct;
+  QMenu* m_contextMenu, *m_bookmarkMenu;
 
   void initActions();
-  void format();
+  void initMenus();
+  void handleAddBookmark(bool);
+  void handleRemoveBookmark(bool);
+  void handleEditBookmark(bool);
+  void handleGotoBookmark();
+  void handleClearBookmarks(bool);
+  void handleCursorPositionChanged();
+  void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  void handleTextChanged();
+
   void updateLeftArea(const QRect& rect, int dy);
-//  void updateLineNumberArea(const QRect& rect, int dy);
   int bookmarkAreaWidth();
   int lineNumberAreaWidth();
-  void onCursorPositionChanged();
-  void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
-  void handleTextChanged();
-//  void updateLineNumberAreaWidth(int);
   void updateLeftAreaWidth(int);
+  int calculateLineNumber(QTextCursor textCursor);
+
+  static const QChar m_arrow;
 
 };
 

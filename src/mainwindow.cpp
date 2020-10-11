@@ -31,41 +31,46 @@ MainWindow::~MainWindow() {}
 
 QWidget* MainWindow::initGui()
 {
-//  QFrame* f = new QFrame(this);
-//  QGridLayout* layout = new QGridLayout;
-//  f->setLayout(layout);
-
   m_toolBar = addToolBar(tr("Main"));
+  m_statusBar = statusBar();
+  m_lineLbl = new QLabel("--/--", this);
+  m_colLbl = new QLabel("--", this);
+  m_statusBar->addPermanentWidget(m_lineLbl);
+  m_statusBar->addPermanentWidget(m_colLbl);
 
   m_editor = new StylesheetEdit(this);
   m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
+  connect(m_editor, &StylesheetEdit::lineNumber, this, &MainWindow::setLineNumber);
+  connect(m_editor, &StylesheetEdit::lineCount, this, &MainWindow::setLineCount);
+  connect(m_editor, &StylesheetEdit::column, this, &MainWindow::setColumn);
+
   const QIcon leftIcon(":/icons/left");
-  QAction *leftAct = new QAction(leftIcon, tr("&Left"), this);
-  connect(leftAct, &QAction::triggered, m_editor, &StylesheetEdit::left);
+  QAction* leftAct = new QAction(leftIcon, tr("&Left"), this);
+  connect(leftAct, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::left));
   const QIcon rightIcon(":/icons/right");
-  QAction *rightAct = new QAction(rightIcon, tr("&Right"), this);
-  connect(rightAct, &QAction::triggered, m_editor, &StylesheetEdit::right);
+  QAction* rightAct = new QAction(rightIcon, tr("&Right"), this);
+  connect(rightAct, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::right));
   const QIcon upIcon(":/icons/up");
-  QAction *upAct = new QAction(upIcon, tr("&Up"), this);
-  connect(upAct, &QAction::triggered, m_editor, &StylesheetEdit::up);
+  QAction* upAct = new QAction(upIcon, tr("&Up"), this);
+  connect(upAct, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::up));
   const QIcon downIcon(":/icons/down");
-  QAction *downAct = new QAction(downIcon, tr("&Down"), this);
-  connect(downAct, &QAction::triggered, m_editor, &StylesheetEdit::down);
+  QAction* downAct = new QAction(downIcon, tr("&Down"), this);
+  connect(downAct, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::down));
   const QIcon startIcon(":/icons/start");
-  QAction *startAct = new QAction(startIcon, tr("&Start"), this);
+  QAction* startAct = new QAction(startIcon, tr("&Start"), this);
   connect(startAct, &QAction::triggered, m_editor, &StylesheetEdit::start);
   const QIcon endIcon(":/icons/end");
-  QAction *endAct = new QAction(endIcon, tr("&End"), this);
+  QAction* endAct = new QAction(endIcon, tr("&End"), this);
   connect(endAct, &QAction::triggered, m_editor, &StylesheetEdit::end);
   const QIcon startLineIcon(":/icons/startline");
-  QAction *startLineAct = new QAction(startLineIcon, tr("&Start of line"), this);
+  QAction* startLineAct = new QAction(startLineIcon, tr("&Start of line"), this);
   connect(startLineAct, &QAction::triggered, m_editor, &StylesheetEdit::startOfLine);
   const QIcon endLineIcon(":/icons/endline");
-  QAction *endLineAct = new QAction(endLineIcon, tr("&End of line"), this);
+  QAction* endLineAct = new QAction(endLineIcon, tr("&End of line"), this);
   connect(endLineAct, &QAction::triggered, m_editor, &StylesheetEdit::endOfLine);
   const QIcon goToIcon(":/icons/jump");
-  QAction *goToAct = new QAction(goToIcon, tr("&Go To Line"), this);
+  QAction* goToAct = new QAction(goToIcon, tr("&Go To Line"), this);
   connect(goToAct, &QAction::triggered, m_editor, &StylesheetEdit::gotoBookmarkDialog);
 
   m_toolBar->addAction(startAct);
@@ -151,7 +156,7 @@ QWidget* MainWindow::initGui()
   bookmarks.insert(5, "Test string");
   bookmarks.insert(10, QString());
   m_editor->setBookmarks(bookmarks);
-//  layout->addWidget(m_editor, 0, 0);
+  //  layout->addWidget(m_editor, 0, 0);
 
   bool hasntText = m_editor->hasBookmarkText(1);
   bool hasText = m_editor->hasBookmarkText(5);
@@ -165,12 +170,36 @@ QWidget* MainWindow::initGui()
     qWarning() << tr("Tested Bad");
   }
 
-  m_editor->setLineNumber(8);
+  m_editor->goToLine(8);
 
   return m_editor;
 }
 
-//void MainWindow::handleGoToBookmark(bool)
-//{
-//  m_editor->gotoBookmark();
-//}
+void MainWindow::setColumn(int value)
+{
+  m_column = value;
+  setLabels();
+}
+
+void MainWindow::setLineNumber(int value)
+{
+  m_linenumber = value;
+  setLabels();
+}
+
+void MainWindow::setLineCount(int value)
+{
+  m_linecount = value;
+  setLabels();
+}
+
+void MainWindow::setLabels()
+{
+  QString line("Line : %1/%2");
+  line = line.arg(m_linenumber).arg(m_linecount);
+  QString col("Col : %1");
+  col = col.arg(m_column);
+
+  m_lineLbl->setText(line);
+  m_colLbl->setText(col);
+}

@@ -23,6 +23,8 @@
 #include <QMainWindow>
 #include <QGridLayout>
 #include <QToolBar>
+#include <QStatusBar>
+#include <QLabel>
 
 #include "stylesheetedit.h"
 
@@ -39,11 +41,16 @@ signals:
 
 private:
   QToolBar *m_toolBar;
+  QStatusBar *m_statusBar;
   StylesheetEdit *m_editor;
+  QLabel *m_lineLbl, *m_colLbl;
+  int m_column, m_linenumber, m_linecount;
 
   QWidget *initGui();
-//  void handleGoToBookmark(bool);
-
+  void setColumn(int value);
+  void setLineNumber(int value);
+  void setLineCount(int value);
+  void setLabels();
 };
 
 #endif // MAINWINDOW_H

@@ -76,6 +76,11 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
 {
 }
 
+int StylesheetEditPrivate::getLineCount() const
+{
+  return m_lineCount;
+}
+
 void StylesheetEdit::setPlainText(const QString& text)
 {
   QPlainTextEdit::setPlainText(text);
@@ -518,21 +523,6 @@ void StylesheetEditPrivate::setBraceMatchFormat(QColor color,
   m_highlighter->setBraceMatchFormat(color, back, weight);
 }
 
-int StylesheetEdit::lineNumberAreaWidth()
-{
-  return d_ptr->lineNumberAreaWidth();
-}
-
-int StylesheetEditPrivate::lineNumberAreaWidth()
-{
-  return m_lineNumberArea->lineNumberAreaWidth();
-}
-
-int StylesheetEdit::bookmarkAreaWidth()
-{
-  return d_ptr->bookmarkAreaWidth();
-}
-
 void StylesheetEdit::resizeEvent(QResizeEvent* event)
 {
   QPlainTextEdit::resizeEvent(event);
@@ -916,6 +906,9 @@ void StylesheetEdit::handleCursorPositionChanged()
   d_ptr->handleCursorPositionChanged(textCursor());
 }
 
+/*
+   Calculates current line number and total line count.
+*/
 int StylesheetEditor::StylesheetEditPrivate::calculateLineNumber(QTextCursor textCursor)
 {
   QTextCursor cursor(textCursor);
@@ -935,7 +928,28 @@ int StylesheetEditor::StylesheetEditPrivate::calculateLineNumber(QTextCursor tex
     block = block.previous();
   }
 
+  int count = lines;
+
+  block = cursor.block().next();
+
+  while (block.isValid()) {
+    count += block.lineCount();
+    block = block.next();
+  }
+
+  m_lineCount = count;
+
   return lines;
+}
+
+/*
+   Calculates the current text column.
+*/
+int StylesheetEditPrivate::calculateColumn(QTextCursor textCursor)
+{
+  QTextCursor cursor(textCursor);
+  cursor.movePosition(QTextCursor::StartOfLine);
+  return textCursor.anchor() - cursor.anchor();
 }
 
 void StylesheetEditPrivate::handleCursorPositionChanged(QTextCursor textCursor)
@@ -944,8 +958,7 @@ void StylesheetEditPrivate::handleCursorPositionChanged(QTextCursor textCursor)
     return;
   }
 
-  int lineNumber = calculateLineNumber(textCursor);
-  setLineNumber(lineNumber);
+  setCurrentCursor(textCursor);
 
   Node* node;
   CursorData data;
@@ -1865,7 +1878,7 @@ void StylesheetEditPrivate::nodeAtCursorPosition(CursorData* data, int position)
   }
 }
 
-StylesheetEditPrivate::BookmarkArea::BookmarkArea(StylesheetEdit* editor)
+BookmarkArea::BookmarkArea(StylesheetEdit* editor)
   : QWidget(editor)
   , m_codeEditor(editor)
   , m_foreSelected(QColor("#808080"))
@@ -1875,52 +1888,52 @@ StylesheetEditPrivate::BookmarkArea::BookmarkArea(StylesheetEdit* editor)
   , m_left(0)
 {}
 
-QSize StylesheetEditPrivate::BookmarkArea::sizeHint() const
+QSize BookmarkArea::sizeHint() const
 {
   return QSize(m_codeEditor->bookmarkAreaWidth(), 0);
 }
 
-QColor StylesheetEditPrivate::BookmarkArea::foreSelected() const
+QColor BookmarkArea::foreSelected() const
 {
   return m_foreSelected;
 }
 
-void StylesheetEditPrivate::BookmarkArea::setForeSelected(const QColor& fore)
+void BookmarkArea::setForeSelected(const QColor& fore)
 {
   m_foreSelected = fore;
 }
 
-QColor StylesheetEditPrivate::BookmarkArea::foreUnselected() const
+QColor BookmarkArea::foreUnselected() const
 {
   return m_foreUnselected;
 }
 
-void StylesheetEditPrivate::BookmarkArea::setForeUnselected(const QColor& fore)
+void BookmarkArea::setForeUnselected(const QColor& fore)
 {
   m_foreUnselected = fore;
 }
 
-QColor StylesheetEditPrivate::BookmarkArea::back() const
+QColor BookmarkArea::back() const
 {
   return m_back;
 }
 
-void StylesheetEditPrivate::BookmarkArea::setBack(const QColor& back)
+void BookmarkArea::setBack(const QColor& back)
 {
   m_back = back;
 }
 
-int StylesheetEditPrivate::BookmarkArea::bookmarkAreaWidth() const
+int BookmarkArea::bookmarkAreaWidth() const
 {
   return m_width;
 }
 
-void StylesheetEditPrivate::BookmarkArea::setWidth(int width)
+void BookmarkArea::setWidth(int width)
 {
   m_width = width;
 }
 
-void StylesheetEditPrivate::BookmarkArea::paintEvent(QPaintEvent* event)
+void BookmarkArea::paintEvent(QPaintEvent* event)
 {
   QRect rect;
   rect.setLeft(m_left);
@@ -1957,12 +1970,12 @@ void StylesheetEditPrivate::BookmarkArea::paintEvent(QPaintEvent* event)
   }
 }
 
-void StylesheetEditPrivate::BookmarkArea::mousePressEvent(QMouseEvent* event)
+void BookmarkArea::mousePressEvent(QMouseEvent* event)
 {
   QWidget::mousePressEvent(event);
 }
 
-void StylesheetEditPrivate::BookmarkArea::mouseMoveEvent(QMouseEvent* event)
+void BookmarkArea::mouseMoveEvent(QMouseEvent* event)
 {
   auto tc = m_codeEditor->cursorForPosition(event->pos());
   int lineNumber = m_codeEditor->calculateLineNumber(tc);
@@ -1979,12 +1992,12 @@ void StylesheetEditPrivate::BookmarkArea::mouseMoveEvent(QMouseEvent* event)
   }
 }
 
-void StylesheetEditPrivate::BookmarkArea::mouseReleaseEvent(QMouseEvent* event)
+void BookmarkArea::mouseReleaseEvent(QMouseEvent* event)
 {
   QWidget::mouseMoveEvent(event);
 }
 
-void StylesheetEditPrivate::BookmarkArea::contextMenuEvent(QContextMenuEvent* event)
+void BookmarkArea::contextMenuEvent(QContextMenuEvent* event)
 {
   m_codeEditor->contextBookmarkMenuEvent(event);
 }
@@ -1999,28 +2012,28 @@ void StylesheetEditPrivate::setBookmarkLineNumber(int bookmarkLineNumber)
   m_bookmarkLineNumber = bookmarkLineNumber;
 }
 
-int StylesheetEditPrivate::BookmarkArea::left() const
+int BookmarkArea::left() const
 {
   return m_left;
 }
 
-void StylesheetEditPrivate::BookmarkArea::setLeft(int left)
+void BookmarkArea::setLeft(int left)
 {
   m_left = left;
 }
 
-QMap<int, QString> StylesheetEditPrivate::BookmarkArea::bookmarks()
+QMap<int, QString> BookmarkArea::bookmarks()
 {
   return m_bookmarks;
 }
 
-void StylesheetEditPrivate::BookmarkArea::setBookmarks(QMap<int, QString> bookmarks)
+void BookmarkArea::setBookmarks(QMap<int, QString> bookmarks)
 {
   m_bookmarks = bookmarks;
   update();
 }
 
-void StylesheetEditPrivate::BookmarkArea::insertBookmark(int bookmark, const QString& text)
+void BookmarkArea::insertBookmark(int bookmark, const QString& text)
 {
   if (m_bookmarks.contains(bookmark) && hasBookmarkText(bookmark)) {
     m_oldBookmarks.insert(bookmark, bookmarkText(bookmark));
@@ -2032,7 +2045,7 @@ void StylesheetEditPrivate::BookmarkArea::insertBookmark(int bookmark, const QSt
   update();
 }
 
-void StylesheetEditPrivate::BookmarkArea::toggleBookmark(int bookmark)
+void BookmarkArea::toggleBookmark(int bookmark)
 {
   if (m_bookmarks.contains(bookmark)) {
     removeBookmark(bookmark);
@@ -2047,7 +2060,7 @@ void StylesheetEditPrivate::BookmarkArea::toggleBookmark(int bookmark)
   }
 }
 
-void StylesheetEditPrivate::BookmarkArea::removeBookmark(int bookmark)
+void BookmarkArea::removeBookmark(int bookmark)
 {
   if (m_bookmarks.contains(bookmark)) {
     m_oldBookmarks.insert(bookmark, m_bookmarks.value(bookmark));
@@ -2056,33 +2069,33 @@ void StylesheetEditPrivate::BookmarkArea::removeBookmark(int bookmark)
   }
 }
 
-void StylesheetEditPrivate::BookmarkArea::clearBookmarks()
+void BookmarkArea::clearBookmarks()
 {
   m_bookmarks.clear();
   update();
 }
 
-bool StylesheetEditPrivate::BookmarkArea::hasBookmark(int bookmark)
+bool BookmarkArea::hasBookmark(int bookmark)
 {
   return m_bookmarks.contains(bookmark);
 }
 
-bool StylesheetEditPrivate::BookmarkArea::hasBookmarkText(int bookmark)
+bool BookmarkArea::hasBookmarkText(int bookmark)
 {
   return !m_bookmarks.value(bookmark).isEmpty();
 }
 
-QString StylesheetEditPrivate::BookmarkArea::bookmarkText(int bookmark)
+QString BookmarkArea::bookmarkText(int bookmark)
 {
   return m_bookmarks.value(bookmark);
 }
 
-int StylesheetEditPrivate::BookmarkArea::count()
+int BookmarkArea::count()
 {
   return m_bookmarks.size();
 }
 
-StylesheetEditPrivate::LineNumberArea::LineNumberArea(StylesheetEdit* editor)
+LineNumberArea::LineNumberArea(StylesheetEdit* editor)
   : QWidget(editor)
   , m_codeEditor(editor)
   , m_foreSelected(QColor("#808080"))
@@ -2092,12 +2105,12 @@ StylesheetEditPrivate::LineNumberArea::LineNumberArea(StylesheetEdit* editor)
   , m_left(0)
 {}
 
-QSize StylesheetEditPrivate::LineNumberArea::sizeHint() const
+QSize LineNumberArea::sizeHint() const
 {
   return QSize(m_codeEditor->lineNumberAreaWidth(), 0);
 }
 
-void StylesheetEditPrivate::LineNumberArea::paintEvent(QPaintEvent* event)
+void LineNumberArea::paintEvent(QPaintEvent* event)
 {
   QRect rect;
   rect.setLeft(m_left);
@@ -2115,20 +2128,21 @@ void StylesheetEditPrivate::LineNumberArea::paintEvent(QPaintEvent* event)
   QPainter painter(this);
   painter.fillRect(rect, back());
 
-  while (block.isValid() && top <= rect.bottom()) {
-    if (block.isVisible() && bottom >= rect.top()) {
-      int number = blockNumber + 1;
-      m_lineCount = blockNumber;
+  while (block.isValid()) {
+    if (top <= rect.bottom()) {
+      if (block.isVisible() && bottom >= rect.top()) {
+        int number = blockNumber + 1;
 
-      if (number == m_currentLineNumber) {
-        painter.setPen(m_foreSelected);
+        if (number == m_currentLineNumber) {
+          painter.setPen(m_foreSelected);
 
-      } else {
-        painter.setPen(m_foreUnselected);
+        } else {
+          painter.setPen(m_foreUnselected);
+        }
+
+        painter.drawText(
+          0, top, width(), height, Qt::AlignRight, QString::number(number));
       }
-
-      painter.drawText(
-        0, top, width(), height, Qt::AlignRight, QString::number(number));
     }
 
     block = block.next();
@@ -2138,24 +2152,24 @@ void StylesheetEditPrivate::LineNumberArea::paintEvent(QPaintEvent* event)
   }
 }
 
-int StylesheetEditPrivate::LineNumberArea::lineCount() const
-{
-  return m_lineCount;
-}
-
-int StylesheetEditPrivate::LineNumberArea::left() const
+int LineNumberArea::left() const
 {
   return m_left;
 }
 
-void StylesheetEditPrivate::LineNumberArea::setLeft(int left)
+void LineNumberArea::setLeft(int left)
 {
   m_left = left;
 }
 
-int StylesheetEditPrivate::LineNumberArea::lineNumber() const
+int LineNumberArea::currentLineNumber() const
 {
   return m_currentLineNumber;
+}
+
+int StylesheetEdit::bookmarkAreaWidth()
+{
+  return d_ptr->bookmarkAreaWidth();
 }
 
 int StylesheetEditPrivate::bookmarkAreaWidth()
@@ -2163,7 +2177,17 @@ int StylesheetEditPrivate::bookmarkAreaWidth()
   return m_bookmarkArea->bookmarkAreaWidth();
 }
 
-int StylesheetEditPrivate::LineNumberArea::lineNumberAreaWidth()
+int StylesheetEdit::lineNumberAreaWidth()
+{
+  return d_ptr->lineNumberAreaWidth();
+}
+
+int StylesheetEditPrivate::lineNumberAreaWidth()
+{
+  return m_lineNumberArea->lineNumberAreaWidth();
+}
+
+int LineNumberArea::lineNumberAreaWidth()
 {
   int digits = 1;
   int max = qMax(1, m_codeEditor->blockCount());
@@ -2354,14 +2378,30 @@ void StylesheetEditPrivate::gotoBookmark(int bookmark)
   }
 }
 
-int StylesheetEdit::lineNumber() const
+QTextCursor StylesheetEditPrivate::currentCursor() const
 {
-  return d_ptr->lineNumber();
+  return m_currentCursor;
 }
 
-int StylesheetEditPrivate::lineNumber() const
+void StylesheetEditPrivate::setCurrentCursor(const QTextCursor& currentCursor)
 {
-  return  m_lineNumberArea->lineNumber();
+  m_currentCursor = currentCursor;
+  setLineData(currentCursor);
+}
+
+int StylesheetEdit::currentLineNumber() const
+{
+  return d_ptr->currentLineNumber();
+}
+
+int StylesheetEditPrivate::currentLineNumber() const
+{
+  return  m_lineNumberArea->currentLineNumber();
+}
+
+int StylesheetEditPrivate::currentLineCount() const
+{
+  return m_lineCount;
 }
 
 void StylesheetEdit::setLineNumber(int lineNumber)
@@ -2369,17 +2409,21 @@ void StylesheetEdit::setLineNumber(int lineNumber)
   d_ptr->setLineNumber(lineNumber);
 }
 
-void StylesheetEditPrivate::setLineNumber(int lineNumber)
+void StylesheetEditPrivate::setLineNumber(int linenumber)
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Start);
-  cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, lineNumber - 1);
+  cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, linenumber - 1);
   q_ptr->setTextCursor(cursor);
-
-  // this handles display of linenumber
-  m_lineNumberArea->setLineNumber(lineNumber);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
+}
+
+void StylesheetEdit::up(bool)
+{
+  up(1);
 }
 
 void StylesheetEdit::up(int n)
@@ -2387,21 +2431,30 @@ void StylesheetEdit::up(int n)
   d_ptr->up(n);
 }
 
+void StylesheetEditor::StylesheetEditPrivate::setLineData(QTextCursor cursor)
+{
+  // this handles display of linenumber, linecount and character column.
+  int ln = calculateLineNumber(cursor);
+  m_lineNumberArea->setLineNumber(ln);
+  emit q_ptr->lineNumber(ln);
+  emit q_ptr->column(calculateColumn(cursor));
+  emit q_ptr->lineCount(m_lineCount);
+}
+
 void StylesheetEditPrivate::up(int n)
 {
   m_manualMove = true;
-  int ln = lineNumber() - 1;
-
-  if (ln > 0) {
-    QTextCursor cursor(q_ptr->document());
-    cursor.movePosition(QTextCursor::Up, QTextCursor::MoveAnchor, n);
-    q_ptr->setTextCursor(cursor);
-
-    // this handles display of linenumber
-    m_lineNumberArea->setLineNumber(ln);
-  }
-
+  QTextCursor cursor(currentCursor());
+  cursor.movePosition(QTextCursor::Up, QTextCursor::MoveAnchor, n);
+  q_ptr->setTextCursor(cursor);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
+}
+
+void StylesheetEdit::down(bool)
+{
+  down(1);
 }
 
 void StylesheetEdit::down(int n)
@@ -2412,18 +2465,17 @@ void StylesheetEdit::down(int n)
 void StylesheetEditPrivate::down(int n)
 {
   m_manualMove = true;
-  int ln = lineNumber() + 1;
-
-  if (ln < m_lineNumberArea->lineCount()) {
-    QTextCursor cursor(q_ptr->document());
-    cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, n);
-    q_ptr->setTextCursor(cursor);
-
-    // this handles display of linenumber
-    m_lineNumberArea->setLineNumber(ln);
-  }
-
+  QTextCursor cursor(currentCursor());
+  cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, n);
+  q_ptr->setTextCursor(cursor);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
+}
+
+void StylesheetEdit::left(bool)
+{
+  left(1);
 }
 
 void StylesheetEdit::left(int n)
@@ -2434,13 +2486,17 @@ void StylesheetEdit::left(int n)
 void StylesheetEditPrivate::left(int n)
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, n);
   q_ptr->setTextCursor(cursor);
-
-  // this handles display of linenumber
-  m_lineNumberArea->setLineNumber(calculateLineNumber(cursor));
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
+}
+
+void StylesheetEdit::right(bool)
+{
+  right(1);
 }
 
 void StylesheetEdit::right(int n)
@@ -2451,12 +2507,11 @@ void StylesheetEdit::right(int n)
 void StylesheetEditPrivate::right(int n)
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, n);
   q_ptr->setTextCursor(cursor);
-
-  // this handles display of linenumber
-  m_lineNumberArea->setLineNumber(calculateLineNumber(cursor));
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
 }
 
@@ -2468,12 +2523,11 @@ void StylesheetEdit::start()
 void StylesheetEditPrivate::start()
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Start);
   q_ptr->setTextCursor(cursor);
-
-  // this handles display of linenumber
-  m_lineNumberArea->setLineNumber(1);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
 }
 
@@ -2485,12 +2539,11 @@ void StylesheetEdit::end()
 void StylesheetEditPrivate::end()
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::End);
   q_ptr->setTextCursor(cursor);
-
-  // this handles display of linenumber
-  m_lineNumberArea->setLineNumber(m_lineNumberArea->lineCount());
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
 }
 
@@ -2502,9 +2555,11 @@ void StylesheetEdit::startOfLine()
 void StylesheetEditPrivate::startOfLine()
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::StartOfLine);
   q_ptr->setTextCursor(cursor);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
 }
 
@@ -2513,31 +2568,20 @@ void StylesheetEdit::endOfLine()
   d_ptr->endOfLine();
 }
 
-void StylesheetEdit::goToLine(int lineNumber)
-{
-  d_ptr->setLineNumber(lineNumber);
-}
-
-//void StylesheetEditPrivate::goToLine(int lineNumber)
-//{
-//  m_manualMove = true;
-//  QTextCursor cursor(q_ptr->document());
-//  cursor.movePosition(QTextCursor::Start);
-//  cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, lineNumber - 1);
-//  q_ptr->setTextCursor(cursor);
-
-//  // this handles display of linenumber
-//  m_lineNumberArea->setLineNumber(lineNumber);
-//  m_manualMove = false;
-//}
-
 void StylesheetEditPrivate::endOfLine()
 {
   m_manualMove = true;
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::EndOfLine);
   q_ptr->setTextCursor(cursor);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
   m_manualMove = false;
+}
+
+void StylesheetEdit::goToLine(int lineNumber)
+{
+  d_ptr->setLineNumber(lineNumber);
 }
 
 int StylesheetEdit::bookmarkCount()
@@ -2550,62 +2594,61 @@ int StylesheetEditPrivate::bookmarkCount()
   return m_bookmarkArea->count();
 }
 
-QFont::Weight StylesheetEditPrivate::LineNumberArea::weight() const
+QFont::Weight LineNumberArea::weight() const
 {
   return m_weight;
 }
 
-void StylesheetEditPrivate::LineNumberArea::setWeight(const QFont::Weight& weight)
+void LineNumberArea::setWeight(const QFont::Weight& weight)
 {
   m_weight = weight;
 }
 
-QColor StylesheetEditPrivate::LineNumberArea::back() const
+QColor LineNumberArea::back() const
 {
   return m_back;
 }
 
-void StylesheetEditPrivate::LineNumberArea::setBack(const QColor& back)
+void LineNumberArea::setBack(const QColor& back)
 {
   m_back = back;
 }
 
-QColor StylesheetEditPrivate::LineNumberArea::foreSelected() const
+QColor LineNumberArea::foreSelected() const
 {
   return m_foreSelected;
 }
 
-void StylesheetEditPrivate::LineNumberArea::setForeSelected(const QColor& fore)
+void LineNumberArea::setForeSelected(const QColor& fore)
 {
   m_foreSelected = fore;
 }
 
-QColor StylesheetEditPrivate::LineNumberArea::foreUnselected() const
+QColor LineNumberArea::foreUnselected() const
 {
   return m_foreUnselected;
 }
 
-void StylesheetEditPrivate::LineNumberArea::setForeUnselected(const QColor& fore)
+void LineNumberArea::setForeUnselected(const QColor& fore)
 {
   m_foreUnselected = fore;
 }
 
-void StylesheetEditPrivate::LineNumberArea::setLineNumber(int lineNumber)
+void LineNumberArea::setLineNumber(int lineNumber)
 {
   m_currentLineNumber = lineNumber;
-  update();
 }
 
-StylesheetEditPrivate::HoverWidget::HoverWidget(QWidget* parent)
+HoverWidget::HoverWidget(QWidget* parent)
   : QWidget(parent)
 {}
 
-QSize StylesheetEditPrivate::HoverWidget::size()
+QSize HoverWidget::size()
 {
   return QSize(m_width, m_height);
 }
 
-void StylesheetEditPrivate::HoverWidget::paintEvent(QPaintEvent* /*event*/)
+void HoverWidget::paintEvent(QPaintEvent* /*event*/)
 {
   QPainter painter(this);
   painter.fillRect(0, 0, m_width, m_height, QColor("mistyrose"));
@@ -2613,12 +2656,12 @@ void StylesheetEditPrivate::HoverWidget::paintEvent(QPaintEvent* /*event*/)
   painter.drawText(5, m_height - 5, m_text);
 }
 
-QString StylesheetEditPrivate::HoverWidget::text() const
+QString HoverWidget::text() const
 {
   return m_text;
 }
 
-void StylesheetEditPrivate::HoverWidget::setText(const QString& text)
+void HoverWidget::setText(const QString& text)
 {
   m_text = text;
   QFontMetrics fm = fontMetrics();
@@ -2627,12 +2670,12 @@ void StylesheetEditPrivate::HoverWidget::setText(const QString& text)
   m_height = rect.height() + 10;
 }
 
-int StylesheetEditPrivate::HoverWidget::width() const
+int HoverWidget::width() const
 {
   return m_width;
 }
 
-int StylesheetEditPrivate::HoverWidget::height() const
+int HoverWidget::height() const
 {
   return m_height;
 }
@@ -2685,7 +2728,7 @@ GoToBookmarkDialog::GoToBookmarkDialog(QMap<int, QString> bookmarks, QWidget* pa
   setLayout(layout);
 
   m_group = new QGroupBox(tr("Bookmarks"), this);
-//  m_group->setContentsMargins(0, 0, 0, 0);
+  //  m_group->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(m_group);
 
   QVBoxLayout* grpLayout = new QVBoxLayout;
@@ -2696,6 +2739,8 @@ GoToBookmarkDialog::GoToBookmarkDialog(QMap<int, QString> bookmarks, QWidget* pa
   m_bookmarkView = new QTableView(this);
   m_bookmarkView->setModel(bookmarkModel);
   m_bookmarkView->verticalHeader()->hide();
+  m_bookmarkView->horizontalHeader()->setVisible(true);
+  m_bookmarkView->horizontalHeader()->setStretchLastSection(true);
   grpLayout->addWidget(m_bookmarkView);
   connect(m_bookmarkView, &QTableView::clicked, this, &GoToBookmarkDialog::handleClicked);
 
@@ -2717,11 +2762,6 @@ QString GoToBookmarkDialog::text()
 {
   return m_text;
 }
-
-//bool GoToBookmarkDialog::setBookmark(int bookmark)
-//{
-//  return dynamic_cast<BookmarkModel*>(m_bookmarkView->model())->setBookmark(bookmark);
-//}
 
 void GoToBookmarkDialog::handleClicked(const QModelIndex& index)
 {
@@ -2757,10 +2797,12 @@ QVariant BookmarkModel::data(const QModelIndex& index, int role) const
   if (index.isValid() && role == Qt::DisplayRole) {
     switch (index.column()) {
     case 0:
-      return m_bookmarks[index.row()];
+      return m_bookmarks.keys().at(index.row());
 
-    case 1:
-      return m_bookmarks.value(index.row());
+    case 1: {
+      int i = m_bookmarks.keys().at(index.row());
+      return m_bookmarks[i];
+    }
     }
   }
 

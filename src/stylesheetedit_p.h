@@ -40,6 +40,7 @@
 #include "stylesheetparser/labelledlineedit.h"
 #include "stylesheetparser/labelledspinbox.h"
 
+/// \cond DO_NOT_DOCUMENT
 namespace StylesheetEditor {
 
 class StylesheetEdit;
@@ -70,7 +71,6 @@ public:
   QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
   Qt::ItemFlags flags(const QModelIndex& index) const;
   QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-//  bool setBookmark(int bookmark);
 
 private:
   QMap<int, QString> m_bookmarks;
@@ -85,7 +85,7 @@ public:
 
   int bookmark();
   QString text();
-//  bool setBookmark(int bookmark);
+  //  bool setBookmark(int bookmark);
 
 private:
   QGroupBox* m_group;
@@ -113,112 +113,113 @@ struct CursorData
   //  int start;
 };
 
+class BookmarkArea : public QWidget
+{
+public:
+  BookmarkArea(StylesheetEdit* parent = nullptr);
+
+  QSize sizeHint() const override;
+
+  QColor foreSelected() const;
+  void setForeSelected(const QColor& fore);
+  QColor foreUnselected() const;
+  void setForeUnselected(const QColor& fore);
+  QColor back() const;
+  void setBack(const QColor& back);
+
+  int bookmarkAreaWidth() const;
+  void setWidth(int width);
+
+  int left() const;
+  void setLeft(int left);
+
+  QMap<int, QString> bookmarks();
+  void setBookmarks(QMap<int, QString> bookmarks);
+  void insertBookmark(int bookmark, const QString& text = QString());
+  void toggleBookmark(int bookmark);
+  void removeBookmark(int bookmark);
+  void editBookmark(int bookmark);
+  void clearBookmarks();
+  bool hasBookmark(int bookmark);
+  bool hasBookmarkText(int bookmark);
+  QString bookmarkText(int bookmark);
+  int count();
+
+
+protected:
+  void paintEvent(QPaintEvent* event) override;
+  void mousePressEvent(QMouseEvent* event);
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event);
+  void contextMenuEvent(QContextMenuEvent* event);
+
+private:
+  StylesheetEdit* m_codeEditor;
+  QColor m_foreSelected, m_foreUnselected, m_back;
+  QFont::Weight m_weight;
+  int m_width, m_left;
+  QMap<int, QString> m_bookmarks;
+  QMap<int, QString> m_oldBookmarks;
+
+};
+
+class LineNumberArea : public QWidget
+{
+public:
+  LineNumberArea(StylesheetEdit* editor = nullptr);
+
+  QSize sizeHint() const override;
+
+  QColor foreSelected() const;
+  void setForeSelected(const QColor& fore);
+  QColor foreUnselected() const;
+  void setForeUnselected(const QColor& fore);
+  QColor back() const;
+  void setBack(const QColor& back);
+
+  void setLineNumber(int lineNumber);
+  int currentLineNumber() const;
+  int lineNumberAreaWidth();
+
+  QFont::Weight weight() const;
+  void setWeight(const QFont::Weight& weight);
+
+  int left() const;
+  void setLeft(int left);
+
+protected:
+  void paintEvent(QPaintEvent* event) override;
+
+private:
+  StylesheetEdit* m_codeEditor;
+  QColor m_foreSelected, m_foreUnselected, m_back;
+  QFont::Weight m_weight;
+  int m_currentLineNumber, m_left;
+};
+
+class HoverWidget : public QWidget
+{
+public:
+  HoverWidget(QWidget* parent = nullptr);
+
+  QSize size();
+  int height() const;
+  int width() const;
+
+  QString text() const;
+  void setText(const QString& text);
+
+protected:
+  void paintEvent(QPaintEvent*) override;
+
+private:
+  QString m_text;
+  int m_height, m_width;
+};
+
 struct StylesheetEditPrivate
 {
   Q_DECLARE_PUBLIC(StylesheetEdit)
-
-  class BookmarkArea : public QWidget
-  {
-  public:
-    BookmarkArea(StylesheetEdit* parent = nullptr);
-
-    QSize sizeHint() const override;
-
-    QColor foreSelected() const;
-    void setForeSelected(const QColor& fore);
-    QColor foreUnselected() const;
-    void setForeUnselected(const QColor& fore);
-    QColor back() const;
-    void setBack(const QColor& back);
-
-    int bookmarkAreaWidth() const;
-    void setWidth(int width);
-
-    int left() const;
-    void setLeft(int left);
-
-    QMap<int, QString> bookmarks();
-    void setBookmarks(QMap<int, QString> bookmarks);
-    void insertBookmark(int bookmark, const QString& text = QString());
-    void toggleBookmark(int bookmark);
-    void removeBookmark(int bookmark);
-    void editBookmark(int bookmark);
-    void clearBookmarks();
-    bool hasBookmark(int bookmark);
-    bool hasBookmarkText(int bookmark);
-    QString bookmarkText(int bookmark);
-    int count();
-
-  protected:
-    void paintEvent(QPaintEvent* event) override;
-    void mousePressEvent(QMouseEvent* event);
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event);
-    void contextMenuEvent(QContextMenuEvent* event);
-
-  private:
-    StylesheetEdit* m_codeEditor;
-    QColor m_foreSelected, m_foreUnselected, m_back;
-    QFont::Weight m_weight;
-    int m_width, m_left;
-    QMap<int, QString> m_bookmarks;
-    QMap<int, QString> m_oldBookmarks;
-  };
-  class LineNumberArea : public QWidget
-  {
-  public:
-    LineNumberArea(StylesheetEdit* editor = nullptr);
-
-    QSize sizeHint() const override;
-
-    QColor foreSelected() const;
-    void setForeSelected(const QColor& fore);
-    QColor foreUnselected() const;
-    void setForeUnselected(const QColor& fore);
-    QColor back() const;
-    void setBack(const QColor& back);
-
-    void setLineNumber(int lineNumber);
-    int lineNumber() const;
-    int lineNumberAreaWidth();
-
-    QFont::Weight weight() const;
-    void setWeight(const QFont::Weight& weight);
-
-    int left() const;
-    void setLeft(int left);
-
-    int lineCount() const;
-
-  protected:
-    void paintEvent(QPaintEvent* event) override;
-
-  private:
-    StylesheetEdit* m_codeEditor;
-    QColor m_foreSelected, m_foreUnselected, m_back;
-    QFont::Weight m_weight;
-    int m_currentLineNumber, m_left, m_lineCount;
-  };
-
-  class HoverWidget : public QWidget
-  {
-  public:
-    HoverWidget(QWidget* parent = nullptr);
-
-    QSize size();
-    int height() const;
-    int width() const;
-
-    QString text() const;
-    void setText(const QString& text);
-
-  protected:
-    void paintEvent(QPaintEvent*) override;
-
-  private:
-    QString m_text;
-    int m_height, m_width;
-  };
 
   StylesheetEditPrivate(StylesheetEdit* parent);
 
@@ -240,6 +241,8 @@ struct StylesheetEditPrivate
   bool m_startComment;
   HoverWidget* m_hoverWidget;
   bool m_manualMove;
+  QTextCursor m_currentCursor;
+  int m_lineCount;
 
   void setPlainText(const QString& text);
 
@@ -247,8 +250,13 @@ struct StylesheetEditPrivate
 
   void showNewlineMarkers(bool show);
 
-  int lineNumber() const;
-  void setLineNumber(int lineNumber);
+  QTextCursor currentCursor() const;
+  void setCurrentCursor(const QTextCursor &currentCursor);
+
+
+  int currentLineNumber() const;
+  int currentLineCount() const;
+  void setLineNumber(int linenumber);
   void up(int n = 1);
   void down(int n = 1);
   void left(int n = 1);
@@ -335,6 +343,7 @@ struct StylesheetEditPrivate
   int bookmarkAreaWidth();
   int lineNumberAreaWidth();
   int calculateLineNumber(QTextCursor textCursor);
+  int calculateColumn(QTextCursor textCursor);
   void updateLeftArea(const QRect& rect, int dy);
 
   void resizeEvent(QRect cr);
@@ -399,9 +408,16 @@ struct StylesheetEditPrivate
                              QColor& color2,
                              QColor& color3);
 
+
+public:
+  int getLineCount() const;
+
 private:
+  void setLineData(QTextCursor cursor);
 };
 
 } // end of StylesheetParser
+
+/// \endcond DO_NOT_DOCUMENT
 
 #endif // STYLESHEETEDIT_P_H

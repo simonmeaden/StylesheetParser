@@ -23,7 +23,6 @@
 #include <QObject>
 //#include <QException>
 
-namespace StylesheetEditor {
 
 class ParserState : public QObject
 {
@@ -93,9 +92,7 @@ private:
   QString m_value;
 };
 
-} // end of StylesheetEditor
-
-Q_DECLARE_METATYPE(StylesheetEditor::ParserState::Error)
-Q_DECLARE_OPERATORS_FOR_FLAGS(StylesheetEditor::ParserState::Errors)
+Q_DECLARE_METATYPE(ParserState::Error)
+Q_DECLARE_OPERATORS_FOR_FLAGS(ParserState::Errors)
 
 #endif // PARSERERROR_H

@@ -19,7 +19,6 @@
 */
 #include "parserstate.h"
 
-namespace StylesheetEditor {
 
 ParserState::ParserState(QObject *parent)
   : QObject(parent)
@@ -94,4 +93,3 @@ void ParserState::setPos(int pos)
   m_pos = pos;
 }
 
-} // end of StylesheetParser

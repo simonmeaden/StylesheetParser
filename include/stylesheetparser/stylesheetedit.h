@@ -28,13 +28,14 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QHeaderView>
+#include <QTextBlock>
+#include <QTextCursor>
 
-#include "datastore.h"
-#include "stylesheethighlighter.h"
-
-namespace StylesheetEditor {
 class LineNumberArea;
 class StylesheetEditPrivate;
+class BookmarkArea;
+class BookmarkData;
+class Node;
 
 class StylesheetEdit : public QPlainTextEdit
 {
@@ -89,9 +90,9 @@ public:
   //! Returns the bookmarks with associated text, if any.
   //!
   //! The bookmarks are stored in the key list of a map.
-  QMap<int, QString> bookmarks();
+  QMap<int, BookmarkData *> *bookmarks();
   //! Sets the bookmarks with associated text, if any.
-  void setBookmarks(QMap<int, QString> bookmarks);
+  void setBookmarks(QMap<int, BookmarkData *> *bookmarks);
   //! Inserts a new bookmark, with an optional text component. The current text is stored
   //! until the text is replaced again.
   void insertBookmark(int bookmark, const QString& text = QString());
@@ -196,7 +197,7 @@ public:
   int bookmarkAreaWidth();
   int calculateLineNumber(QTextCursor textCursor);
   void contextBookmarkMenuEvent(QContextMenuEvent* event);
-  void drawHoverWidget(QPoint pos, QString text);
+//  void drawHoverWidget(QPoint pos, QString text);
 
   /// \cond DO_NOT_DOCUMENT
   // These should not be documented as they are only removing protected status.
@@ -227,6 +228,7 @@ protected:
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event);
   void mouseDoubleClickEvent(QMouseEvent* event);
+  void leaveEvent(QEvent *event) override;
 
   void setLineNumber(int lineNumber);
 
@@ -257,7 +259,5 @@ public:
 
 };
 
-
-} // end of StylesheetParser
 
 #endif // STYLESHEETEDIT_H

@@ -23,10 +23,7 @@
 #include <QObject>
 #include <QList>
 #include <QMap>
-#include <QRegularExpression>
 #include <QFile>
-
-namespace StylesheetEditor {
 
 class StylesheetEdit;
 class StylesheetData;
@@ -37,6 +34,7 @@ class DataStore : public QObject
 public:
   enum AttributeType
   {
+    NoAttributeValue,
     Alignment,
     Attachment,
     Background,
@@ -70,7 +68,7 @@ public:
     TextDecoration,
     List,
     // below here are specific to StylesheetEdit
-    StylesheetEdit,
+    StylesheetEditGood,
     StylesheetEditBad,
   };
 
@@ -88,8 +86,9 @@ public:
 
   bool getIfValidStylesheetValue(const QString& propertyname, const QString& valuename,
                                  StylesheetData* data);
-  bool isValidPropertyValue(const QString& propertyname, const QString& value);
-  QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
+  bool isValidPropertyValueForProperty(const QString& propertyname, const QString& value);
+//  QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
+  AttributeType propertyValueAttribute(const QString& value);
 
   //! Returns the names of all widgets for which this sub-control is valid.
   QStringList possibleSubControlWidgets(const QString& name) const;
@@ -100,18 +99,16 @@ public:
   void addPseudoState(const QString& state);
   void removePseudoState(const QString& state);
 
-  //  QMap<QString, AttributeTypes> attributes() const;
-  //  void setAttributes(const QMap<QString, AttributeTypes>& attributes);
-
 private:
   QStringList m_widgets;
+  QStringList m_colors;
+  QStringList m_attributeNames;
   QStringList m_properties;
   QStringList m_pseudoStates;
   QStringList m_possibleWidgets;
   QStringList m_StylesheetProperties;
   QMap<QString, QStringList> m_subControls;
   QMap<QString, AttributeType> m_attributes;
-  //  QMap<QString, QStringList> m_attributeValues;
   QMap<QString, AttributeType> m_stylesheetAttributes;
 
   bool checkPropertyValue(AttributeType propertyAttribute,
@@ -164,13 +161,12 @@ private:
   QMap<QString, AttributeType> initialiseAttributeMap();
   QStringList initialiseStylesheetProperties();
   QMap<QString, AttributeType> initialiseStylesheetMap();
+  QStringList initialiseColorList();
 
   QStringList addControls(int count, ...);
 
-  static const QString RE_COLOUR_NAMES;
 };
 
 
-} // end of StylesheetParser
 
 #endif // DATASTORE_H

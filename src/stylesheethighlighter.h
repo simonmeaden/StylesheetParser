@@ -25,7 +25,6 @@
 
 #include "node.h"
 
-namespace StylesheetEditor {
 
 class StylesheetEdit;
 
@@ -112,6 +111,5 @@ private:
   int setNodeStart(int nodeStart, int blockStart);
 };
 
-} // end of StylesheetParser
 
 #endif // STYLESHEETHIGHLIGHTER_H

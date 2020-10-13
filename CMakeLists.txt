@@ -52,6 +52,10 @@ target_sources(tst_parser
       src/stylesheetedit.qrc
       src/stylesheetedit.cpp
       src/stylesheeteditdialog.cpp
+      src/bookmarkarea.h
+      src/bookmarkarea.cpp
+      src/hoverwidget.h
+      src/hoverwidget.cpp
       src/stylesheethighlighter.h
       src/stylesheethighlighter.cpp
       src/mainwindow.cpp

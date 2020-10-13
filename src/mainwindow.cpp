@@ -18,6 +18,8 @@
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include "stylesheetparser/mainwindow.h"
+#include "bookmarkarea.h"
+
 #include <QtDebug>
 
 MainWindow::MainWindow(QWidget* parent)
@@ -102,24 +104,27 @@ QWidget* MainWindow::initGui()
   //         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
 
   // Test StylesheetEdit properties.
-  text = "StylesheetEdit {\n"
-         "widget: blue light yellow;\n"
-         "subcontrol: yellow blue normal;\n"
-         "subcontrolmarker: blue black yellow;\n"
-         "pseudostate: red lightgrey light;\n"
-         "pseudostatemarker: lightgrey red extrabold;\n"
-         "property: darkgrey lightblue bold;\n"
-         "propertymarker: lightblue medium;\n"
-         "value: darkgrey pink demibold;\n"
-         "startbrace: red;\n"
-         "endbrace: yellow normal;\n"
-         "bracematch: blue lightgreen bold;\n"
-         "comment: blue yellow thin;\n"
-         "bad: red blue extralight;\n"
-         "}";
+//  text = "StylesheetEdit {\n"
+//         "widget: blue light yellow;\n"
+//         "subcontrol: yellow blue normal;\n"
+//         "subcontrolmarker: blue black yellow;\n"
+//         "pseudostate: red lightgrey light;\n"
+//         "pseudostatemarker: lightgrey red extrabold;\n"
+//         "property: darkgrey lightblue bold;\n"
+//         "propertymarker: lightblue medium;\n"
+//         "value: darkgrey pink demibold;\n"
+//         "startbrace: red;\n"
+//         "endbrace: yellow normal;\n"
+//         "bracematch: blue lightgreen bold;\n"
+//         "comment: blue yellow thin;\n"
+//         "bad: red blue extralight;\n"
+//         "}";
 
   // Errors
-  //    text =  "color: red border: green solid 1px;"; // missing first end property char.
+      text =  "color red;\n" // missing property marker
+         " bordr: green slid 1px; \n" // bad property name, missing property end char
+         " shitwidget:active {} \n" // bad property name, missing property end char
+         " background-color: blue;"; // GOOD.
   //    text =  "color red; border: green solid 1px;"; // missing first end property marker.
   //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
   //  text =   "color: rd";
@@ -137,11 +142,11 @@ QWidget* MainWindow::initGui()
   //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
   //  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
 
-  //  text = "StylesheetEdit {\n"
-  //         "wiget: blue liht yellow;\n"
-  //         "subcntrol: yelow blue normal;\n"
-  //         "subcntrolmarker: blue blck yellow;\n"
-  //         "}";
+//    text = "StylesheetEdit {\n"
+//           "  widget: blue liht yellow;\n"
+//           "subcntrol: yelow blue normal;\n"
+//           " subcntrolmarker: blue blck yellow;\n"
+//           "}";
 
   //  QString stylesheet =
   //    "StylesheetEdit {"
@@ -151,10 +156,10 @@ QWidget* MainWindow::initGui()
   //  m_editor->setStyleSheet(stylesheet);
   m_editor->setPlainText(text);
 
-  QMap<int, QString> bookmarks;
-  bookmarks.insert(1, QString());
-  bookmarks.insert(5, "Test string");
-  bookmarks.insert(10, QString());
+  QMap<int, BookmarkData*> *bookmarks=new QMap<int, BookmarkData*>();
+  bookmarks->insert(1, new BookmarkData());
+  bookmarks->insert(5, new BookmarkData("Test string"));
+  bookmarks->insert(10, new BookmarkData());
   m_editor->setBookmarks(bookmarks);
   //  layout->addWidget(m_editor, 0, 0);
 

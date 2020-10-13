@@ -26,8 +26,7 @@
 
 int main(int argc, char* argv[])
 {
-   qRegisterMetaType<StylesheetEditor::ParserState::Error>("StylesheetParser::ParserError::Error");
-//   qRegisterMetaType<StylesheetParser::ParserError::Errors>("StylesheetParser::ParserError::Errors");
+   qRegisterMetaType<ParserState::Error>("ParserError::Error");
 
    QApplication a(argc, argv);
    MainWindow w;

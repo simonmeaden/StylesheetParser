@@ -21,7 +21,6 @@
 */
 #include "node.h"
 
-namespace StylesheetEditor {
 
 Node::Node(QTextCursor start, QObject* parent, Type type)
   : QObject(parent)
@@ -226,6 +225,11 @@ QList<int> PropertyNode::offsets() const
   return m_offsets;
 }
 
+QList<DataStore::AttributeType> PropertyNode::attributeTypes() const
+{
+  return m_attributeTypes;
+}
+
 void PropertyNode::setValues(const QStringList& values)
 {
   m_values = values;
@@ -241,11 +245,12 @@ void PropertyNode::setOffsets(const QList<int>& offsets)
   m_offsets = offsets;
 }
 
-void PropertyNode::addValue(const QString& value, PropertyNode::Check check, int offset)
+void PropertyNode::addValue(const QString& value, PropertyNode::Check check, int offset, DataStore::AttributeType attType = DataStore::NoAttributeValue)
 {
   m_values.append(value);
   m_checks.append(check);
   m_offsets.append(offset);
+  m_attributeTypes.append(attType);
 }
 
 bool PropertyNode::setBadCheck(Check check, int index)
@@ -296,11 +301,16 @@ void PropertyNode::setPropertyMarkerExists(bool propertyMarker)
   m_propertyMarkerExists = propertyMarker;
 }
 
+void PropertyNode::setAttributeTypes(const QList<DataStore::AttributeType> &attributeTypes)
+{
+  m_attributeTypes = attributeTypes;
+}
+
 SubControlNode::SubControlNode(const QString& name,
                                QTextCursor start,
                                QObject* parent,
                                Type type)
-  : Node(start, parent, type)
+    : Node(start, parent, type)
   , NameNode(name)
 {}
 
@@ -460,10 +470,3 @@ PropertyEndNode::PropertyEndNode(QTextCursor start,
   : Node(start, parent, type)
 {}
 
-
-
-
-
-
-
-} // end of StylesheetParser

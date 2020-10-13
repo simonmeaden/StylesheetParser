@@ -23,36 +23,10 @@
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
 
-namespace StylesheetEditor {
-
-//! The list of permissible colour strings.
-const QString DataStore::RE_COLOUR_NAMES =
-  "black|silver|gray|whitesmoke|maroon|red|purple|fuchsia|green|"
-  "lime|olivedrab|yellow|navy|blue|teal|aquamarine|orange|aliceblue|"
-  "antiquewhite|aqua|azure|beige|bisque|blanchedalmond|blueviolet|"
-  "brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|"
-  "cornsilk|crimson|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|"
-  "darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|"
-  "darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|"
-  "darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|"
-  "firebrick|floralwhite|forestgreen|gainsboro|ghostwhite|goldenrod|gold|"
-  "greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|"
-  "lavenderblush|lavender|lawngreen|lemonchiffon|lightblue|lightcoral|"
-  "lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|"
-  "lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|"
-  "lightsteelblue|lightyellow|limegreen|linen|mediumaquamarine|mediumblue|"
-  "mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|"
-  "mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|"
-  "navajowhite|oldlace|olive|orangered|orchid|palegoldenrod|palegreen|"
-  "paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|"
-  "powderblue|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|"
-  "seashell|sienna|skyblue|slateblue|slategray|slategrey|snow|springgreen|"
-  "steelblue|tan|thistle|tomato|transparent|turquoise|violet|wheat|white|"
-  "yellowgreen|rebeccapurple";
-
 DataStore::DataStore(QObject* parent)
   : QObject(parent)
   , m_widgets(initialiseWidgetList())
+  , m_colors(initialiseColorList())
   , m_properties(initialisePropertyList())
   , m_pseudoStates(initialisePseudoStateList())
   , m_StylesheetProperties(initialiseStylesheetProperties())
@@ -237,14 +211,8 @@ bool DataStore::checkBrush(const QString& value)
 
 bool DataStore::checkColor(const QString& value)
 {
-  QRegularExpression re;
-  QRegularExpressionMatch match;
-
   // check if this was a color name.
-  re.setPattern(RE_COLOUR_NAMES);
-  match = re.match(value);
-
-  if (match.hasMatch()) {
+  if (m_colors.contains(value)) {
     return true;
   }
 
@@ -867,7 +835,7 @@ bool DataStore::checkPropertyValue(DataStore::AttributeType propertyAttribute,
     // This should never reach here.
     break;
 
-  case StylesheetEdit:
+  case StylesheetEditGood:
     return checkStylesheetEdit(valuename, data);
 
   case StylesheetEditBad:
@@ -887,70 +855,70 @@ bool DataStore::getIfValidStylesheetValue(const QString& propertyname,
 
   AttributeType stylesheetAttribute =
     m_stylesheetAttributes.value(propertyname);
-  return checkPropertyValue(stylesheetAttribute, valuename, data);
+  return (checkPropertyValue(stylesheetAttribute, valuename, data) != NoAttributeValue);
 }
 
-bool DataStore::isValidPropertyValue(const QString& propertyname,
-                                     const QString& valuename)
+bool DataStore::isValidPropertyValueForProperty(const QString& propertyname,
+    const QString& valuename)
 {
   if (valuename.isEmpty()) {
     return false;
   }
 
   AttributeType propertyAttribute = m_attributes.value(propertyname);
-  return checkPropertyValue(propertyAttribute, valuename, new StylesheetData());
+  return (checkPropertyValue(propertyAttribute, valuename, new StylesheetData()) != NoAttributeValue);
 }
 
-QList<bool> DataStore::isValidPropertyValues(const QString& name, const QStringList& values)
-{
-  QList<bool> results;
+//QList<bool> DataStore::isValidPropertyValues(const QString& name, const QStringList& values)
+//{
+//  QList<bool> results;
 
-  if (values.length() == 1) {
-    results.append(isValidPropertyValue(name, values.at(0)));
+//  if (values.length() == 1) {
+//    results.append(isValidPropertyValue(name, values.at(0)));
 
-  } else {
-    AttributeType type = m_attributes.value(name);
+//  } else {
+//    AttributeType type = m_attributes.value(name);
 
-    for (auto value : values) {
-      switch (type) {
-      case BoxColors:
-        if (values.length() == 0 || values.length() > 4) {
-          results.append(false);
+//    for (auto value : values) {
+//      switch (type) {
+//      case BoxColors:
+//        if (values.length() == 0 || values.length() > 4) {
+//          results.append(false);
 
-        } else {
-          results.append(checkColor(value));
-        }
+//        } else {
+//          results.append(checkColor(value));
+//        }
 
-        break;
+//        break;
 
-      case BoxLengths:
-        if (values.length() == 0 || values.length() > 4) {
-          results.append(false);
+//      case BoxLengths:
+//        if (values.length() == 0 || values.length() > 4) {
+//          results.append(false);
 
-        } else {
-          results.append(checkLength(value));
-        }
+//        } else {
+//          results.append(checkLength(value));
+//        }
 
-        break;
+//        break;
 
-      case Radius:
-        if (values.length() == 0 || values.length() > 2) {
-          results.append(false);
+//      case Radius:
+//        if (values.length() == 0 || values.length() > 2) {
+//          results.append(false);
 
-        } else {
-          results.append(checkRadius(value));
-        }
+//        } else {
+//          results.append(checkRadius(value));
+//        }
 
-        break;
+//        break;
 
-      default:
-        break;
-      }
-    }
-  }
+//      default:
+//        break;
+//      }
+//    }
+//  }
 
-  return results;
-}
+//  return results;
+//}
 
 QStringList DataStore::possibleSubControlWidgets(const QString& name) const
 {
@@ -986,16 +954,107 @@ void DataStore::removePseudoState(const QString& state)
   m_pseudoStates.removeAll(state);
 }
 
-// QMap<QString, AttributeTypes> DataStore::attributes() const
-//{
-//  return m_attributes;
-//}
+DataStore::AttributeType DataStore::propertyValueAttribute(const QString& value)
+{
+  if (checkColor(value)) {
+    return Color;
 
-// void DataStore::setAttributes(const QMap<QString, AttributeTypes>&
-// attributes)
-//{
-//  m_attributes = attributes;
-//}
+  } else if (checkLength(value)) {
+    return Length;
+
+  } else if (checkBorder(value)) {
+    return Border;
+
+  } else if (checkFont(value)) {
+    return Font;
+
+  } else if (checkFontWeight(value)) {
+    return FontWeight;
+
+  } else if (checkRadius(value)) {
+    return Radius;
+
+  } else if (checkBrush(value)) {
+    return Brush;
+
+  } else if (checkFontStyle(value)) {
+    return FontStyle;
+
+  } else if (checkFontSize(value)) {
+    return FontSize;
+
+  } else if (checkAlignment(value)) {
+    return Alignment;
+
+  } else if (checkAttachment(value)) {
+    return Attachment;
+
+  } else if (checkBackground(value)) {
+    return Background;
+
+  } else if (checkBool(value)) {
+    return Bool;
+
+  } else if (checkBoolean(value)) {
+    return Boolean;
+
+  } else if (checkBorderImage(value)) {
+    return BorderImage;
+
+  } else if (checkBorderStyle(value)) {
+    return BorderStyle;
+
+  } else if (checkBoxColors(value)) {
+    return BoxColors;
+
+  } else if (checkBoxLengths(value)) {
+    return BoxLengths;
+
+  } else if (checkGradient(value)) {
+    return Gradient;
+
+  } else if (checkIcon(value)) {
+    return Icon;
+
+  } else if (checkNumber(value)) {
+    return Number;
+
+  } else if (checkOutline(value)) {
+    return Outline;
+
+  } else if (checkOrigin(value)) {
+    return Origin;
+
+  } else if (checkOutlineStyle(value)) {
+    return OutlineStyle;
+
+  } else if (checkOutlineRadius(value)) {
+    return OutlineRadius;
+
+  } else if (checkPaletteRole(value)) {
+    return PaletteRole;
+
+  } else if (checkRepeat(value)) {
+    return Repeat;
+
+  } else if (checkUrl(value)) {
+    return Url;
+
+  } else if (checkPosition(value)) {
+    return Position;
+
+  } else if (checkTextDecoration(value)) {
+    return TextDecoration;
+
+  } else if (checkStylesheetEdit(value)) {
+    return StylesheetEditGood;
+
+  } else if (checkStylesheetEditBad(value)) {
+    return StylesheetEditBad;
+  }
+
+  return NoAttributeValue;
+}
 
 QMap<QString, QStringList> DataStore::initialiseSubControlMap()
 {
@@ -1004,9 +1063,7 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
   map.insert("add-page", addControls(1, new QString("QScrollBar")));
   map.insert("branch", addControls(1, new QString("QTreeBar")));
   map.insert("chunk", addControls(1, new QString("QProgressBar")));
-  map.insert(
-    "close-button",
-    addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
+  map.insert("close-button ", addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
   map.insert("corner", addControls(1, new QString("QAbstractScrollArea")));
   map.insert("down-arrow",
              addControls(4,
@@ -1014,9 +1071,8 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
                          new QString("QHeaderView"),
                          new QString("QScrollBar"),
                          new QString("QSpinBox")));
-  map.insert(
-    "down-button",
-    addControls(2, new QString("QScrollBar"), new QString("QSpinBox")));
+  map.insert("down-button",
+             addControls(2, new QString("QScrollBar"), new QString("QSpinBox")));
   map.insert("drop-down", addControls(1, new QString("QComboBox")));
   map.insert("float-button", addControls(1, new QString("QDockWidget")));
   map.insert("groove", addControls(1, new QString("QSlider")));
@@ -1032,9 +1088,8 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
                          new QString("QScrollBar"),
                          new QString("QSplitter"),
                          new QString("QSlider")));
-  map.insert(
-    "icon",
-    addControls(2, new QString("QAbstractItemView"), new QString("QMenu")));
+  map.insert("icon",
+             addControls(2, new QString("QAbstractItemView"), new QString("QMenu")));
   map.insert("item",
              addControls(4,
                          new QString("QAbstractItemView"),
@@ -1063,9 +1118,9 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
   map.insert("tear", addControls(1, new QString("QTabBar")));
   map.insert("tearoff", addControls(1, new QString("QMenu")));
   map.insert("text", addControls(1, new QString("QAbstractItemView")));
-  map.insert(
-    "title",
-    addControls(2, new QString("QGroupBox"), new QString("QDockWidget")));
+  map.insert("title",
+             addControls(
+               2, new QString("QGroupBox"), new QString("QDockWidget")));
   map.insert("up-arrow",
              addControls(3,
                          new QString("QHeaderView"),
@@ -1314,21 +1369,56 @@ QStringList DataStore::initialiseStylesheetProperties()
 QMap<QString, DataStore::AttributeType> DataStore::initialiseStylesheetMap()
 {
   QMap<QString, AttributeType> map;
-  map.insert("widget", StylesheetEdit);
-  map.insert("subcontrol", StylesheetEdit);
-  map.insert("pseudostate", StylesheetEdit);
-  map.insert("subcontrolmarker", StylesheetEdit);
-  map.insert("pseudostatemarker", StylesheetEdit);
-  map.insert("property", StylesheetEdit);
-  map.insert("propertymarker", StylesheetEdit);
-  map.insert("value", StylesheetEdit);
-  map.insert("startbrace", StylesheetEdit);
-  map.insert("endbrace", StylesheetEdit);
-  map.insert("bracematch", StylesheetEdit);
-  map.insert("comment", StylesheetEdit);
+  map.insert("widget", StylesheetEditGood);
+  map.insert("subcontrol", StylesheetEditGood);
+  map.insert("pseudostate", StylesheetEditGood);
+  map.insert("subcontrolmarker", StylesheetEditGood);
+  map.insert("pseudostatemarker", StylesheetEditGood);
+  map.insert("property", StylesheetEditGood);
+  map.insert("propertymarker", StylesheetEditGood);
+  map.insert("value", StylesheetEditGood);
+  map.insert("startbrace", StylesheetEditGood);
+  map.insert("endbrace", StylesheetEditGood);
+  map.insert("bracematch", StylesheetEditGood);
+  map.insert("comment", StylesheetEditGood);
   map.insert("bad", StylesheetEditBad);
   // TODO more values
   return map;
+}
+
+QStringList DataStore::initialiseColorList()
+{
+  QStringList list;
+  list << "black" << "silver" << "gray" << "whitesmoke" << "maroon" << "red" << "purple"
+       << "fuchsia" << "green" << "lime" << "olivedrab" << "yellow" << "navy" << "blue"
+       << "teal" << "aquamarine" << "orange" << "aliceblue" << "antiquewhite" << "aqua"
+       << "azure" << "beige" << "bisque" << "blanchedalmond" << "blueviolet" << "brown"
+       << "burlywood" << "cadetblue" << "chartreuse" << "chocolate" << "coral"
+       << "cornflowerblue" << "cornsilk" << "crimson" << "darkblue" << "darkcyan"
+       << "darkgoldenrod" << "darkgray" << "darkgreen" << "darkgrey" << "darkkhaki"
+       << "darkmagenta" << "darkolivegreen" << "darkorange" << "darkorchid" << "darkred"
+       << "darksalmon" << "darkseagreen" << "darkslateblue" << "darkslategray"
+       << "darkslategrey" << "darkturquoise" << "darkviolet" << "deeppink"
+       << "deepskyblue" << "dimgray" << "dimgrey" << "dodgerblue" << "firebrick"
+       << "floralwhite" << "forestgreen" << "gainsboro" << "ghostwhite" << "goldenrod"
+       << "gold" << "greenyellow" << "grey" << "honeydew" << "hotpink" << "indianred"
+       << "indigo" << "ivory" << "khaki" << "lavenderblush" << "lavender" << "lawngreen"
+       << "lemonchiffon" << "lightblue" << "lightcoral" << "lightcyan"
+       << "lightgoldenrodyellow" << "lightgray" << "lightgreen" << "lightgrey"
+       << "lightpink" << "lightsalmon" << "lightseagreen" << "lightskyblue"
+       << "lightslategray" << "lightslategrey" << "lightsteelblue" << "lightyellow"
+       << "limegreen" << "linen" << "mediumaquamarine" << "mediumblue" << "mediumorchid"
+       << "mediumpurple" << "mediumseagreen" << "mediumslateblue" << "mediumspringgreen"
+       << "mediumturquoise" << "mediumvioletred" << "midnightblue" << "mintcream"
+       << "mistyrose" << "moccasin" << "navajowhite" << "oldlace" << "olive" << "orangered"
+       << "orchid" << "palegoldenrod" << "palegreen" << "paleturquoise" << "palevioletred"
+       << "papayawhip" << "peachpuff" << "peru" << "pink" << "plum" << "powderblue"
+       << "rosybrown" << "royalblue" << "saddlebrown" << "salmon" << "sandybrown"
+       << "seagreen" << "seashell" << "sienna" << "skyblue" << "slateblue" << "slategray"
+       << "slategrey" << "snow" << "springgreen" << "steelblue" << "tan" << "thistle"
+       << "tomato" << "transparent" << "turquoise" << "violet" << "wheat" << "white"
+       << "yellowgreen" << "rebeccapurple";
+  return list;
 }
 
 QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
@@ -1428,18 +1518,18 @@ QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
   map.insert("-qt-background-role", PaletteRole);
   map.insert("-qt-style-features", List);
   // Below this is the attributes available for this stylesheet editor.
-  map.insert("widget", StylesheetEdit);
-  map.insert("subcontrol", StylesheetEdit);
-  map.insert("pseudostate", StylesheetEdit);
-  map.insert("subcontrolmarker", StylesheetEdit);
-  map.insert("pseudostatemarker", StylesheetEdit);
-  map.insert("property", StylesheetEdit);
-  map.insert("propertymarker", StylesheetEdit);
-  map.insert("value", StylesheetEdit);
-  map.insert("startbrace", StylesheetEdit);
-  map.insert("endbrace", StylesheetEdit);
-  map.insert("bracematch", StylesheetEdit);
-  map.insert("comment", StylesheetEdit);
+  map.insert("widget", StylesheetEditGood);
+  map.insert("subcontrol", StylesheetEditGood);
+  map.insert("pseudostate", StylesheetEditGood);
+  map.insert("subcontrolmarker", StylesheetEditGood);
+  map.insert("pseudostatemarker", StylesheetEditGood);
+  map.insert("property", StylesheetEditGood);
+  map.insert("propertymarker", StylesheetEditGood);
+  map.insert("value", StylesheetEditGood);
+  map.insert("startbrace", StylesheetEditGood);
+  map.insert("endbrace", StylesheetEditGood);
+  map.insert("bracematch", StylesheetEditGood);
+  map.insert("comment", StylesheetEditGood);
   map.insert("bad", StylesheetEditBad);
 
   return map;
@@ -1461,5 +1551,3 @@ QStringList DataStore::addControls(int count, ...)
 
   return widgets;
 }
-
-} // end of StylesheetParser

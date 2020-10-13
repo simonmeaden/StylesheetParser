@@ -20,7 +20,6 @@
 #include "stylesheethighlighter.h"
 #include "stylesheetparser/stylesheetedit.h"
 
-namespace StylesheetEditor {
 
 StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   : QSyntaxHighlighter(editor->document())
@@ -175,7 +174,7 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
 
           start = nodeStart + offset;
 
-          if (check == PropertyNode::GoodValue) {
+          if (check == PropertyNode::GoodValue || check == PropertyNode::ValidPropertyType) {
             setFormat(start, value.length(), m_valueFormat);
 
           } else {
@@ -262,7 +261,7 @@ void StylesheetHighlighter::setSubControlMarkerFormat(QBrush color, QBrush back,
   m_subControlMarkerFormat.setBackground(back);
 }
 
-void StylesheetEditor::StylesheetHighlighter::setValueFormat(QBrush color, QBrush back, QFont::Weight weight)
+void StylesheetHighlighter::setValueFormat(QBrush color, QBrush back, QFont::Weight weight)
 {
   m_valueFormat.setFontWeight(weight);
   m_valueFormat.setForeground(color);
@@ -488,4 +487,3 @@ QTextCharFormat::UnderlineStyle StylesheetHighlighter::underlinestyle() const
   return m_badValueFormat.underlineStyle();
 }
 
-} // end of StylesheetParser

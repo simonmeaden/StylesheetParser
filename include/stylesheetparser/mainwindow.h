@@ -28,8 +28,6 @@
 
 #include "stylesheetedit.h"
 
-using namespace StylesheetEditor;
-
 class MainWindow : public QMainWindow
 {
    Q_OBJECT

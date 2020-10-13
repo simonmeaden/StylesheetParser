@@ -29,8 +29,7 @@
 #include <cstdarg>
 
 #include "parserstate.h"
-
-namespace StylesheetEditor {
+#include "datastore.h"
 
 class Node : public QObject
 {
@@ -170,8 +169,8 @@ public:
   enum Check
   {
     GoodValue,
+    ValidPropertyType,
     BadValue,
-    //    MissingPropertyMarker,
     MissingPropertyEnd,
   };
   explicit PropertyNode(const QString& name, QTextCursor start, QObject* parent, Type type = PropertyType);
@@ -182,14 +181,18 @@ public:
   QList<Check> checks() const;
   //! Returns the offsets as a list.
   QList<int> offsets() const;
+  //! Returns the attribute types as a list.
+  QList<DataStore::AttributeType> attributeTypes() const;
   //! Sets the values to the supplied string values.
   void setValues(const QStringList& values);
   //! Sets the checks to the supplied bool values.
   void setChecks(const QList<Check>& checks);
   //! Sets the offsets to the supplied int offsets.
   void setOffsets(const QList<int>& offsets);
+  //! Sets the attribute types as a list.
+  void setAttributeTypes(const QList<DataStore::AttributeType> &attributeTypes);
   //! Adds a complete value/check/offset to the values.
-  void addValue(const QString& value, Check check, int offset);
+  void addValue(const QString& value, Check check, int offset, DataStore::AttributeType attType);
   //! Sets the check at index as bad.
   //!
   //! If index is not set then the default is to set the last value as bad.
@@ -207,10 +210,12 @@ public:
   bool hasPropertyMarker() const;
   void setPropertyMarkerExists(bool propertyMarker);
 
+
 private:
   QStringList m_values;
   QList<Check> m_checks;
   QList<int> m_offsets;
+  QList<DataStore::AttributeType> m_attributeTypes;
   bool m_propertyMarkerExists;
 };
 
@@ -328,8 +333,5 @@ public:
 
   int end() const override;
 };
-
-
-} // end of StylesheetParser
 
 #endif // NODE_H

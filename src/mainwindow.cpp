@@ -26,7 +26,7 @@ MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
 {
   setCentralWidget(initGui());
-  setGeometry(0, 0, 500, 800);
+  setGeometry(400, 100, 500, 800);
 }
 
 MainWindow::~MainWindow() {}

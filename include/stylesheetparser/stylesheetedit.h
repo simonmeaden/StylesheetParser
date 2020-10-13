@@ -73,10 +73,10 @@ public:
   void setPropertyMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
   //! Sets a new foreground/background/fontweight for the highlighter line numbers format
   void setLineNumberFormat(QColor foreground, QColor back, QFont::Weight weight = QFont::Light);
-  //! Sets a new foreground/background/fontweight for the highlighter bad value format
-  void setBadValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Light, bool underline = true,
-                         QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
-                         QColor underlineColor = QColor("red"));
+//  //! Sets a new foreground/background/fontweight for the highlighter bad value format
+//  void setBadValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Light, bool underline = true,
+//                         QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
+//                         QColor underlineColor = QColor("red"));
   //! Sets a new foreground/background/fontweight for the highlighter start curly brace ({) format
   void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
   //! Sets a new foreground/background/fontweight for the highlighter end curly brace (}) format

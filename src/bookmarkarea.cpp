@@ -140,7 +140,7 @@ void BookmarkArea::mouseMoveEvent(QMouseEvent* event)
       m_hoverWidget = new HoverWidget(m_editor);
     }
 
-    m_hoverWidget->show(pos, bookmarkText(lineNumber));
+    m_hoverWidget->setHover(pos, bookmarkText(lineNumber));
 
   } else {
     if (m_hoverWidget && m_hoverWidget->isVisible()) {

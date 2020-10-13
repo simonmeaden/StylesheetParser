@@ -28,7 +28,7 @@ class HoverWidget : public QWidget
 public:
   HoverWidget(QWidget* parent = nullptr);
 
-  void show(QPoint pos, const QString& text, QColor foreground = QColor("INVALID"),
+  void setHover(QPoint pos, const QString& text, QColor foreground = QColor("INVALID"),
             QColor background = QColor("INVALID"));
 
   QColor fore() const;

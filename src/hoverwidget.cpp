@@ -32,7 +32,7 @@ void HoverWidget::paintEvent(QPaintEvent* /*event*/)
   painter.setPen(m_foreground);
   int bottom = -3;
 
-  for (int i = 0; i < m_text.count(); i++){
+  for (int i = 0; i < m_text.count(); i++) {
     QString t = m_text.at(i);
     int h = m_heights.at(i);
     bottom += h;
@@ -61,13 +61,14 @@ void HoverWidget::setFore(const QColor& fore)
   m_defForeground = fore;
 }
 
-void HoverWidget::show(QPoint pos, const QString& text, QColor foreground, QColor background)
+void HoverWidget::setHover(QPoint pos, const QString& text, QColor foreground, QColor background)
 {
   m_foreground = (foreground.isValid() ? foreground : m_defForeground);
   m_background = (background.isValid() ? background : m_defBackground);
   m_text = text.split("\n");
   QFontMetrics fm = fontMetrics();
   m_width = m_height = 0;
+  m_heights.clear();
 
   for (auto t : m_text) {
     QRect rect = fm.boundingRect(t);
@@ -79,5 +80,11 @@ void HoverWidget::show(QPoint pos, const QString& text, QColor foreground, QColo
   m_width += 10;
   setGeometry(
     pos.x() + 40, pos.y(), m_width, m_height);
-  QWidget::show();
+
+//  if (isVisible()) {
+    update();
+
+//  } else {
+//    QWidget::show();
+//  }
 }

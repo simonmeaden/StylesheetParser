@@ -111,8 +111,8 @@ QString Node::toString()
   case PropertyType:
     return "Property Node";
 
-  case PropertyMarkerType:
-    return "Property End Marker";
+  //  case PropertyMarkerType:
+  //    return "Property End Marker";
 
   case PropertyEndType:
     return "Property End";
@@ -199,7 +199,18 @@ WidgetNode::WidgetNode(const QString& name,
                        Type type)
   : Node(start, parent, type)
   , NameNode(name)
+  , m_widgetValid(true)
 {}
+
+bool WidgetNode::isWidgetValid() const
+{
+  return m_widgetValid;
+}
+
+void WidgetNode::setWidgetValid(bool widgetValid)
+{
+  m_widgetValid = widgetValid;
+}
 
 PropertyNode::PropertyNode(const QString& name,
                            QTextCursor start,
@@ -208,6 +219,7 @@ PropertyNode::PropertyNode(const QString& name,
   : Node(start, parent, type)
   , NameNode(name)
   , m_propertyMarkerExists(false)
+  , m_validProperty(true)
 {}
 
 QStringList PropertyNode::values() const
@@ -245,7 +257,8 @@ void PropertyNode::setOffsets(const QList<int>& offsets)
   m_offsets = offsets;
 }
 
-void PropertyNode::addValue(const QString& value, PropertyNode::Check check, int offset, DataStore::AttributeType attType = DataStore::NoAttributeValue)
+void PropertyNode::addValue(const QString& value, PropertyNode::Check check, int offset,
+                            DataStore::AttributeType attType = DataStore::NoAttributeValue)
 {
   m_values.append(value);
   m_checks.append(check);
@@ -301,7 +314,27 @@ void PropertyNode::setPropertyMarkerExists(bool propertyMarker)
   m_propertyMarkerExists = propertyMarker;
 }
 
-void PropertyNode::setAttributeTypes(const QList<DataStore::AttributeType> &attributeTypes)
+bool PropertyNode::isValidProperty() const
+{
+  return m_validProperty;
+}
+
+void PropertyNode::setValidProperty(bool validProperty)
+{
+  m_validProperty = validProperty;
+}
+
+int PropertyNode::propertyMarkerOffset() const
+{
+  return m_propertymarkerOffset;
+}
+
+void PropertyNode::setPropertyMarkerOffset(int propertymarkerOffset)
+{
+  m_propertymarkerOffset = propertymarkerOffset;
+}
+
+void PropertyNode::setAttributeTypes(const QList<DataStore::AttributeType>& attributeTypes)
 {
   m_attributeTypes = attributeTypes;
 }
@@ -310,7 +343,7 @@ SubControlNode::SubControlNode(const QString& name,
                                QTextCursor start,
                                QObject* parent,
                                Type type)
-    : Node(start, parent, type)
+  : Node(start, parent, type)
   , NameNode(name)
 {}
 
@@ -452,11 +485,11 @@ PseudoStateMarkerNode::PseudoStateMarkerNode(QTextCursor start,
   : ColonNode(start, parent, type)
 {}
 
-PropertyMarkerNode::PropertyMarkerNode(QTextCursor start,
-                                       QObject* parent,
-                                       Node::Type type)
-  : ColonNode(start, parent, type)
-{}
+//PropertyMarkerNode::PropertyMarkerNode(QTextCursor start,
+//                                       QObject* parent,
+//                                       Node::Type type)
+//  : ColonNode(start, parent, type)
+//{}
 
 PropertyEndMarkerNode::PropertyEndMarkerNode(QTextCursor start,
     QObject* parent,

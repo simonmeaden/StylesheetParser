@@ -212,13 +212,13 @@ struct StylesheetEditPrivate
   void setLineNumberFormat(QColor foreground,
                            QColor back,
                            QFont::Weight weight = QFont::Light);
-  void setBadValueFormat(QColor color,
-                         QColor back,
-                         QFont::Weight weight = QFont::Light,
-                         bool underline = true,
-                         QTextCharFormat::UnderlineStyle underlineStyle =
-                           QTextCharFormat::WaveUnderline,
-                         QColor underlineColor = QColor("red"));
+//  void setBadValueFormat(QColor color,
+//                         QColor back,
+//                         QFont::Weight weight = QFont::Light,
+//                         bool underline = true,
+//                         QTextCharFormat::UnderlineStyle underlineStyle =
+//                           QTextCharFormat::WaveUnderline,
+//                         QColor underlineColor = QColor("red"));
   void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
   void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
@@ -237,6 +237,7 @@ struct StylesheetEditPrivate
   void handleLeaveEvent();
   void displayBookmark(BookmarkData*data, QPoint pos);
   void displayError(QString text, QPoint pos);
+  void displayError(WidgetNode *widget, QPoint pos);
   void displayError(BadBlockNode* badNode, QPoint pos);
   void displayError(PropertyNode* property, QPoint pos);
 
@@ -255,7 +256,7 @@ struct StylesheetEditPrivate
                               QString& block,
                               Node** endnode);
   void parseComment(const QString& text, int& pos);
-  void stashWidget(int position, const QString& block);
+  void stashWidget(int position, const QString& block, bool valid=true);
   void stashBadNode(int position,
                     const QString& block,
                     ParserState::Error error);
@@ -274,7 +275,7 @@ struct StylesheetEditPrivate
                             int charsAdded,
                             int charsRemoved,
                             const QString& newValue);
-  int calculateWidth(QString name, int offset, QFontMetrics fm);
+//  int calculateWidth(QString name, int offset, QFontMetrics fm);
 
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank
   // character.
@@ -300,6 +301,9 @@ public:
 
 private:
   void setLineData(QTextCursor cursor);
+  void createAndHideHover();
+  void hideHover();
+  void showHover();
 };
 
 

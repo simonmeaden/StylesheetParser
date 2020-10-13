@@ -52,7 +52,7 @@ public:
     EndBraceType,
     NewlineType,
     PropertyType,
-    PropertyMarkerType,
+//    PropertyMarkerType,
     PropertyEndType,
     PropertyEndMarkerType,
     BadNodeType,
@@ -160,6 +160,13 @@ class WidgetNode : public Node, public NameNode
   Q_OBJECT
 public:
   explicit WidgetNode(const QString& name, QTextCursor start, QObject* parent, Type type = WidgetType);
+
+  bool isWidgetValid() const;
+  void setWidgetValid(bool widgetValid);
+
+private:
+  bool m_widgetValid;
+
 };
 
 class PropertyNode : public Node, public NameNode
@@ -210,6 +217,11 @@ public:
   bool hasPropertyMarker() const;
   void setPropertyMarkerExists(bool propertyMarker);
 
+  bool isValidProperty() const;
+  void setValidProperty(bool validProperty);
+
+  int propertyMarkerOffset() const;
+  void setPropertyMarkerOffset(int propertymarkerOffset);
 
 private:
   QStringList m_values;
@@ -217,6 +229,8 @@ private:
   QList<int> m_offsets;
   QList<DataStore::AttributeType> m_attributeTypes;
   bool m_propertyMarkerExists;
+  int m_propertymarkerOffset;
+  bool m_validProperty;
 };
 
 class BadPropertyNode : public PropertyNode, public BadNode
@@ -255,12 +269,12 @@ public:
   int end() const override;
 };
 
-class PropertyMarkerNode : public ColonNode
-{
-  Q_OBJECT
-public:
-  explicit PropertyMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyMarkerType);
-};
+//class PropertyMarkerNode : public ColonNode
+//{
+//  Q_OBJECT
+//public:
+//  explicit PropertyMarkerNode(QTextCursor start, QObject* parent, Type type = PropertyMarkerType);
+//};
 
 class SemiColonNode : public Node, public NameNode
 {

@@ -41,9 +41,9 @@ public:
   void setSubControlFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setSubControlMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setValueFormat(QBrush color, QBrush back, QFont::Weight weight);
-  void setBadValueFormat(QBrush color, QBrush back, QFont::Weight weight, bool underline,
-                         QTextCharFormat::UnderlineStyle underlineStyle,
-                         QColor underlineColor);
+//  void setBadValueFormat(QBrush color, QBrush back, QFont::Weight weight, bool underline,
+//                         QTextCharFormat::UnderlineStyle underlineStyle,
+//                         QColor underlineColor);
   void setPropertyFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPropertyMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPropertyEndMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
@@ -90,6 +90,7 @@ private:
   StylesheetEdit* m_editor;
   QTextCharFormat m_baseFormat;
   QTextCharFormat m_widgetFormat;
+  QTextCharFormat m_badWidgetFormat;
   QTextCharFormat m_nameFormat;
   QTextCharFormat m_valueFormat;
   QTextCharFormat m_badValueFormat;
@@ -98,6 +99,7 @@ private:
   QTextCharFormat m_subControlFormat;
   QTextCharFormat m_subControlMarkerFormat;
   QTextCharFormat m_propertyFormat;
+  QTextCharFormat m_badPropertyFormat;
   QTextCharFormat m_propertyMarkerFormat;
   QTextCharFormat m_propertyEndMarkerFormat;
   QTextCharFormat m_startBraceFormat;

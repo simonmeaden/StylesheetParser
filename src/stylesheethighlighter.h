@@ -95,8 +95,10 @@ private:
   QTextCharFormat m_valueFormat;
   QTextCharFormat m_badValueFormat;
   QTextCharFormat m_pseudoStateFormat;
+  QTextCharFormat m_badPseudoStateFormat;
   QTextCharFormat m_pseudoStateMarkerFormat;
   QTextCharFormat m_subControlFormat;
+  QTextCharFormat m_badSubControlFormat;
   QTextCharFormat m_subControlMarkerFormat;
   QTextCharFormat m_propertyFormat;
   QTextCharFormat m_badPropertyFormat;

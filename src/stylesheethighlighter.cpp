@@ -111,26 +111,42 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
     case Node::NewlineType:
       break;
 
-    case Node::PseudoStateType:
-      setFormat(nodeStart, length, m_pseudoStateFormat);
+    case Node::PseudoStateType:{
+      auto pseudostate = qobject_cast<PseudoStateNode*>(node);
+
+      if (pseudostate->isStateValid()) {
+        setFormat(nodeStart, length, m_pseudoStateFormat);
+
+      } else {
+        setFormat(nodeStart, length, m_badPseudoStateFormat);
+      }
       break;
+    }
 
     case Node::PseudoStateMarkerType:
       setFormat(nodeStart, length, m_pseudoStateMarkerFormat);
       break;
 
-    case Node::SubControlType:
-      setFormat(nodeStart, length, m_subControlFormat);
+    case Node::SubControlType:{
+      auto subcontrol = qobject_cast<SubControlNode*>(node);
+
+      if (subcontrol->isStateValid()) {
+        setFormat(nodeStart, length, m_subControlFormat);
+
+      } else {
+        setFormat(nodeStart, length, m_badSubControlFormat);
+      }
       break;
+    }
 
     case Node::SubControlMarkerType:
       setFormat(nodeStart, length, m_subControlMarkerFormat);
       break;
 
     case Node::WidgetType:{
-      WidgetNode* wNode = qobject_cast<WidgetNode*>(node);
+      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
 
-      if (wNode->isWidgetValid()) {
+      if (widget->isWidgetValid()) {
         setFormat(nodeStart, length, m_widgetFormat);
 
       } else {
@@ -254,6 +270,9 @@ void StylesheetHighlighter::setPseudoStateFormat(QBrush color, QBrush back, QFon
   m_pseudoStateFormat.setFontWeight(weight);
   m_pseudoStateFormat.setForeground(color);
   m_pseudoStateFormat.setBackground(back);
+  m_badPseudoStateFormat = QTextCharFormat(m_pseudoStateFormat);
+  m_badPseudoStateFormat.setUnderlineColor(QColor(Qt::red));
+  m_badPseudoStateFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
 void StylesheetHighlighter::setPseudoStateMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)
@@ -268,6 +287,9 @@ void StylesheetHighlighter::setSubControlFormat(QBrush color, QBrush back, QFont
   m_subControlFormat.setFontWeight(weight);
   m_subControlFormat.setForeground(color);
   m_subControlFormat.setBackground(back);
+  m_badSubControlFormat = QTextCharFormat(m_subControlFormat);
+  m_badSubControlFormat.setUnderlineColor(QColor(Qt::red));
+  m_badSubControlFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
 void StylesheetHighlighter::setSubControlMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)

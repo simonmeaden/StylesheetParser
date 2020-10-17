@@ -271,6 +271,12 @@ public:
   explicit SubControlNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = SubControlType);
 
   int end() const override;
+  bool isStateValid() const;
+  void setStateValid(bool stateValid);
+
+private:
+  bool m_stateValid;
+
 };
 
 class PseudoStateNode : public NamedNode
@@ -280,6 +286,12 @@ public:
   explicit PseudoStateNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = PseudoStateType);
 
   int end() const override;
+  bool isStateValid() const;
+  void setStateValid(bool stateValid);
+
+private:
+  bool m_stateValid;
+
 };
 
 class CommentNode : public NamedNode

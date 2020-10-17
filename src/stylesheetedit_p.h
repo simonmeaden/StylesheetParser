@@ -262,8 +262,8 @@ struct StylesheetEditPrivate
                     ParserState::Error error);
   void stashBadSubControlMarkerNode(int position, ParserState::Error error);
   void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
-  void stashPseudoState(int position, const QString& block);
-  void stashSubControl(int position, const QString& block);
+  void stashPseudoState(int position, const QString& block, bool valid=true);
+  void stashSubControl(int position, const QString& block, bool valid=true);
   void stashEndBrace(int position);
   void stashStartBrace(int position);
   void stashPseudoStateMarker(int position);

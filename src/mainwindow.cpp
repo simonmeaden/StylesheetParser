@@ -123,10 +123,16 @@ QWidget* MainWindow::initGui()
   // Errors
   text =
     "\n\n"
-    "color red;\n\n" // missing property marker
-    " bordr: green slid 1px; \n\n" // bad property name, missing property end char
-    " shitwidget:active {} \n\n" // bad property name, missing property end char
-    " background-color: blue;\n\n" // GOOD.
+    "color red;\n"                  // BAD missing property marker - working
+    " bordr: green slid 1px; \n"    // BAD property name, missing property end char - working
+    " shitwidget:active {}\n"       // BAD widget name - working
+    " background-color: blue;\n\n"    // GOOD property. - working
+    "QTabWidget:actve {}\n\n"             // BAD widget and pseudostate
+    "QTaWidget:active {}\n\n"             // BAD widget and GOOD pseudostate
+    "QTabWidget::branh {}\n\n"            // BAD subcontrol
+    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD subcontrol
+    "QTbWidget::branh {}\n\n"             // BAD widget and GOOD subcontrol
+    "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;" // missing end brace
     ;
   //    text =  "color red; border: green solid 1px;"; // missing first end property marker.
   //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
@@ -138,7 +144,7 @@ QWidget* MainWindow::initGui()
   //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.
 
   //  text = "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;"; // missing end brace
-  //  text = "QTabWidget:actve {}"; // BAD pseudostate
+  //  text = ; // BAD pseudostate
   //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
   //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
   //  text = "QTabWidget::branh {}"; // BAD subcontrol

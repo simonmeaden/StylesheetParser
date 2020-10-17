@@ -430,6 +430,16 @@ int SubControlNode::end() const
   return m_cursor.anchor() + m_name.length();
 }
 
+bool SubControlNode::isStateValid() const
+{
+  return m_stateValid;
+}
+
+void SubControlNode::setStateValid(bool stateValid)
+{
+  m_stateValid = stateValid;
+}
+
 PseudoStateNode::PseudoStateNode(const QString& name,
                                  QTextCursor start,
                                  StylesheetEdit* parent,
@@ -440,6 +450,16 @@ PseudoStateNode::PseudoStateNode(const QString& name,
 int PseudoStateNode::end() const
 {
   return m_cursor.anchor() + m_name.length();
+}
+
+bool PseudoStateNode::isStateValid() const
+{
+  return m_stateValid;
+}
+
+void PseudoStateNode::setStateValid(bool stateValid)
+{
+  m_stateValid = stateValid;
 }
 
 CommentNode::CommentNode(QTextCursor start, StylesheetEdit* parent, Node::Type type)

@@ -27,6 +27,9 @@ HoverWidget::HoverWidget(QWidget* parent)
 
 void HoverWidget::paintEvent(QPaintEvent* /*event*/)
 {
+  if (m_width==0 || m_height==0)
+    return;
+
   QPainter painter(this);
   painter.fillRect(0, 0, m_width, m_height, m_background);
   painter.setPen(m_foreground);
@@ -41,6 +44,13 @@ void HoverWidget::paintEvent(QPaintEvent* /*event*/)
   }
 }
 
+void HoverWidget::setPos(QPoint pos)
+{
+  m_x = pos.x() + 40;
+  m_y = pos.y();
+  update();
+}
+
 QColor HoverWidget::defaultBackground() const
 {
   return m_defBackground;
@@ -49,6 +59,18 @@ QColor HoverWidget::defaultBackground() const
 void HoverWidget::setDefaultBackground(const QColor& background)
 {
   m_defBackground = background;
+}
+
+void HoverWidget::showHover()
+{
+  //  show();
+  update();
+}
+
+void HoverWidget::hideHover()
+{
+  m_width = m_height = 0;
+  update();
 }
 
 QColor HoverWidget::fore() const
@@ -61,11 +83,13 @@ void HoverWidget::setFore(const QColor& fore)
   m_defForeground = fore;
 }
 
-void HoverWidget::setHover(QPoint pos, const QString& text, QColor foreground, QColor background)
+void HoverWidget::setHoverText(QPoint pos, const QString& text, QColor foreground, QColor background)
 {
   m_foreground = (foreground.isValid() ? foreground : m_defForeground);
   m_background = (background.isValid() ? background : m_defBackground);
   m_text = text.split("\n");
+  m_x = pos.x() + 40;
+  m_y = pos.y();
   QFontMetrics fm = fontMetrics();
   m_width = m_height = 0;
   m_heights.clear();
@@ -81,10 +105,5 @@ void HoverWidget::setHover(QPoint pos, const QString& text, QColor foreground, Q
   setGeometry(
     pos.x() + 40, pos.y(), m_width, m_height);
 
-//  if (isVisible()) {
-    update();
-
-//  } else {
-//    QWidget::show();
-//  }
+  update();
 }

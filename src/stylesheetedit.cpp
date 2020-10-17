@@ -75,7 +75,7 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   , m_hoverWidget(nullptr)
   , m_manualMove(false)
 {
-  createAndHideHover();
+  createHover();
 }
 
 int StylesheetEditPrivate::getLineCount() const
@@ -638,236 +638,277 @@ int StylesheetEdit::calculateLineNumber(QTextCursor textCursor)
   return d_ptr->calculateLineNumber(textCursor);
 }
 
-// void StylesheetEdit::drawHoverWidget(QPoint pos, QString text)
-//{
-//  d_ptr->drawHoverWidget(pos, text);
-//}
-
 void StylesheetEdit::format()
 {
   // TODO format code nicely.
 }
 
-void StylesheetEditPrivate::hideHover()
-{
-  //  if (m_hoverWidget && m_hoverWidget->isVisible()) {
-  //    m_hoverWidget->hide();
-  //  }
-  m_hoverWidget->setVisible(false);
-}
-
-void StylesheetEditPrivate::createAndHideHover()
+void StylesheetEditPrivate::createHover()
 {
   if (!m_hoverWidget) {
     m_hoverWidget = new HoverWidget(q_ptr);
+    m_hoverWidget->setVisible(true); // always showing just 0 size when not needed.
+    m_hoverWidget->setPos(QPoint(0, 0));
+    m_hoverWidget->hideHover();
   }
-
-  hideHover();
 }
 
-void StylesheetEditPrivate::showHover()
+QPair<NameNode::SectionType, int> StylesheetEditPrivate::nodeForPoint(const QPoint& pos, NamedNode** nNode)
 {
-  if (!m_hoverWidget->isVisible()) {
-    m_hoverWidget->setVisible(true);
+  QPair<NameNode::SectionType, int> isin = qMakePair<NameNode::SectionType, int>(NamedNode::None, -1);
+  qWarning() << "Pos : " <<pos;
+
+  for (auto node : m_nodes->values()) {
+    *nNode = qobject_cast<NamedNode*>(node);
+
+    if (*nNode) {
+      isin = (*nNode)->isIn(pos);
+
+      if (isin.first != NamedNode::None) {
+        return isin;
+      }
+    }
   }
+
+  return isin;
 }
 
 void StylesheetEditPrivate::handleMouseMove(QPoint pos)
 {
-  auto tc = q_ptr->cursorForPosition(pos);
-  auto data = getNodeAtCursor(tc);
-  auto node = data.node;
-  auto x = pos.x();
-  auto y = pos.y();
+  NamedNode* nNode = nullptr;
+  auto isin = nodeForPoint(pos, &nNode);
 
-  if (!node) {
+  if (!nNode || isin.first == NamedNode::None) {
+    m_hoverWidget->hideHover();
     return;
-  }
 
-  //  if (x < m_bookmarkArea->width() + m_lineNumberArea->weight()) {
-  //    // inside margins.
-  //    return;
-  //  }
-
-  auto cursor = QTextCursor(node->cursor());
-  auto rect = q_ptr->cursorRect(cursor);
-  auto left = rect.x();
-  auto right = left;
-  auto top = rect.y();
-  auto fm = q_ptr->fontMetrics();
-  auto height = fm.height();
-  auto bottom = top + height;
-  int width;
-
-  if (node) {
-    switch (node->type()) {
-    //    case Node::BadNodeType: {
-    //      BadBlockNode* badNode = qobject_cast<BadBlockNode*>(node);
-
-    //      if (badNode) {
-    //        ParserState::Errors errors = badNode->errors();
-
-    //        if (errors.testFlag(ParserState::InvalidWidget)) {
-    //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Widget"));
-
-    //        } else if (errors.testFlag(ParserState::InvalidSubControl)) {
-    //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Sub-Control"));
-
-    //        } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
-    //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Pseudo-State"));
-
-    //        } else if (errors.testFlag(ParserState::AnomalousMarkerType)) {
-    //          m_hoverWidget->show(
-    //            pos,
-    //            q_ptr->tr(
-    //              "This could be either a Pseudo-State marker or a Sub-Control marker."));
-
-    //        } else if (errors.testFlag(ParserState::AnomalousType)) {
-    //          m_hoverWidget->show(pos, q_ptr->tr("The type of this is anomalous."));
-
-    //        } else {
-    //          hideHover();
-    //        }
-
-    //      }
-
-    //      break;
-    //    } // end case Node::BadNodeType
+  } else {
+    switch (nNode->type()) {
 
     case Node::WidgetType: {
-      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
+      WidgetNode* widget = qobject_cast<WidgetNode*>(nNode);
 
-      if (!widget->isWidgetValid()) {
-        if (y > top && y < bottom) {
-          auto name = widget->name();
-          width = fm.horizontalAdvance(name);
-          right += width;
+      switch (isin.first) {
+//      case WidgetNode::None:
+//        m_hoverWidget->hideHover();
+//        break;
 
-          qWarning() << QString("Widget Pos : %1, %2 - %3, %4").arg(pos.x()).arg(pos.y()).arg(left).arg(right);
-
-          if (x >= left && x <= right) {
-            m_hoverWidget->setHover(pos, q_ptr->tr("Bad widget name"));
-          } else {
-            hideHover();
-          }
-
-        } else {
-          hideHover();
+      case WidgetNode::Name: {
+        if (!widget->isWidgetValid()) {
+          m_hoverWidget->setHoverText(pos, q_ptr->tr("%1 is not a valid widget name").arg(widget->name()));
+          m_hoverWidget->showHover();
         }
 
+        break;
+      }
+
+      default:
+        break;
       }
 
       break;
     }
 
     case Node::PropertyType: {
-      PropertyNode* property = qobject_cast<PropertyNode*>(node);
-      QString propertyName = dynamic_cast<NameNode*>(node)->name();
+      PropertyNode* property = qobject_cast<PropertyNode*>(nNode);
 
-      if (property->checks().contains(PropertyNode::BadValue) ||
-          property->checks().contains(PropertyNode::MissingPropertyEnd) ||
-          property->checks().contains(PropertyNode::ValidPropertyType) ||
-          !property->hasPropertyMarker()) {
-        auto offsets = property->offsets();
-        auto values = property->values();
-        auto checks = property->checks();
+      switch (isin.first) {
+      case PropertyNode::None:
+        m_hoverWidget->hideHover();
+        break;
 
-        if (y > top && y < bottom) {
-          auto name = property->name();
-          width = fm.horizontalAdvance(name);
-          right += width;
+      case PropertyNode::Name: {
+        auto propertyName = property->name();
 
-          if (x >= left && x <= right) {
-            // inside property name
-            if (!property->hasPropertyMarker()) {
-              m_hoverWidget->setHover(pos, q_ptr->tr("Missing property marker (:)!"));
-              showHover();
+        if (property->checks().contains(PropertyNode::MissingPropertyEnd) && !property->hasPropertyMarker()) {
+          m_hoverWidget->setHoverText(pos,
+                                      q_ptr->tr("%1 is not a valid property name!\nMissing property marker (:)!").
+                                      arg(propertyName));
+          m_hoverWidget->showHover();
 
-            } else {
-              m_hoverWidget->setHover(pos, q_ptr->tr("Bad property name!"));
-              showHover();
-            }
+        } else if (property->checks().contains(PropertyNode::MissingPropertyEnd)) {
+          m_hoverWidget->setHoverText(pos,
+                                      q_ptr->tr("%1 is not a valid property name!").
+                                      arg(propertyName));
+          m_hoverWidget->showHover();
 
-            //            qWarning() << QString("Property Name Pos : %1, %2 - %3, %4").arg(pos.x()).arg(pos.y()).arg(left).arg(right);
+        } else if (!property->hasPropertyMarker()) {
+          m_hoverWidget->setHoverText(pos,
+                                      q_ptr->tr("Missing property marker (:)!"));
+          m_hoverWidget->showHover();
 
-            return;
+        } else if (!property->isValidProperty()) {
+          m_hoverWidget->setHoverText(pos,
+                                      q_ptr->tr("Invalid property name!"));
+          m_hoverWidget->showHover();
 
-          } else {
-            hideHover();
-          }
-
-          for (int i = 0; i < offsets.count(); i++) {
-            auto check = checks.at(i);
-            auto value = values.at(i);
-            auto offset = offsets.at(i);
-            auto pCursor(cursor);
-            pCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, offset);
-            rect = q_ptr->cursorRect(pCursor);
-            width = fm.horizontalAdvance(value);
-            left = rect.x();
-            right = rect.x() + width;
-
-            if (x >= left && x <= right) {
-              // inside the value.
-              if (check == PropertyNode::ValidPropertyType) {
-                // This is a valid property but the property name is wrong.
-                // TODO handle different attribute types here?
-                m_hoverWidget->setHover(pos, q_ptr->tr("Good property value.\nIncorrect property name!"));
-                showHover();
-
-              } else if (check == PropertyNode::BadValue) {
-                // This is just a bad value
-                m_hoverWidget->setHover(pos, q_ptr->tr("Bad property value."));
-                showHover();
-              }
-
-              //              qWarning() << QString("Property Values Pos : %1, %2 - %3, %4").arg(pos.x()).arg(pos.y()).arg(left).arg(right);
-
-            } else {
-              hideHover();
-            }
-          }
-
-        } else {
-          hideHover();
         }
 
-      }/* else {
+        break;
+      }
 
-      hideHover();
-    }*/
+      case PropertyNode::Value: {
+        if (property->checks().at(isin.second) == PropertyNode::ValidPropertyType) {
+          // This is a valid property but the property name is wrong.
+          // TODO handle different attribute types here?
+          m_hoverWidget->setHoverText(pos,
+                                      q_ptr->tr("%1 is a good property value.\nIncorrect property name!").
+                                      arg(property->values().at(isin.second)));
+          m_hoverWidget->showHover();
+
+        } else if (property->checks().at(isin.second) == PropertyNode::BadValue) {
+          m_hoverWidget->setHoverText(pos, q_ptr->tr("%1 is a bad property value.").
+                                      arg(property->values().at(isin.second)));
+        }
+
+        break;
+      }
+      }
 
       break;
-    } // end case Node::PropertyType
-    } // end switch
+    }
 
-    return;
+    case Node::BadNodeType: {
+      BadBlockNode* badNode = qobject_cast<BadBlockNode*>(nNode);
 
-  }/* else {
+      //      if (badNode) {
+      //        ParserState::Errors errors = badNode->errors();
 
-    hideHover();
-  }*/
+      //        if (errors.testFlag(ParserState::InvalidWidget)) {
+      //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Widget"));
+
+      //        } else if (errors.testFlag(ParserState::InvalidSubControl)) {
+      //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Sub-Control"));
+
+      //        } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
+      //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Pseudo-State"));
+
+      //        } else if (errors.testFlag(ParserState::AnomalousMarkerType)) {
+      //          m_hoverWidget->show(
+      //            pos,
+      //            q_ptr->tr(
+      //              "This could be either a Pseudo-State marker or a Sub-Control marker."));
+
+      //        } else if (errors.testFlag(ParserState::AnomalousType)) {
+      //          m_hoverWidget->show(pos, q_ptr->tr("The type of this is anomalous."));
+
+      //        } else {
+      //          hideHover();
+      //        }
+
+      //      }
+
+      break;
+    } // end case Node::BadNodeType
+
+    default:
+      m_hoverWidget->hideHover();
+    }
+
+  }
 }
+
+//      QString propertyName = dynamic_cast<NameNode*>(node)->name();
+
+//      if (property->checks().contains(PropertyNode::BadValue) ||
+//          property->checks().contains(PropertyNode::MissingPropertyEnd) ||
+//          property->checks().contains(PropertyNode::ValidPropertyType) ||
+//          !property->hasPropertyMarker()) {
+//        auto offsets = property->offsets();
+//        auto values = property->values();
+//        auto checks = property->checks();
+
+//        if (y > top && y < bottom) {
+//          auto propertName = property->name();
+//          width = fm.horizontalAdvance(propertName);
+//          right += width;
+
+//          if (x >= left && x <= right) {
+//            // inside property name
+//            if (!property->hasPropertyMarker()) {
+//              m_hoverWidget->setHoverText(pos, q_ptr->tr("Missing property marker (:)!"));
+//              m_hoverWidget->showHover();
+
+//            } else {
+//              m_hoverWidget->setHoverText(pos, q_ptr->tr(""));
+//              m_hoverWidget->showHover();
+
+//            }
+
+//            return;
+
+//          } else {
+//            m_hoverWidget->hideHover();
+
+//          }
+
+//          for (int i = 0; i < offsets.count(); i++) {
+//            auto check = checks.at(i);
+//            auto value = values.at(i);
+//            auto offset = offsets.at(i);
+//            auto pCursor(cursor);
+//            pCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, offset);
+//            rect = q_ptr->cursorRect(pCursor);
+//            width = fm.horizontalAdvance(value);
+//            left = rect.x();
+//            right = rect.x() + width + 1;
+
+//            if (x >= left && x <= right) {
+//              // inside the value.
+//              if (check == PropertyNode::ValidPropertyType) {
+//                // This is a valid property but the property name is wrong.
+//                // TODO handle different attribute types here?
+//                m_hoverWidget->setHoverText(pos, q_ptr->tr("Good property value.\nIncorrect property name!"));
+//                m_hoverWidget->showHover();
+
+//              } else if (check == PropertyNode::BadValue) {
+//                // This is just a bad value
+//                m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad property value."));
+//                m_hoverWidget->showHover();
+//              }
+
+//            } else {
+//              m_hoverWidget->hideHover();
+//            }
+//          }
+
+//        } else {
+//          m_hoverWidget->hideHover();
+//        }
+
+//      }/* else {
+
+//hideHover();
+//}*/
+
+//      break;
+//    } // end case Node::PropertyType
+//    } // end switch
+
+//    return;
+
+//  }
+//}
 
 void StylesheetEditPrivate::handleLeaveEvent()
 {
   if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hide();
+    m_hoverWidget->hideHover();
   }
 }
 
 void StylesheetEditPrivate::displayBookmark(BookmarkData* data, QPoint pos)
 {
   if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hide();
+    m_hoverWidget->hideHover();
   }
 
-  m_hoverWidget->setHover(pos, data->text);
+  m_hoverWidget->setHoverText(pos, data->text);
 }
 
 void StylesheetEditPrivate::displayError(QString text, QPoint pos)
 {
-  m_hoverWidget->setHover(pos, text);
+  m_hoverWidget->setHoverText(pos, text);
 }
 
 void StylesheetEditPrivate::displayError(WidgetNode* widget, QPoint pos)
@@ -877,7 +918,7 @@ void StylesheetEditPrivate::displayError(WidgetNode* widget, QPoint pos)
   }
 
   if (m_hoverWidget->isVisible()) {
-    m_hoverWidget->hide();
+    m_hoverWidget->hideHover();
   }
 
   if (!widget->isWidgetValid()) {
@@ -901,7 +942,7 @@ void StylesheetEditPrivate::displayError(WidgetNode* widget, QPoint pos)
       qWarning() << QString("Widget Pos : %1, %2 - %3, %4").arg(pos.x()).arg(pos.y()).arg(left).arg(right);
 
       if (x >= left && x <= right) {
-        m_hoverWidget->setHover(pos, q_ptr->tr("Bad widget name"));
+        m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad widget name"));
       }
     }
   }
@@ -912,22 +953,22 @@ void StylesheetEditPrivate::displayError(BadBlockNode* widget, QPoint pos)
   ParserState::Errors errors = widget->errors();
 
   if (errors.testFlag(ParserState::InvalidWidget)) {
-    m_hoverWidget->setHover(pos, q_ptr->tr("This is not a valid Widget"));
+    m_hoverWidget->setHoverText(pos, q_ptr->tr("This is not a valid Widget"));
 
   } else if (errors.testFlag(ParserState::InvalidSubControl)) {
-    m_hoverWidget->setHover(pos, q_ptr->tr("This is not a valid Sub-Control"));
+    m_hoverWidget->setHoverText(pos, q_ptr->tr("This is not a valid Sub-Control"));
 
   } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
-    m_hoverWidget->setHover(pos, q_ptr->tr("This is not a valid Pseudo-State"));
+    m_hoverWidget->setHoverText(pos, q_ptr->tr("This is not a valid Pseudo-State"));
 
   } else if (errors.testFlag(ParserState::AnomalousMarkerType)) {
-    m_hoverWidget->setHover(
+    m_hoverWidget->setHoverText(
       pos,
       q_ptr->tr(
         "This could be either a Pseudo-State marker or a Sub-Control marker."));
 
   } else if (errors.testFlag(ParserState::AnomalousType)) {
-    m_hoverWidget->setHover(pos, q_ptr->tr("The type of this is anomalous."));
+    m_hoverWidget->setHoverText(pos, q_ptr->tr("The type of this is anomalous."));
   }
 }
 
@@ -956,7 +997,7 @@ void StylesheetEditPrivate::displayError(PropertyNode* property, QPoint pos)
     }
 
     if (m_hoverWidget->isVisible()) {
-      m_hoverWidget->hide();
+      m_hoverWidget->hideHover();
     }
 
     width = fm.horizontalAdvance(name);
@@ -965,10 +1006,10 @@ void StylesheetEditPrivate::displayError(PropertyNode* property, QPoint pos)
     if (x >= left && x <= right) {
       // inside property name
       if (!property->hasPropertyMarker()) {
-        m_hoverWidget->setHover(pos, q_ptr->tr("Missing property marker (:)!"));
+        m_hoverWidget->setHoverText(pos, q_ptr->tr("Missing property marker (:)!"));
 
       } else {
-        m_hoverWidget->setHover(pos, q_ptr->tr("Bad property name!"));
+        m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad property name!"));
       }
 
       qWarning() << QString("Property Name Pos : %1, %2 - %3, %4").arg(pos.x()).arg(pos.y()).arg(left).arg(right);
@@ -998,11 +1039,11 @@ void StylesheetEditPrivate::displayError(PropertyNode* property, QPoint pos)
         if (check == PropertyNode::ValidPropertyType) {
           // This is a valid property but the property name is wrong.
           // TODO handle different attribute types here?
-          m_hoverWidget->setHover(pos, q_ptr->tr("Good property value.\nIncorrect property name!"));
+          m_hoverWidget->setHoverText(pos, q_ptr->tr("Good property value.\nIncorrect property name!"));
 
         } else if (check == PropertyNode::BadValue) {
           // This is just a bad value
-          m_hoverWidget->setHover(pos, q_ptr->tr("Bad property value."));
+          m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad property value."));
 
         } else {
           // TODO
@@ -1950,20 +1991,16 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
       }
 
     } else {
+      QString nextBlock;
+
       if (!m_nodes->isEmpty()) {
         int oldPos = pos;
-        QString nextBlock = findNext(text, pos);
+        nextBlock = findNext(text, pos);
 
         if (nextBlock == ":") {
           nextBlock = findNext(text, pos);
 
-          if (m_datastore->containsSubControl(nextBlock)) {
-            stashWidget(start, block, false);
-            stashSubControlMarker(oldPos);
-            stashSubControl(pos - nextBlock.length(), block);
-            continue;
-
-          } else if (m_datastore->containsPseudoState(nextBlock)) {
+          if (m_datastore->containsPseudoState(nextBlock)) {
             stashWidget(start, block, false);
             stashPseudoStateMarker(oldPos); // correct last node
             stashPseudoState(pos - nextBlock.length(), nextBlock);
@@ -1989,6 +2026,17 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
 
             continue;
           }
+
+        } else if (nextBlock == "::") {
+          nextBlock = findNext(text, pos);
+
+          if (m_datastore->containsSubControl(nextBlock)) {
+            stashWidget(start, block, false);
+            stashSubControlMarker(oldPos);
+            stashSubControl(pos - nextBlock.length(), block);
+            continue;
+
+          }
         }
 
         // step back
@@ -2013,7 +2061,52 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
           stashBadNode(start, block, ParserState::InvalidWidget);
         }
 
-      } else {
+      } else {// anomalous type - see what comes next.
+        int oldPos = pos;
+        nextBlock = findNext(text, pos);
+
+        if (nextBlock == ":") {
+          nextBlock = findNext(text, pos);
+
+          if (m_datastore->containsPseudoState(nextBlock)) {
+            stashWidget(start, block, false);
+            stashPseudoStateMarker(oldPos); // correct last node
+            stashPseudoState(pos - nextBlock.length(), nextBlock);
+            continue;
+
+          } else if (m_datastore->propertyValueAttribute(nextBlock) != DataStore::NoAttributeValue) {
+            Node* endnode = nullptr;
+            cursor = getCursorForNode(start);
+            PropertyNode* property = new PropertyNode(block, cursor, q_ptr);
+            property->setPropertyMarkerExists(true);
+            property->setValidProperty(false);
+            m_nodes->insert(cursor, property);
+            pos -= block.length(); // step back
+            int end = parsePropertyWithValues(
+                        cursor, property, text, start, pos, block, &endnode);
+
+            // run out of text.
+            if (!endnode) {
+              cursor = getCursorForNode(end);
+              endnode = new PropertyEndNode(cursor, q_ptr);
+              m_nodes->insert(cursor, endnode);
+            }
+
+            continue;
+          }
+
+        } else if (nextBlock == "::") {
+          nextBlock = findNext(text, pos);
+
+          if (m_datastore->containsSubControl(nextBlock)) {
+            stashWidget(start, block, false);
+            stashSubControlMarker(oldPos);
+            stashSubControl(pos - nextBlock.length(), block);
+            continue;
+
+          }
+        }
+
         stashBadNode(start, block, ParserState::AnomalousType);
       }
     }

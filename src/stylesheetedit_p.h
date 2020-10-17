@@ -301,9 +301,8 @@ public:
 
 private:
   void setLineData(QTextCursor cursor);
-  void createAndHideHover();
-  void hideHover();
-  void showHover();
+  void createHover();
+  QPair<NameNode::SectionType, int> nodeForPoint(const QPoint &pos, NamedNode **nNode);
 };
 
 

@@ -140,11 +140,11 @@ void BookmarkArea::mouseMoveEvent(QMouseEvent* event)
       m_hoverWidget = new HoverWidget(m_editor);
     }
 
-    m_hoverWidget->setHover(pos, bookmarkText(lineNumber));
+    m_hoverWidget->setHoverText(pos, bookmarkText(lineNumber));
 
   } else {
     if (m_hoverWidget && m_hoverWidget->isVisible()) {
-      m_hoverWidget->hide();
+      m_hoverWidget->hideHover();
     }
   }
 }
@@ -162,7 +162,7 @@ void BookmarkArea::contextMenuEvent(QContextMenuEvent* event)
 void BookmarkArea::leaveEvent(QEvent* event)
 {
   if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hide();
+    m_hoverWidget->hideHover();
   }
 }
 

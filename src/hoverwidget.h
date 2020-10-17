@@ -28,7 +28,7 @@ class HoverWidget : public QWidget
 public:
   HoverWidget(QWidget* parent = nullptr);
 
-  void setHover(QPoint pos, const QString& text, QColor foreground = QColor("INVALID"),
+  void setHoverText(QPoint pos, const QString& text, QColor foreground = QColor("INVALID"),
             QColor background = QColor("INVALID"));
 
   QColor fore() const;
@@ -37,13 +37,18 @@ public:
   QColor defaultBackground() const;
   void setDefaultBackground(const QColor& background);
 
+  void showHover();
+  void hideHover();
+
+  void setPos(QPoint pos);
+
 protected:
   void paintEvent(QPaintEvent*) override;
 
 private:
   QStringList m_text;
   QList<int> m_heights;
-  int m_height, m_width;
+  int m_x, m_y, m_height, m_width;
   QColor m_defForeground, m_foreground;
   QColor m_defBackground, m_background;
 };

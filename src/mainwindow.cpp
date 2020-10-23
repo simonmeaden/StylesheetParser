@@ -123,16 +123,17 @@ QWidget* MainWindow::initGui()
   // Errors
   text =
     "\n\n"
-    "color red;\n"                  // BAD missing property marker - working
-    " bordr: green slid 1px; \n"    // BAD property name, missing property end char - working
-    " shitwidget:active {}\n"       // BAD widget name - working
-    " background-color: blue;\n\n"    // GOOD property. - working
-    "QTabWidget:actve {}\n\n"             // BAD widget and pseudostate
-    "QTaWidget:active {}\n\n"             // BAD widget and GOOD pseudostate
-    "QTabWidget::branh {}\n\n"            // BAD subcontrol
-    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD subcontrol
-    "QTbWidget::branh {}\n\n"             // BAD widget and GOOD subcontrol
-    "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;" // missing end brace
+    "color red;\n"                        // BAD missing property marker        - WORKING
+    " bordr: green slid 1px; \n"          // BAD property name, missing property end char - WORKING
+    " shitwidget:active {}\n"             // BAD widget name                    - WORKING
+    " background-color: blue;\n\n"        // GOOD property.                     - WORKING
+    "color red; border: green solid 1px;" // missing first end property marker.
+    "QTabWidget:actve {}\n\n"             // BAD widget and pseudostate         - WORKING
+    "QTaWidget:active {}\n\n"             // BAD widget and GOOD pseudostate    - WORKING
+    "QTabWidget::branh {}\n\n"            // BAD subcontrol                     - WORKING
+    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD subcontrol     - WORKING
+    "QTbWidget::branh {}\n\n"             // BAD widget and GOOD subcontrol     - WORKING
+    "QTabWidget::branch {color: red; border: green solid 1px; background-color: blue;" // BAD missing end brace
     ;
   //    text =  "color red; border: green solid 1px;"; // missing first end property marker.
   //  text =  "color: red border: green solid 1px;\n background-color: blue;"; // missing first end property char.

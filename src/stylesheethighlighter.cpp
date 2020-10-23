@@ -309,20 +309,6 @@ void StylesheetHighlighter::setValueFormat(QBrush color, QBrush back, QFont::Wei
   m_badValueFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-//void StylesheetHighlighter::setBadValueFormat(QBrush color, QBrush back,
-//    QFont::Weight weight,
-//    bool underline,
-//    QTextCharFormat::UnderlineStyle underlineStyle,
-//    QColor underlineColor)
-//{
-//  m_badValueFormat.setFontWeight(weight);
-//  m_badValueFormat.setForeground(color);
-//  m_badValueFormat.setBackground(back);
-//  m_badValueFormat.setFontUnderline(underline);
-//  m_badValueFormat.setUnderlineStyle(underlineStyle);
-//  m_badValueFormat.setUnderlineColor(underlineColor);
-//}
-
 void StylesheetHighlighter::setPropertyFormat(QBrush color, QBrush back, QFont::Weight weight)
 {
   m_propertyFormat.setFontWeight(weight);

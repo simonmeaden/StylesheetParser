@@ -33,62 +33,142 @@ DataStore::DataStore(QObject* parent)
   , m_subControls(initialiseSubControlMap())
   , m_attributes(initialiseAttributeMap())
   , m_stylesheetAttributes(initialiseStylesheetMap())
-{}
-
-QStringList DataStore::widgets() const
 {
-  return m_widgets;
+  m_alignmentValues << "top"
+                    << "bottom"
+                    << "left"
+                    << "right"
+                    << "center";
+  m_paletteRoles << "alternate-base"
+                 << "base"
+                 << "bright-text"
+                 << "button"
+                 << "button-text"
+                 << "dark"
+                 << "highlight"
+                 << "highlighted-text"
+                 << "light"
+                 << "link"
+                 << "link-visited"
+                 << "mid"
+                 << "midlight"
+                 << "shadow"
+                 << "text"
+                 << "window"
+                 << "window-text";
 }
 
-void DataStore::addWidget(const QString& widget)
+DataStore::~DataStore() {}
+
+void
+DataStore::addWidget(const QString& widget)
 {
   if (!m_widgets.contains(widget)) {
     m_widgets.append(widget);
   }
 }
 
-void DataStore::removeWidget(const QString& widget)
+void
+DataStore::removeWidget(const QString& widget)
 {
   m_widgets.removeAll(widget);
 }
 
-bool DataStore::containsWidget(const QString& name)
+bool
+DataStore::containsWidget(const QString& name)
 {
   // NOT toLower() as widget names are cased.
   return m_widgets.contains(name);
 }
 
-bool DataStore::containsProperty(const QString& name)
+QMap<int, QString>
+DataStore::fuzzySearch(const QString& name, QStringList list)
+{
+  QMap<int, QString> matches;
+  char* pattern = new char[name.size() + 1];
+  strcpy(pattern, name.toStdString().c_str());
+
+  int score = 0;
+
+  for (auto valueStr : list) {
+    char* value = new char[valueStr.size() + 1];
+    strcpy(value, valueStr.toStdString().c_str());
+
+    if (fts::fuzzy_match(pattern, value, score)) {
+      matches.insert(score, valueStr);
+    }
+  }
+
+  return matches;
+}
+
+QMap<int, QString>
+DataStore::fuzzySearchWidgets(const QString& name)
+{
+  return fuzzySearch(name, m_widgets);
+}
+
+bool
+DataStore::containsProperty(const QString& name)
 {
   return m_properties.contains(name.toLower());
 }
 
-bool DataStore::containsStylesheetProperty(const QString& name)
+QMap<int, QString>
+DataStore::fuzzySearchProperty(const QString& name)
+{
+  return fuzzySearch(name, m_properties);
+}
+
+QMap<int, QString>
+DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
+{
+  auto attributes = propertyValueAttributes(name, value);
+
+}
+
+bool
+DataStore::containsStylesheetProperty(const QString& name)
 {
   return m_StylesheetProperties.contains(name.toLower());
 }
 
-bool DataStore::containsPseudoState(const QString& name)
+bool
+DataStore::containsPseudoState(const QString& name)
 {
   return m_pseudoStates.contains(name.toLower());
 }
 
-bool DataStore::containsSubControl(const QString& name)
+QMap<int, QString>
+DataStore::fuzzySearchPseudoStates(const QString& name)
+{
+  return fuzzySearch(name, m_pseudoStates);
+}
+
+bool
+DataStore::containsSubControl(const QString& name)
 {
   return m_subControls.contains(name.toLower());
 }
 
-bool DataStore::checkAlignment(const QString& value)
+QMap<int, QString>
+DataStore::fuzzySearchSubControl(const QString& name)
 {
-  if (value == "top" | value == "bottom" || value == "left" ||
-      value == "right" || value == "center") {
+  return fuzzySearch(name, m_subControls.keys());
+}
+
+bool
+DataStore::checkAlignment(const QString& value)
+{
+  if (m_alignmentValues.contains(value)) {
     return true;
   }
 
   return false;
 }
 
-bool DataStore::checkAttachment(const QString& value)
+bool
+DataStore::checkAttachment(const QString& value)
 {
   if (value == "scroll" | value == "fixed") {
     return true;
@@ -97,7 +177,8 @@ bool DataStore::checkAttachment(const QString& value)
   return false;
 }
 
-bool DataStore::checkBackground(const QString& value)
+bool
+DataStore::checkBackground(const QString& value)
 {
   if (checkBrush(value)) {
     return true;
@@ -118,7 +199,8 @@ bool DataStore::checkBackground(const QString& value)
   return false;
 }
 
-bool DataStore::checkBool(const QString& value)
+bool
+DataStore::checkBool(const QString& value)
 {
   if (value == "true" or value == "false") {
     return true;
@@ -127,7 +209,8 @@ bool DataStore::checkBool(const QString& value)
   return false;
 }
 
-bool DataStore::checkBoolean(const QString& value)
+bool
+DataStore::checkBoolean(const QString& value)
 {
   if (value == "0" or value == "1") {
     return true;
@@ -136,7 +219,8 @@ bool DataStore::checkBoolean(const QString& value)
   return false;
 }
 
-bool DataStore::checkBorder(const QString& value)
+bool
+DataStore::checkBorder(const QString& value)
 {
   if (checkBorderStyle(value)) {
     return true;
@@ -153,7 +237,8 @@ bool DataStore::checkBorder(const QString& value)
   return false;
 }
 
-bool DataStore::checkBorderImage(const QString& value)
+bool
+DataStore::checkBorderImage(const QString& value)
 {
   if (checkUrl(value)) {
     return true;
@@ -170,7 +255,8 @@ bool DataStore::checkBorderImage(const QString& value)
   return false;
 }
 
-bool DataStore::checkBorderStyle(const QString& value)
+bool
+DataStore::checkBorderStyle(const QString& value)
 {
   if (value == "dashed" | value == "dot-dash" || value == "dot-dot-dash" ||
       value == "dotted" || value == "double" || value == "groove" ||
@@ -182,17 +268,20 @@ bool DataStore::checkBorderStyle(const QString& value)
   return false;
 }
 
-bool DataStore::checkBoxColors(const QString& value)
+bool
+DataStore::checkBoxColors(const QString& value)
 {
   return checkColor(value);
 }
 
-bool DataStore::checkBoxLengths(const QString& value)
+bool
+DataStore::checkBoxLengths(const QString& value)
 {
   return checkLength(value);
 }
 
-bool DataStore::checkBrush(const QString& value)
+bool
+DataStore::checkBrush(const QString& value)
 {
   if (checkColor(value)) {
     return true;
@@ -209,7 +298,8 @@ bool DataStore::checkBrush(const QString& value)
   return false;
 }
 
-bool DataStore::checkColor(const QString& value)
+bool
+DataStore::checkColor(const QString& value)
 {
   // check if this was a color name.
   if (m_colors.contains(value)) {
@@ -393,7 +483,8 @@ bool DataStore::checkColor(const QString& value)
   return false;
 }
 
-bool DataStore::checkFontStyle(const QString& value)
+bool
+DataStore::checkFontStyle(const QString& value)
 {
   if (value == "normal" | value == "italic" || value == "oblique") {
     return true;
@@ -402,7 +493,8 @@ bool DataStore::checkFontStyle(const QString& value)
   return false;
 }
 
-bool DataStore::checkFont(const QString& value)
+bool
+DataStore::checkFont(const QString& value)
 {
   if (checkFontSize(value)) {
     return true;
@@ -420,12 +512,14 @@ bool DataStore::checkFont(const QString& value)
   return false;
 }
 
-bool DataStore::checkFontSize(const QString& value)
+bool
+DataStore::checkFontSize(const QString& value)
 {
   return checkLength(value);
 }
 
-bool DataStore::checkFontWeight(const QString& value)
+bool
+DataStore::checkFontWeight(const QString& value)
 {
   if (value == "normal" || value == "bold" || value == "bolder" ||
       value == "lighter" || value == "100" || value == "200" ||
@@ -437,7 +531,8 @@ bool DataStore::checkFontWeight(const QString& value)
   return false;
 }
 
-bool DataStore::checkGradient(const QString& value)
+bool
+DataStore::checkGradient(const QString& value)
 {
   if (value == "qlineargradient" | value == "qradialgradient" ||
       value == "qconicalgradient") {
@@ -447,7 +542,8 @@ bool DataStore::checkGradient(const QString& value)
   return false;
 }
 
-bool DataStore::checkIcon(const QString& value)
+bool
+DataStore::checkIcon(const QString& value)
 {
   if (checkUrl(value)) {
     return true;
@@ -461,7 +557,8 @@ bool DataStore::checkIcon(const QString& value)
   return false;
 }
 
-bool DataStore::checkLength(const QString& value)
+bool
+DataStore::checkLength(const QString& value)
 {
   bool ok = false;
 
@@ -480,7 +577,8 @@ bool DataStore::checkLength(const QString& value)
   return false;
 }
 
-bool DataStore::checkNumber(const QString& value)
+bool
+DataStore::checkNumber(const QString& value)
 {
   bool ok = false;
   // don't actually need the value, I only want to know
@@ -489,7 +587,8 @@ bool DataStore::checkNumber(const QString& value)
   return ok;
 }
 
-bool DataStore::checkOutline(const QString& value)
+bool
+DataStore::checkOutline(const QString& value)
 {
   if (checkOutlineColor(value)) {
     return true;
@@ -510,7 +609,8 @@ bool DataStore::checkOutline(const QString& value)
   return false;
 }
 
-bool DataStore::checkOrigin(const QString& value)
+bool
+DataStore::checkOrigin(const QString& value)
 {
   if (value == "margin" | value == "border" || value == "padding" ||
       value == "content") {
@@ -520,7 +620,8 @@ bool DataStore::checkOrigin(const QString& value)
   return false;
 }
 
-bool DataStore::checkOutlineStyle(const QString& value)
+bool
+DataStore::checkOutlineStyle(const QString& value)
 {
   if (value == "dotted" | value == "solid" || value == "double" ||
       value == "groove" || value == "ridge" || value == "inset" ||
@@ -531,7 +632,8 @@ bool DataStore::checkOutlineStyle(const QString& value)
   return false;
 }
 
-bool DataStore::checkOutlineColor(const QString& value)
+bool
+DataStore::checkOutlineColor(const QString& value)
 {
   if (value == "invert") {
     return true;
@@ -540,7 +642,8 @@ bool DataStore::checkOutlineColor(const QString& value)
   return checkColor(value);
 }
 
-bool DataStore::checkOutlineWidth(const QString& value)
+bool
+DataStore::checkOutlineWidth(const QString& value)
 {
   if (value == "thin" || value == "medium" or value == "thick") {
     return true;
@@ -549,37 +652,37 @@ bool DataStore::checkOutlineWidth(const QString& value)
   return checkLength(value);
 }
 
-bool DataStore::checkOutlineOffset(const QString& value)
+bool
+DataStore::checkOutlineOffset(const QString& value)
 {
   return checkLength(value);
 }
 
-bool DataStore::checkOutlineRadius(const QString& value)
+bool
+DataStore::checkOutlineRadius(const QString& value)
 {
   // check for 4 radius values.
   return checkRadius(value);
 }
 
-bool DataStore::checkPaletteRole(const QString& value)
+bool
+DataStore::checkPaletteRole(const QString& value)
 {
-  if (value == "alternate-base" | value == "base" || value == "bright-text" ||
-      value == "button" || value == "button-text" || value == "dark" ||
-      value == "highlight" || value == "highlighted-text" || value == "light" ||
-      value == "link" || value == "link-visited" || value == "mid" ||
-      value == "midlight" || value == "shadow" || value == "text" ||
-      value == "window" || value == "window-text") {
+  if (m_paletteRoles.contains(value)) {
     return true;
   }
 
   return false;
 }
 
-bool DataStore::checkRadius(const QString& value)
+bool
+DataStore::checkRadius(const QString& value)
 {
   return checkLength(value);
 }
 
-bool DataStore::checkRepeat(const QString& value)
+bool
+DataStore::checkRepeat(const QString& value)
 {
   if (value == "repeat-x" | value == "repeat-y" || value == "repeat" ||
       value == "no-repeat") {
@@ -589,7 +692,8 @@ bool DataStore::checkRepeat(const QString& value)
   return false;
 }
 
-bool DataStore::checkUrl(const QString& value)
+bool
+DataStore::checkUrl(const QString& value)
 {
   QFile file(value);
 
@@ -605,7 +709,8 @@ bool DataStore::checkUrl(const QString& value)
   return false;
 }
 
-bool DataStore::checkPosition(const QString& value)
+bool
+DataStore::checkPosition(const QString& value)
 {
   if (value == "relative" || value == "absolute") {
     return true;
@@ -614,7 +719,8 @@ bool DataStore::checkPosition(const QString& value)
   return false;
 }
 
-bool DataStore::checkTextDecoration(const QString& value)
+bool
+DataStore::checkTextDecoration(const QString& value)
 {
   if (value == "none" || value == "underline" || value == "overline" ||
       value == "line-through") {
@@ -624,7 +730,8 @@ bool DataStore::checkTextDecoration(const QString& value)
   return false;
 }
 
-bool DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
+bool
+DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
 {
   if (data && checkColor(value)) {
     data->colors.append(value);
@@ -638,7 +745,8 @@ bool DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
   return false;
 }
 
-bool DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* data)
+bool
+DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* data)
 {
   if (data) {
     if (checkColor(value)) {
@@ -687,7 +795,8 @@ bool DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* dat
   return false;
 }
 
-bool DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* data)
+bool
+DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* data)
 {
   if (data) {
     if (value == "thin") {
@@ -731,123 +840,125 @@ bool DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* 
   return false;
 }
 
-bool DataStore::checkPropertyValue(DataStore::AttributeType propertyAttribute,
-                                   const QString& valuename,
-                                   StylesheetData* data)
+bool
+DataStore::checkPropertyValue(DataStore::AttributeType propertyAttribute,
+                              const QString& valuename,
+                              StylesheetData* data)
 {
   switch (propertyAttribute) {
-  case Alignment:
-    return checkAlignment(valuename);
+    case Alignment:
+      return checkAlignment(valuename);
 
-  case Attachment:
-    return checkAttachment(valuename);
+    case Attachment:
+      return checkAttachment(valuename);
 
-  case Background:
-    return checkBackground(valuename);
+    case Background:
+      return checkBackground(valuename);
 
-  case Bool:
-    return checkBool(valuename);
+    case Bool:
+      return checkBool(valuename);
 
-  case Boolean:
-    return checkBoolean(valuename);
+    case Boolean:
+      return checkBoolean(valuename);
 
-  case Border:
-    return checkBorder(valuename);
+    case Border:
+      return checkBorder(valuename);
 
-  case BorderImage:
-    return checkBorderImage(valuename);
+    case BorderImage:
+      return checkBorderImage(valuename);
 
-  case BorderStyle:
-    return checkBorderStyle(valuename);
+    case BorderStyle:
+      return checkBorderStyle(valuename);
 
-  case BoxColors:
-    return checkBoxColors(valuename);
+    case BoxColors:
+      return checkBoxColors(valuename);
 
-  case BoxLengths:
-    return checkBoxLengths(valuename);
+    case BoxLengths:
+      return checkBoxLengths(valuename);
 
-  case Brush:
-    return checkBrush(valuename);
+    case Brush:
+      return checkBrush(valuename);
 
-  case Color:
-    return checkColor(valuename);
+    case Color:
+      return checkColor(valuename);
 
-  case Font:
-    return checkFont(valuename);
+    case Font:
+      return checkFont(valuename);
 
-  case FontSize:
-    return checkFontSize(valuename);
+    case FontSize:
+      return checkFontSize(valuename);
 
-  case FontStyle:
-    return checkFontStyle(valuename);
+    case FontStyle:
+      return checkFontStyle(valuename);
 
-  case FontWeight:
-    return checkFontWeight(valuename);
+    case FontWeight:
+      return checkFontWeight(valuename);
 
-  case Gradient:
-    return checkGradient(valuename);
+    case Gradient:
+      return checkGradient(valuename);
 
-  case Icon:
-    return checkIcon(valuename);
+    case Icon:
+      return checkIcon(valuename);
 
-  case Length:
-    return checkLength(valuename);
+    case Length:
+      return checkLength(valuename);
 
-  case Number: // TODO not supported.
-    return checkNumber(valuename);
+    case Number: // TODO not supported.
+      return checkNumber(valuename);
 
-  case Origin:
-    return checkOrigin(valuename);
+    case Origin:
+      return checkOrigin(valuename);
 
-  case Outline:
-    return checkOutline(valuename);
+    case Outline:
+      return checkOutline(valuename);
 
-  case OutlineRadius:
-    return checkOutlineRadius(valuename);
+    case OutlineRadius:
+      return checkOutlineRadius(valuename);
 
-  case OutlineStyle:
-    return checkOutlineStyle(valuename);
+    case OutlineStyle:
+      return checkOutlineStyle(valuename);
 
-  case PaletteRole:
-    return checkPaletteRole(valuename);
+    case PaletteRole:
+      return checkPaletteRole(valuename);
 
-  case Position:
-    return checkPosition(valuename);
+    case Position:
+      return checkPosition(valuename);
 
-  case Radius:
-    return checkRadius(valuename);
+    case Radius:
+      return checkRadius(valuename);
 
-  case Repeat:
-    return checkRepeat(valuename);
+    case Repeat:
+      return checkRepeat(valuename);
 
-  case TextDecoration:
-    return checkTextDecoration(valuename);
+    case TextDecoration:
+      return checkTextDecoration(valuename);
 
-  case Url:
-    return checkUrl(valuename);
+    case Url:
+      return checkUrl(valuename);
 
-  case String:
-    // value IS a string.
-    // might need to check the string contents here.
-    return true;
+    case String:
+      // value IS a string.
+      // might need to check the string contents here.
+      return true;
 
-  case List:
-    // This should never reach here.
-    break;
+    case List:
+      // This should never reach here.
+      break;
 
-  case StylesheetEditGood:
-    return checkStylesheetEdit(valuename, data);
+    case StylesheetEditGood:
+      return checkStylesheetEdit(valuename, data);
 
-  case StylesheetEditBad:
-    return checkStylesheetEditBad(valuename, data);
+    case StylesheetEditBad:
+      return checkStylesheetEditBad(valuename, data);
   }
 
   return false;
 }
 
-bool DataStore::getIfValidStylesheetValue(const QString& propertyname,
-    const QString& valuename,
-    StylesheetData* data)
+bool
+DataStore::getIfValidStylesheetValue(const QString& propertyname,
+                                     const QString& valuename,
+                                     StylesheetData* data)
 {
   if (valuename.isEmpty()) {
     return false;
@@ -855,21 +966,26 @@ bool DataStore::getIfValidStylesheetValue(const QString& propertyname,
 
   AttributeType stylesheetAttribute =
     m_stylesheetAttributes.value(propertyname);
-  return (checkPropertyValue(stylesheetAttribute, valuename, data) != NoAttributeValue);
+  return (checkPropertyValue(stylesheetAttribute, valuename, data) !=
+          NoAttributeValue);
 }
 
-bool DataStore::isValidPropertyValueForProperty(const QString& propertyname,
-    const QString& valuename)
+bool
+DataStore::isValidPropertyValueForProperty(const QString& propertyname,
+                                           const QString& valuename)
 {
   if (valuename.isEmpty()) {
     return false;
   }
 
   AttributeType propertyAttribute = m_attributes.value(propertyname);
-  return (checkPropertyValue(propertyAttribute, valuename, new StylesheetData()) != NoAttributeValue);
+  return (checkPropertyValue(propertyAttribute,
+                             valuename,
+                             new StylesheetData()) != NoAttributeValue);
 }
 
-//QList<bool> DataStore::isValidPropertyValues(const QString& name, const QStringList& values)
+// QList<bool> DataStore::isValidPropertyValues(const QString& name, const
+// QStringList& values)
 //{
 //  QList<bool> results;
 
@@ -920,41 +1036,48 @@ bool DataStore::isValidPropertyValueForProperty(const QString& propertyname,
 //  return results;
 //}
 
-QStringList DataStore::possibleSubControlWidgets(const QString& name) const
+QStringList
+DataStore::possibleSubControlWidgets(const QString& name) const
 {
   return m_subControls.value(name);
 }
 
-void DataStore::addSubControl(const QString& control, const QString& widget)
+void
+DataStore::addSubControl(const QString& control, const QString& widget)
 {
   m_subControls.insert(control, addControls(1, &widget));
 }
 
-void DataStore::addSubControl(const QString& control, QStringList& widgets)
+void
+DataStore::addSubControl(const QString& control, QStringList& widgets)
 {
   m_subControls.insert(control, widgets);
 }
 
-void DataStore::removeSubControl(const QString& control)
+void
+DataStore::removeSubControl(const QString& control)
 {
   if (m_subControls.contains(control)) {
     m_subControls.remove(control);
   }
 }
 
-void DataStore::addPseudoState(const QString& state)
+void
+DataStore::addPseudoState(const QString& state)
 {
   if (!m_pseudoStates.contains(state)) {
     m_pseudoStates.append(state);
   }
 }
 
-void DataStore::removePseudoState(const QString& state)
+void
+DataStore::removePseudoState(const QString& state)
 {
   m_pseudoStates.removeAll(state);
 }
 
-DataStore::AttributeType DataStore::propertyValueAttribute(const QString& value)
+DataStore::AttributeType
+DataStore::propertyValueAttribute(const QString& value)
 {
   if (checkColor(value)) {
     return Color;
@@ -1056,14 +1179,143 @@ DataStore::AttributeType DataStore::propertyValueAttribute(const QString& value)
   return NoAttributeValue;
 }
 
-QMap<QString, QStringList> DataStore::initialiseSubControlMap()
+QMap<int, QString>
+DataStore::propertyValueAttributes(const QString& name, const QString& value)
+{
+  auto attribute = propertyValueAttribute(name);
+
+  switch (attribute) {
+    case Alignment:
+      return fuzzySearch(value, m_alignmentValues);
+
+    case Attachment:
+      QStringList list;
+      list << "scroll"
+           << "fixed";
+      return fuzzySearch(value, list);
+
+    case Background:{
+      QMap<int, QString> data, dataIn;
+      dataIn = fuzzySearch(value, m_colors);
+      data.insert(dataIn);
+      dataIn = fuzzySearch(value, m_paletteRoles);
+      QStringList list;
+      list << "qlineargradient" << "qradialgradient" << "qconicalgradient";
+      dataIn = fuzzySearch(value, list);
+      data.insert(dataIn);
+
+      return data;
+    }
+
+    case Bool:
+      return checkBool(valuename);
+
+    case Boolean:
+      return checkBoolean(valuename);
+
+    case Border:
+      return checkBorder(valuename);
+
+    case BorderImage:
+      return checkBorderImage(valuename);
+
+    case BorderStyle:
+      return checkBorderStyle(valuename);
+
+    case BoxColors:
+      return checkBoxColors(valuename);
+
+    case BoxLengths:
+      return checkBoxLengths(valuename);
+
+    case Brush:
+      return checkBrush(valuename);
+
+    case Color:
+      return checkColor(valuename);
+
+    case Font:
+      return checkFont(valuename);
+
+    case FontSize:
+      return checkFontSize(valuename);
+
+    case FontStyle:
+      return checkFontStyle(valuename);
+
+    case FontWeight:
+      return checkFontWeight(valuename);
+
+    case Gradient:
+      return checkGradient(valuename);
+
+    case Icon:
+      return checkIcon(valuename);
+
+    case Length:
+      return checkLength(valuename);
+
+    case Number: // TODO not supported.
+      return checkNumber(valuename);
+
+    case Origin:
+      return checkOrigin(valuename);
+
+    case Outline:
+      return checkOutline(valuename);
+
+    case OutlineRadius:
+      return checkOutlineRadius(valuename);
+
+    case OutlineStyle:
+      return checkOutlineStyle(valuename);
+
+    case PaletteRole:
+      return checkPaletteRole(valuename);
+
+    case Position:
+      return checkPosition(valuename);
+
+    case Radius:
+      return checkRadius(valuename);
+
+    case Repeat:
+      return checkRepeat(valuename);
+
+    case TextDecoration:
+      return checkTextDecoration(valuename);
+
+    case Url:
+      return checkUrl(valuename);
+
+    case String:
+      // value IS a string.
+      // might need to check the string contents here.
+      return true;
+
+    case List:
+      // This should never reach here.
+      break;
+
+    case StylesheetEditGood:
+      return checkStylesheetEdit(valuename, data);
+
+    case StylesheetEditBad:
+      return checkStylesheetEditBad(valuename, data);
+  }
+}
+
+QMap<QString, QStringList>
+DataStore::initialiseSubControlMap()
 {
   QMap<QString, QStringList> map;
   map.insert("add-line", addControls(1, new QString("QScrollBar")));
   map.insert("add-page", addControls(1, new QString("QScrollBar")));
   map.insert("branch", addControls(1, new QString("QTreeBar")));
   map.insert("chunk", addControls(1, new QString("QProgressBar")));
-  map.insert("close-button ", addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
+  map.insert(
+    "close-button ",
+    addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
   map.insert("corner", addControls(1, new QString("QAbstractScrollArea")));
   map.insert("down-arrow",
              addControls(4,
@@ -1071,8 +1323,9 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
                          new QString("QHeaderView"),
                          new QString("QScrollBar"),
                          new QString("QSpinBox")));
-  map.insert("down-button",
-             addControls(2, new QString("QScrollBar"), new QString("QSpinBox")));
+  map.insert(
+    "down-button",
+    addControls(2, new QString("QScrollBar"), new QString("QSpinBox")));
   map.insert("drop-down", addControls(1, new QString("QComboBox")));
   map.insert("float-button", addControls(1, new QString("QDockWidget")));
   map.insert("groove", addControls(1, new QString("QSlider")));
@@ -1088,8 +1341,9 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
                          new QString("QScrollBar"),
                          new QString("QSplitter"),
                          new QString("QSlider")));
-  map.insert("icon",
-             addControls(2, new QString("QAbstractItemView"), new QString("QMenu")));
+  map.insert(
+    "icon",
+    addControls(2, new QString("QAbstractItemView"), new QString("QMenu")));
   map.insert("item",
              addControls(4,
                          new QString("QAbstractItemView"),
@@ -1118,9 +1372,9 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
   map.insert("tear", addControls(1, new QString("QTabBar")));
   map.insert("tearoff", addControls(1, new QString("QMenu")));
   map.insert("text", addControls(1, new QString("QAbstractItemView")));
-  map.insert("title",
-             addControls(
-               2, new QString("QGroupBox"), new QString("QDockWidget")));
+  map.insert(
+    "title",
+    addControls(2, new QString("QGroupBox"), new QString("QDockWidget")));
   map.insert("up-arrow",
              addControls(3,
                          new QString("QHeaderView"),
@@ -1130,7 +1384,8 @@ QMap<QString, QStringList> DataStore::initialiseSubControlMap()
   return map;
 }
 
-QStringList DataStore::initialiseWidgetList()
+QStringList
+DataStore::initialiseWidgetList()
 {
   QStringList list;
   list << "QAbstractScrollArea"
@@ -1178,10 +1433,21 @@ QStringList DataStore::initialiseWidgetList()
        << "QWidget"
        // I might as well add stylesheetedit stuff to this widget.
        << "StylesheetEdit";
+
+  //  QString fuzzyWidgets = m_widgets.first();
+  //  for (int i = 1; i < m_widgets.size(); i++) {
+  //    fuzzyWidgets += " ";
+  //    fuzzyWidgets += m_widgets.at(i);
+  //  }
+  //  char *pline = new char[fuzzyWidgets.size() + 1];
+  //  strcpy ( pline, fuzzyWidgets.toStdString().c_str() );
+  //  m_fuzzyWidgets = pline;
+
   return list;
 }
 
-QStringList DataStore::initialisePseudoStateList()
+QStringList
+DataStore::initialisePseudoStateList()
 {
   QStringList list;
   list << "active"
@@ -1231,7 +1497,8 @@ QStringList DataStore::initialisePseudoStateList()
   return list;
 }
 
-QStringList DataStore::initialisePropertyList()
+QStringList
+DataStore::initialisePropertyList()
 {
   QStringList list;
   list << "alternate-background-color"
@@ -1346,7 +1613,8 @@ QStringList DataStore::initialisePropertyList()
   return list;
 }
 
-QStringList DataStore::initialiseStylesheetProperties()
+QStringList
+DataStore::initialiseStylesheetProperties()
 {
   QStringList list;
   list << "widget"
@@ -1366,7 +1634,8 @@ QStringList DataStore::initialiseStylesheetProperties()
   return list;
 }
 
-QMap<QString, DataStore::AttributeType> DataStore::initialiseStylesheetMap()
+QMap<QString, DataStore::AttributeType>
+DataStore::initialiseStylesheetMap()
 {
   QMap<QString, AttributeType> map;
   map.insert("widget", StylesheetEditGood);
@@ -1386,42 +1655,162 @@ QMap<QString, DataStore::AttributeType> DataStore::initialiseStylesheetMap()
   return map;
 }
 
-QStringList DataStore::initialiseColorList()
+QStringList
+DataStore::initialiseColorList()
 {
   QStringList list;
-  list << "black" << "silver" << "gray" << "whitesmoke" << "maroon" << "red" << "purple"
-       << "fuchsia" << "green" << "lime" << "olivedrab" << "yellow" << "navy" << "blue"
-       << "teal" << "aquamarine" << "orange" << "aliceblue" << "antiquewhite" << "aqua"
-       << "azure" << "beige" << "bisque" << "blanchedalmond" << "blueviolet" << "brown"
-       << "burlywood" << "cadetblue" << "chartreuse" << "chocolate" << "coral"
-       << "cornflowerblue" << "cornsilk" << "crimson" << "darkblue" << "darkcyan"
-       << "darkgoldenrod" << "darkgray" << "darkgreen" << "darkgrey" << "darkkhaki"
-       << "darkmagenta" << "darkolivegreen" << "darkorange" << "darkorchid" << "darkred"
-       << "darksalmon" << "darkseagreen" << "darkslateblue" << "darkslategray"
-       << "darkslategrey" << "darkturquoise" << "darkviolet" << "deeppink"
-       << "deepskyblue" << "dimgray" << "dimgrey" << "dodgerblue" << "firebrick"
-       << "floralwhite" << "forestgreen" << "gainsboro" << "ghostwhite" << "goldenrod"
-       << "gold" << "greenyellow" << "grey" << "honeydew" << "hotpink" << "indianred"
-       << "indigo" << "ivory" << "khaki" << "lavenderblush" << "lavender" << "lawngreen"
-       << "lemonchiffon" << "lightblue" << "lightcoral" << "lightcyan"
-       << "lightgoldenrodyellow" << "lightgray" << "lightgreen" << "lightgrey"
-       << "lightpink" << "lightsalmon" << "lightseagreen" << "lightskyblue"
-       << "lightslategray" << "lightslategrey" << "lightsteelblue" << "lightyellow"
-       << "limegreen" << "linen" << "mediumaquamarine" << "mediumblue" << "mediumorchid"
-       << "mediumpurple" << "mediumseagreen" << "mediumslateblue" << "mediumspringgreen"
-       << "mediumturquoise" << "mediumvioletred" << "midnightblue" << "mintcream"
-       << "mistyrose" << "moccasin" << "navajowhite" << "oldlace" << "olive" << "orangered"
-       << "orchid" << "palegoldenrod" << "palegreen" << "paleturquoise" << "palevioletred"
-       << "papayawhip" << "peachpuff" << "peru" << "pink" << "plum" << "powderblue"
-       << "rosybrown" << "royalblue" << "saddlebrown" << "salmon" << "sandybrown"
-       << "seagreen" << "seashell" << "sienna" << "skyblue" << "slateblue" << "slategray"
-       << "slategrey" << "snow" << "springgreen" << "steelblue" << "tan" << "thistle"
-       << "tomato" << "transparent" << "turquoise" << "violet" << "wheat" << "white"
-       << "yellowgreen" << "rebeccapurple";
+  list << "black"
+       << "silver"
+       << "gray"
+       << "whitesmoke"
+       << "maroon"
+       << "red"
+       << "purple"
+       << "fuchsia"
+       << "green"
+       << "lime"
+       << "olivedrab"
+       << "yellow"
+       << "navy"
+       << "blue"
+       << "teal"
+       << "aquamarine"
+       << "orange"
+       << "aliceblue"
+       << "antiquewhite"
+       << "aqua"
+       << "azure"
+       << "beige"
+       << "bisque"
+       << "blanchedalmond"
+       << "blueviolet"
+       << "brown"
+       << "burlywood"
+       << "cadetblue"
+       << "chartreuse"
+       << "chocolate"
+       << "coral"
+       << "cornflowerblue"
+       << "cornsilk"
+       << "crimson"
+       << "darkblue"
+       << "darkcyan"
+       << "darkgoldenrod"
+       << "darkgray"
+       << "darkgreen"
+       << "darkgrey"
+       << "darkkhaki"
+       << "darkmagenta"
+       << "darkolivegreen"
+       << "darkorange"
+       << "darkorchid"
+       << "darkred"
+       << "darksalmon"
+       << "darkseagreen"
+       << "darkslateblue"
+       << "darkslategray"
+       << "darkslategrey"
+       << "darkturquoise"
+       << "darkviolet"
+       << "deeppink"
+       << "deepskyblue"
+       << "dimgray"
+       << "dimgrey"
+       << "dodgerblue"
+       << "firebrick"
+       << "floralwhite"
+       << "forestgreen"
+       << "gainsboro"
+       << "ghostwhite"
+       << "goldenrod"
+       << "gold"
+       << "greenyellow"
+       << "grey"
+       << "honeydew"
+       << "hotpink"
+       << "indianred"
+       << "indigo"
+       << "ivory"
+       << "khaki"
+       << "lavenderblush"
+       << "lavender"
+       << "lawngreen"
+       << "lemonchiffon"
+       << "lightblue"
+       << "lightcoral"
+       << "lightcyan"
+       << "lightgoldenrodyellow"
+       << "lightgray"
+       << "lightgreen"
+       << "lightgrey"
+       << "lightpink"
+       << "lightsalmon"
+       << "lightseagreen"
+       << "lightskyblue"
+       << "lightslategray"
+       << "lightslategrey"
+       << "lightsteelblue"
+       << "lightyellow"
+       << "limegreen"
+       << "linen"
+       << "mediumaquamarine"
+       << "mediumblue"
+       << "mediumorchid"
+       << "mediumpurple"
+       << "mediumseagreen"
+       << "mediumslateblue"
+       << "mediumspringgreen"
+       << "mediumturquoise"
+       << "mediumvioletred"
+       << "midnightblue"
+       << "mintcream"
+       << "mistyrose"
+       << "moccasin"
+       << "navajowhite"
+       << "oldlace"
+       << "olive"
+       << "orangered"
+       << "orchid"
+       << "palegoldenrod"
+       << "palegreen"
+       << "paleturquoise"
+       << "palevioletred"
+       << "papayawhip"
+       << "peachpuff"
+       << "peru"
+       << "pink"
+       << "plum"
+       << "powderblue"
+       << "rosybrown"
+       << "royalblue"
+       << "saddlebrown"
+       << "salmon"
+       << "sandybrown"
+       << "seagreen"
+       << "seashell"
+       << "sienna"
+       << "skyblue"
+       << "slateblue"
+       << "slategray"
+       << "slategrey"
+       << "snow"
+       << "springgreen"
+       << "steelblue"
+       << "tan"
+       << "thistle"
+       << "tomato"
+       << "transparent"
+       << "turquoise"
+       << "violet"
+       << "wheat"
+       << "white"
+       << "yellowgreen"
+       << "rebeccapurple";
   return list;
 }
 
-QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
+QMap<QString, DataStore::AttributeType>
+DataStore::initialiseAttributeMap()
 {
   QMap<QString, AttributeType> map;
   map.insert("alternate-background-color", Brush);
@@ -1535,7 +1924,8 @@ QMap<QString, DataStore::AttributeType> DataStore::initialiseAttributeMap()
   return map;
 }
 
-QStringList DataStore::addControls(int count, ...)
+QStringList
+DataStore::addControls(int count, ...)
 {
   va_list arguments;
 

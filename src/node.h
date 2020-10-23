@@ -113,6 +113,7 @@ public:
   NamedNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = NodeType);
 
   QPair<SectionType, int> isIn(QPoint pos) override;
+  int end() const;
 };
 
 class BadNode
@@ -246,6 +247,7 @@ public:
   void setPropertyMarkerOffset(int propertymarkerOffset);
 
   QPair<SectionType, int> isIn(QPoint pos) override;
+  QPair<bool, QString> isProperty(int offset);
 
 private:
   QStringList m_values;

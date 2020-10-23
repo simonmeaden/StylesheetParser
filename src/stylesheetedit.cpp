@@ -72,64 +72,134 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   , m_braceCount(0)
   , m_bracesMatched(true)
   , m_startComment(false)
-  , m_hoverWidget(nullptr)
+  //  , m_hoverWidget(nullptr)
   , m_manualMove(false)
+  , m_maxSuggestionCount(5)
 {
-  createHover();
+  m_hoverWidget = new HoverWidget(q_ptr);
+  m_hoverWidget->setVisible(
+    true); // always showing just 0 size when not needed.
+  m_hoverWidget->setPosition(QPoint(0, 0));
+  m_hoverWidget->hideHover();
 }
 
-int StylesheetEditPrivate::getLineCount() const
+void
+StylesheetEditPrivate::initActions()
+{
+  m_formatAct = new QAction(q_ptr->tr("&Format"), q_ptr);
+  m_formatAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
+  m_formatAct->setStatusTip(q_ptr->tr("Prettyfy the stylesheet"));
+  q_ptr->connect(
+    m_formatAct, &QAction::triggered, q_ptr, &StylesheetEdit::format);
+
+  m_addBookmarkAct = new QAction(q_ptr->tr("Add Bookmark"), q_ptr);
+  q_ptr->connect(m_addBookmarkAct,
+                 &QAction::triggered,
+                 q_ptr,
+                 &StylesheetEdit::handleAddBookmark);
+  m_removeBookmarkAct = new QAction(q_ptr->tr("Remove Bookmark"), q_ptr);
+  q_ptr->connect(m_removeBookmarkAct,
+                 &QAction::triggered,
+                 q_ptr,
+                 &StylesheetEdit::handleRemoveBookmark);
+  m_clearBookmarksAct = new QAction(q_ptr->tr("Clear Bookmarks"), q_ptr);
+  q_ptr->connect(m_clearBookmarksAct,
+                 &QAction::triggered,
+                 q_ptr,
+                 &StylesheetEdit::handleClearBookmarks);
+  m_gotoBookmarkAct = new QAction(q_ptr->tr("Go To Bookmark"), q_ptr);
+  q_ptr->connect(m_gotoBookmarkAct,
+                 &QAction::triggered,
+                 q_ptr,
+                 &StylesheetEdit::handleGotoBookmark);
+  m_editBookmarkAct = new QAction(q_ptr->tr("Edit Bookmark"), q_ptr);
+  q_ptr->connect(m_editBookmarkAct,
+                 &QAction::triggered,
+                 q_ptr,
+                 &StylesheetEdit::handleEditBookmark);
+}
+
+void
+StylesheetEditPrivate::initMenus()
+{
+  m_contextMenu = createContextMenu();
+  createBookmarkMenu();
+}
+
+int
+StylesheetEditPrivate::maxSuggestionCount() const
+{
+  return m_maxSuggestionCount;
+}
+
+void
+StylesheetEditPrivate::setMaxSuggestionCount(int maxSuggestionCount)
+{
+  m_maxSuggestionCount = maxSuggestionCount;
+}
+
+int
+StylesheetEditPrivate::getLineCount() const
 {
   return m_lineCount;
 }
 
-void StylesheetEdit::setPlainText(const QString& text)
+void
+StylesheetEdit::setPlainText(const QString& text)
 {
   QPlainTextEdit::setPlainText(text);
   d_ptr->setPlainText(text);
 }
 
-void StylesheetEditPrivate::setPlainText(const QString& text)
+void
+StylesheetEditPrivate::setPlainText(const QString& text)
 {
   parseInitialText(text);
   m_highlighter->rehighlight();
 }
 
-QMap<QTextCursor, Node*>* StylesheetEdit::nodes()
+QMap<QTextCursor, Node*>*
+StylesheetEdit::nodes()
 {
   return d_ptr->nodes();
 }
 
-QMap<QTextCursor, Node*>* StylesheetEditPrivate::nodes()
+QMap<QTextCursor, Node*>*
+StylesheetEditPrivate::nodes()
 {
   return m_nodes;
 }
 
-void StylesheetEdit::showNewlineMarkers(bool show)
+void
+StylesheetEdit::showNewlineMarkers(bool show)
 {
   d_ptr->showNewlineMarkers(show);
 }
 
-void StylesheetEditPrivate::showNewlineMarkers(bool show)
+void
+StylesheetEditPrivate::showNewlineMarkers(bool show)
 {
   // TODO show/hide newline markers.
   // maybe detect position of line end and draw a [NL] box??
 }
 
-QString StylesheetEdit::styleSheet() const
+QString
+StylesheetEdit::styleSheet() const
 {
   return d_ptr->styleSheet();
 }
 
-QString StylesheetEditPrivate::styleSheet() const
+QString
+StylesheetEditPrivate::styleSheet() const
 {
   return m_stylesheet;
 }
 
-bool StylesheetEditPrivate::checkStylesheetColors(StylesheetData* data,
-    QColor& color1,
-    QColor& color2,
-    QColor& color3)
+bool
+StylesheetEditPrivate::checkStylesheetColors(StylesheetData* data,
+                                             QColor& color1,
+                                             QColor& color2,
+                                             QColor& color3)
 {
   if (data->colors.count() == 1) {
     color1 = QColor(data->colors.at(0));
@@ -152,12 +222,14 @@ bool StylesheetEditPrivate::checkStylesheetColors(StylesheetData* data,
   return false;
 }
 
-void StylesheetEdit::setStyleSheet(const QString& stylesheet)
+void
+StylesheetEdit::setStyleSheet(const QString& stylesheet)
 {
   d_ptr->setStyleSheet(stylesheet);
 }
 
-void StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
+void
+StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
 {
   // TODO implement standard stylesheet shit.
   m_stylesheet = stylesheet;
@@ -206,7 +278,7 @@ void StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
           colorError = checkStylesheetColors(data, color1, color2, color3);
           underlineStyle =
             (data->underline.size() > 0 ? data->underline.at(0)
-             : QTextCharFormat::NoUnderline);
+                                        : QTextCharFormat::NoUnderline);
           fontWeight =
             (data->weights.size() > 0 ? data->weights.at(0) : QFont::Normal);
           // TODO ignore any more than 3 colours or one weight or underline
@@ -263,12 +335,12 @@ void StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
             m_highlighter->setCommentFormat(color1, color2, fontWeight);
             continue;
 
-          }/* else if (data->name == "bad") {
+          } /* else if (data->name == "bad") {
 
-            m_highlighter->setBadValueFormat(
-              color1, color2, fontWeight, true, underlineStyle, color3);
-            continue;
-          }*/
+             m_highlighter->setBadValueFormat(
+               color1, color2, fontWeight, true, underlineStyle, color3);
+             continue;
+           }*/
         }
       }
     }
@@ -277,7 +349,8 @@ void StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
   m_highlighter->rehighlight();
 }
 
-StylesheetData* StylesheetEditPrivate::getStylesheetProperty(const QString& sheet, int& pos)
+StylesheetData*
+StylesheetEditPrivate::getStylesheetProperty(const QString& sheet, int& pos)
 {
   QString property, sep, value;
   StylesheetData* data = nullptr;
@@ -311,137 +384,156 @@ StylesheetData* StylesheetEditPrivate::getStylesheetProperty(const QString& shee
   return data;
 }
 
-void StylesheetEdit::setValueFormat(QColor color, QColor back, QFont::Weight weight)
+void
+StylesheetEdit::setValueFormat(QColor color, QColor back, QFont::Weight weight)
 {
   d_ptr->setValueFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setValueFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setValueFormat(QColor color,
+                                      QColor back,
+                                      QFont::Weight weight)
 {
   m_highlighter->setValueFormat(color, back, weight);
 }
 
-void StylesheetEdit::setWidgetFormat(QColor color, QColor back, QFont::Weight weight)
+void
+StylesheetEdit::setWidgetFormat(QColor color, QColor back, QFont::Weight weight)
 {
   d_ptr->setWidgetFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setWidgetFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setWidgetFormat(QColor color,
+                                       QColor back,
+                                       QFont::Weight weight)
 {
   m_highlighter->setWidgetFormat(color, back, weight);
 }
 
-void StylesheetEdit::setPseudoStateFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setPseudoStateFormat(QColor color,
+                                     QColor back,
+                                     QFont::Weight weight)
 {
   d_ptr->setPseudoStateFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setPseudoStateFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setPseudoStateFormat(QColor color,
+                                            QColor back,
+                                            QFont::Weight weight)
 {
   m_highlighter->setPseudoStateFormat(color, back, weight);
 }
 
-void StylesheetEdit::setPseudoStateMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setPseudoStateMarkerFormat(QColor color,
+                                           QColor back,
+                                           QFont::Weight weight)
 {
   d_ptr->setPseudoStateMarkerFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setPseudoStateMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setPseudoStateMarkerFormat(QColor color,
+                                                  QColor back,
+                                                  QFont::Weight weight)
 {
   m_highlighter->setPseudoStateMarkerFormat(color, back, weight);
 }
 
-void StylesheetEdit::setSubControlFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setSubControlFormat(QColor color,
+                                    QColor back,
+                                    QFont::Weight weight)
 {
   d_ptr->setSubControlFormat(color, back, weight);
 }
-void StylesheetEditPrivate::setSubControlFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setSubControlFormat(QColor color,
+                                           QColor back,
+                                           QFont::Weight weight)
 {
   m_highlighter->setSubControlFormat(color, back, weight);
 }
 
-void StylesheetEdit::setSubControlMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setSubControlMarkerFormat(QColor color,
+                                          QColor back,
+                                          QFont::Weight weight)
 {
   d_ptr->setSubControlMarkerFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setSubControlMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setSubControlMarkerFormat(QColor color,
+                                                 QColor back,
+                                                 QFont::Weight weight)
 {
   m_highlighter->setSubControlMarkerFormat(color, back, weight);
 }
 
-void StylesheetEdit::setPropertyFormat(QColor color,
-                                       QColor back,
-                                       QFont::Weight weight)
+void
+StylesheetEdit::setPropertyFormat(QColor color,
+                                  QColor back,
+                                  QFont::Weight weight)
 {
   d_ptr->setPropertyFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setPropertyFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setPropertyFormat(QColor color,
+                                         QColor back,
+                                         QFont::Weight weight)
 {
   m_highlighter->setPropertyFormat(color, back, weight);
 }
 
-void StylesheetEdit::setPropertyMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setPropertyMarkerFormat(QColor color,
+                                        QColor back,
+                                        QFont::Weight weight)
 {
   d_ptr->setPropertyMarkerFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setPropertyMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setPropertyMarkerFormat(QColor color,
+                                               QColor back,
+                                               QFont::Weight weight)
 {
   m_highlighter->setPropertyMarkerFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setPropertyEndMarkerFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setPropertyEndMarkerFormat(QColor color,
+                                                  QColor back,
+                                                  QFont::Weight weight)
 {
   m_highlighter->setPropertyMarkerFormat(color, back, weight);
 }
 
-void StylesheetEdit::setLineNumberFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setLineNumberFormat(QColor color,
+                                    QColor back,
+                                    QFont::Weight weight)
 {
   d_ptr->setLineNumberFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setLineNumberFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setLineNumberFormat(QColor color,
+                                           QColor back,
+                                           QFont::Weight weight)
 {
   m_lineNumberArea->setForeSelected(color);
   m_lineNumberArea->setBack(back);
   m_lineNumberArea->setWeight(weight);
 }
 
-//void StylesheetEdit::setBadValueFormat(
+// void StylesheetEdit::setBadValueFormat(
 //  QColor color,
 //  QColor back,
 //  QFont::Weight weight,
@@ -453,7 +545,7 @@ void StylesheetEditPrivate::setLineNumberFormat(QColor color,
 //    color, back, weight, underline, underlineStyle, underlineColor);
 //}
 
-//void StylesheetEditPrivate::setBadValueFormat(
+// void StylesheetEditPrivate::setBadValueFormat(
 //  QColor color,
 //  QColor back,
 //  QFont::Weight weight,
@@ -465,81 +557,94 @@ void StylesheetEditPrivate::setLineNumberFormat(QColor color,
 //    color, back, weight, underline, underlineStyle, underlineColor);
 //}
 
-void StylesheetEdit::setStartBraceFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setStartBraceFormat(QColor color,
+                                    QColor back,
+                                    QFont::Weight weight)
 {
   d_ptr->setStartBraceFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setStartBraceFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setStartBraceFormat(QColor color,
+                                           QColor back,
+                                           QFont::Weight weight)
 {
   m_highlighter->setStartBraceFormat(color, back, weight);
 }
 
-void StylesheetEdit::setEndBraceFormat(QColor color,
-                                       QColor back,
-                                       QFont::Weight weight)
+void
+StylesheetEdit::setEndBraceFormat(QColor color,
+                                  QColor back,
+                                  QFont::Weight weight)
 {
   d_ptr->setEndBraceFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setEndBraceFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setEndBraceFormat(QColor color,
+                                         QColor back,
+                                         QFont::Weight weight)
 {
   m_highlighter->setEndBraceFormat(color, back, weight);
 }
 
-void StylesheetEdit::setBraceMatchFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEdit::setBraceMatchFormat(QColor color,
+                                    QColor back,
+                                    QFont::Weight weight)
 {
   d_ptr->setBraceMatchFormat(color, back, weight);
 }
 
-void StylesheetEditPrivate::setBraceMatchFormat(QColor color,
-    QColor back,
-    QFont::Weight weight)
+void
+StylesheetEditPrivate::setBraceMatchFormat(QColor color,
+                                           QColor back,
+                                           QFont::Weight weight)
 {
   m_highlighter->setBraceMatchFormat(color, back, weight);
 }
 
-void StylesheetEdit::resizeEvent(QResizeEvent* event)
+void
+StylesheetEdit::resizeEvent(QResizeEvent* event)
 {
   QPlainTextEdit::resizeEvent(event);
 
   d_ptr->resizeEvent(contentsRect());
 }
 
-void StylesheetEdit::mousePressEvent(QMouseEvent* event)
+void
+StylesheetEdit::mousePressEvent(QMouseEvent* event)
 {
   QPlainTextEdit::mouseMoveEvent(event);
 }
 
-void StylesheetEdit::mouseMoveEvent(QMouseEvent* event)
+void
+StylesheetEdit::mouseMoveEvent(QMouseEvent* event)
 {
   d_ptr->handleMouseMove(event->pos());
 }
 
-void StylesheetEdit::mouseReleaseEvent(QMouseEvent* event)
+void
+StylesheetEdit::mouseReleaseEvent(QMouseEvent* event)
 {
   QPlainTextEdit::mouseReleaseEvent(event);
 }
 
-void StylesheetEdit::mouseDoubleClickEvent(QMouseEvent* event)
+void
+StylesheetEdit::mouseDoubleClickEvent(QMouseEvent* event)
 {
   QPlainTextEdit::mouseDoubleClickEvent(event);
 }
 
-void StylesheetEdit::leaveEvent(QEvent* /*event*/)
+void
+StylesheetEdit::leaveEvent(QEvent* /*event*/)
 {
   d_ptr->handleLeaveEvent();
 }
 
-void StylesheetEditPrivate::resizeEvent(QRect cr)
+void
+StylesheetEditPrivate::resizeEvent(QRect cr)
 {
   m_bookmarkArea->setGeometry(
     QRect(cr.left(), cr.top(), bookmarkAreaWidth(), cr.height()));
@@ -549,47 +654,25 @@ void StylesheetEditPrivate::resizeEvent(QRect cr)
                                       cr.height()));
 }
 
-void StylesheetEdit::initActions()
+void
+StylesheetEdit::initActions()
 {
-  m_formatAct = new QAction(tr("&Format"), this);
-  m_formatAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
-  m_formatAct->setStatusTip(tr("Prettyfy the stylesheet"));
-  connect(m_formatAct, &QAction::triggered, this, &StylesheetEdit::format);
-
-  m_addBookmarkAct = new QAction(tr("Add Bookmark"), this);
-  connect(m_addBookmarkAct,
-          &QAction::triggered,
-          this,
-          &StylesheetEdit::handleAddBookmark);
-  m_removeBookmarkAct = new QAction(tr("Remove Bookmark"), this);
-  connect(m_removeBookmarkAct,
-          &QAction::triggered,
-          this,
-          &StylesheetEdit::handleRemoveBookmark);
-  m_clearBookmarksAct = new QAction(tr("Clear Bookmarks"), this);
-  connect(m_clearBookmarksAct,
-          &QAction::triggered,
-          this,
-          &StylesheetEdit::handleClearBookmarks);
-  m_gotoBookmarkAct = new QAction(tr("Go To Bookmark"), this);
-  connect(m_gotoBookmarkAct,
-          &QAction::triggered,
-          this,
-          &StylesheetEdit::handleGotoBookmark);
-  m_editBookmarkAct = new QAction(tr("Edit Bookmark"), this);
-  connect(m_editBookmarkAct,
-          &QAction::triggered,
-          this,
-          &StylesheetEdit::handleEditBookmark);
+  d_ptr->initActions();
 }
 
-void StylesheetEdit::initMenus()
+QMenu*
+StylesheetEditPrivate::createContextMenu()
 {
-  m_contextMenu = createStandardContextMenu();
-  m_contextMenu->addSeparator();
-  m_contextMenu->addAction(m_formatAct);
+  QMenu* menu = q_ptr->createStandardContextMenu();
+  menu->addSeparator();
+  menu->addAction(m_formatAct);
+  return menu;
+}
 
-  m_bookmarkMenu = new QMenu(this);
+void
+StylesheetEditPrivate::createBookmarkMenu()
+{
+  m_bookmarkMenu = new QMenu(q_ptr);
   m_bookmarkMenu->addAction(m_addBookmarkAct);
   m_bookmarkMenu->addAction(m_editBookmarkAct);
   m_bookmarkMenu->addAction(m_removeBookmarkAct);
@@ -599,63 +682,65 @@ void StylesheetEdit::initMenus()
   m_bookmarkMenu->addAction(m_clearBookmarksAct);
 }
 
-void StylesheetEdit::contextMenuEvent(QContextMenuEvent* event)
+void
+StylesheetEdit::initMenus()
 {
-  m_contextMenu->exec(event->globalPos());
+  d_ptr->initMenus();
 }
 
-void StylesheetEdit::contextBookmarkMenuEvent(QContextMenuEvent* event)
+void
+StylesheetEdit::contextMenuEvent(QContextMenuEvent* event)
 {
-  auto tc = cursorForPosition(event->pos());
-  int lineNumber = d_ptr->calculateLineNumber(tc);
-  d_ptr->setBookmarkLineNumber(lineNumber);
-
-  if (d_ptr->hasBookmark(lineNumber)) {
-    m_addBookmarkAct->setEnabled(false);
-    m_editBookmarkAct->setEnabled(true);
-    m_removeBookmarkAct->setEnabled(true);
-
-  } else {
-    m_addBookmarkAct->setEnabled(true);
-    m_editBookmarkAct->setEnabled(false);
-    m_removeBookmarkAct->setEnabled(false);
-  }
-
-  if (d_ptr->bookmarkCount() == 0) {
-    m_clearBookmarksAct->setEnabled(false);
-    m_gotoBookmarkAct->setEnabled(false);
-
-  } else {
-    m_clearBookmarksAct->setEnabled(true);
-    m_gotoBookmarkAct->setEnabled(true);
-  }
-
-  m_bookmarkMenu->exec(event->globalPos());
+  d_ptr->handleContextMenuEvent(event->globalPos());
 }
 
-int StylesheetEdit::calculateLineNumber(QTextCursor textCursor)
+void
+StylesheetEdit::contextBookmarkMenuEvent(QContextMenuEvent* event)
+{
+  d_ptr->handleBookmarkMenuEvent(event->globalPos());
+}
+
+int
+StylesheetEdit::maxSuggestionCount() const
+{
+  return d_ptr->maxSuggestionCount();
+}
+
+void
+StylesheetEdit::setMaxSuggestionCount(int maxSuggestionCount)
+{
+  d_ptr->setMaxSuggestionCount(maxSuggestionCount);
+}
+
+int
+StylesheetEdit::calculateLineNumber(QTextCursor textCursor)
 {
   return d_ptr->calculateLineNumber(textCursor);
 }
 
-void StylesheetEdit::format()
+void
+StylesheetEdit::format()
 {
   // TODO format code nicely.
 }
 
-void StylesheetEditPrivate::createHover()
+void
+StylesheetEditPrivate::createHover()
 {
   if (!m_hoverWidget) {
     m_hoverWidget = new HoverWidget(q_ptr);
-    m_hoverWidget->setVisible(true); // always showing just 0 size when not needed.
-    m_hoverWidget->setPos(QPoint(0, 0));
+    m_hoverWidget->setVisible(
+      true); // always showing just 0 size when not needed.
+    m_hoverWidget->setPosition(QPoint(0, 0));
     m_hoverWidget->hideHover();
   }
 }
 
-QPair<NameNode::SectionType, int> StylesheetEditPrivate::nodeForPoint(const QPoint& pos, NamedNode** nNode)
+QPair<NameNode::SectionType, int>
+StylesheetEditPrivate::nodeForPoint(const QPoint& pos, NamedNode** nNode)
 {
-  QPair<NameNode::SectionType, int> isin = qMakePair<NameNode::SectionType, int>(NamedNode::None, -1);
+  QPair<NameNode::SectionType, int> isin =
+    qMakePair<NameNode::SectionType, int>(NamedNode::None, -1);
 
   for (auto node : m_nodes->values()) {
     *nNode = qobject_cast<NamedNode*>(node);
@@ -672,417 +757,249 @@ QPair<NameNode::SectionType, int> StylesheetEditPrivate::nodeForPoint(const QPoi
   return isin;
 }
 
-void StylesheetEditPrivate::handleMouseMove(QPoint pos)
+void
+StylesheetEditPrivate::hoverWidgetType(NamedNode* nNode,
+                                       QPair<NameNode::SectionType, int> isin,
+                                       QPoint pos)
 {
-  NamedNode* nNode = nullptr;
-  auto isin = nodeForPoint(pos, &nNode);
-
-  if (!nNode || isin.first == NamedNode::None) {
-    m_hoverWidget->hideHover();
-    return;
-
-  } else {
-    switch (nNode->type()) {
-
-      case Node::WidgetType: {
-        WidgetNode* widget = qobject_cast<WidgetNode*>(nNode);
-
-        switch (isin.first) {
-          case WidgetNode::Name: {
-            if (!widget->isWidgetValid()) {
-              m_hoverWidget->setHoverText(pos, q_ptr->tr("%1 is not a valid widget name").arg(widget->name()));
-              m_hoverWidget->showHover();
-            }
-
-            break;
-          }
-
-          default:
-            break;
-        }
-
-        break;
-      }
-
-      case Node::PseudoStateType: {
-        PseudoStateNode* pseudostate = qobject_cast<PseudoStateNode*>(nNode);
-
-        switch (isin.first) {
-          case PseudoStateNode::Name: {
-            if (!pseudostate->isStateValid()) {
-              m_hoverWidget->setHoverText(pos, q_ptr->tr("%1 is not a valid pseudo state").arg(pseudostate->name()));
-              m_hoverWidget->showHover();
-            }
-
-            break;
-          }
-
-          default:
-            break;
-        }
-
-        break;
-      }
-
-      case Node::SubControlType: {
-        SubControlNode* subcontrol = qobject_cast<SubControlNode*>(nNode);
-
-        switch (isin.first) {
-          case PseudoStateNode::Name: {
-            if (!subcontrol->isStateValid()) {
-              m_hoverWidget->setHoverText(pos, q_ptr->tr("%1 is not a valid sub-control").arg(subcontrol->name()));
-              m_hoverWidget->showHover();
-            }
-
-            break;
-          }
-
-          default:
-            break;
-        }
-
-        break;
-      }
-
-    case Node::PropertyType: {
-      PropertyNode* property = qobject_cast<PropertyNode*>(nNode);
-
-      switch (isin.first) {
-      case PropertyNode::None:
-        m_hoverWidget->hideHover();
-        break;
-
-      case PropertyNode::Name: {
-        auto propertyName = property->name();
-
-        if (property->checks().contains(PropertyNode::MissingPropertyEnd) && !property->hasPropertyMarker()) {
-          m_hoverWidget->setHoverText(pos,
-                                      q_ptr->tr("%1 is not a valid property name!\nMissing property marker (:)!").
-                                      arg(propertyName));
-          m_hoverWidget->showHover();
-
-        } else if (property->checks().contains(PropertyNode::MissingPropertyEnd)) {
-          m_hoverWidget->setHoverText(pos,
-                                      q_ptr->tr("%1 is not a valid property name!").
-                                      arg(propertyName));
-          m_hoverWidget->showHover();
-
-        } else if (!property->hasPropertyMarker()) {
-          m_hoverWidget->setHoverText(pos,
-                                      q_ptr->tr("Missing property marker (:)!"));
-          m_hoverWidget->showHover();
-
-        } else if (!property->isValidProperty()) {
-          m_hoverWidget->setHoverText(pos,
-                                      q_ptr->tr("Invalid property name!"));
-          m_hoverWidget->showHover();
-
-        }
-
-        break;
-      }
-
-      case PropertyNode::Value: {
-        if (property->checks().at(isin.second) == PropertyNode::ValidPropertyType) {
-          // This is a valid property but the property name is wrong.
-          // TODO handle different attribute types here?
-          m_hoverWidget->setHoverText(pos,
-                                      q_ptr->tr("%1 is a good property value.\nIncorrect property name!").
-                                      arg(property->values().at(isin.second)));
-          m_hoverWidget->showHover();
-
-        } else if (property->checks().at(isin.second) == PropertyNode::BadValue) {
-          m_hoverWidget->setHoverText(pos, q_ptr->tr("%1 is a bad property value.").
-                                      arg(property->values().at(isin.second)));
-        }
-
-        break;
-      }
-      }
-
-      break;
-    }
-
-    case Node::BadNodeType: {
-      BadBlockNode* badNode = qobject_cast<BadBlockNode*>(nNode);
-
-      //      if (badNode) {
-      //        ParserState::Errors errors = badNode->errors();
-
-      //        if (errors.testFlag(ParserState::InvalidWidget)) {
-      //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Widget"));
-
-      //        } else if (errors.testFlag(ParserState::InvalidSubControl)) {
-      //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Sub-Control"));
-
-      //        } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
-      //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid Pseudo-State"));
-
-      //        } else if (errors.testFlag(ParserState::AnomalousMarkerType)) {
-      //          m_hoverWidget->show(
-      //            pos,
-      //            q_ptr->tr(
-      //              "This could be either a Pseudo-State marker or a Sub-Control marker."));
-
-      //        } else if (errors.testFlag(ParserState::AnomalousType)) {
-      //          m_hoverWidget->show(pos, q_ptr->tr("The type of this is anomalous."));
-
-      //        } else {
-      //          hideHover();
-      //        }
-
-      //      }
-
-      break;
-    } // end case Node::BadNodeType
-
-    default:
-      m_hoverWidget->hideHover();
-    }
-
-  }
-}
-
-//      QString propertyName = dynamic_cast<NameNode*>(node)->name();
-
-//      if (property->checks().contains(PropertyNode::BadValue) ||
-//          property->checks().contains(PropertyNode::MissingPropertyEnd) ||
-//          property->checks().contains(PropertyNode::ValidPropertyType) ||
-//          !property->hasPropertyMarker()) {
-//        auto offsets = property->offsets();
-//        auto values = property->values();
-//        auto checks = property->checks();
-
-//        if (y > top && y < bottom) {
-//          auto propertName = property->name();
-//          width = fm.horizontalAdvance(propertName);
-//          right += width;
-
-//          if (x >= left && x <= right) {
-//            // inside property name
-//            if (!property->hasPropertyMarker()) {
-//              m_hoverWidget->setHoverText(pos, q_ptr->tr("Missing property marker (:)!"));
-//              m_hoverWidget->showHover();
-
-//            } else {
-//              m_hoverWidget->setHoverText(pos, q_ptr->tr(""));
-//              m_hoverWidget->showHover();
-
-//            }
-
-//            return;
-
-//          } else {
-//            m_hoverWidget->hideHover();
-
-//          }
-
-//          for (int i = 0; i < offsets.count(); i++) {
-//            auto check = checks.at(i);
-//            auto value = values.at(i);
-//            auto offset = offsets.at(i);
-//            auto pCursor(cursor);
-//            pCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, offset);
-//            rect = q_ptr->cursorRect(pCursor);
-//            width = fm.horizontalAdvance(value);
-//            left = rect.x();
-//            right = rect.x() + width + 1;
-
-//            if (x >= left && x <= right) {
-//              // inside the value.
-//              if (check == PropertyNode::ValidPropertyType) {
-//                // This is a valid property but the property name is wrong.
-//                // TODO handle different attribute types here?
-//                m_hoverWidget->setHoverText(pos, q_ptr->tr("Good property value.\nIncorrect property name!"));
-//                m_hoverWidget->showHover();
-
-//              } else if (check == PropertyNode::BadValue) {
-//                // This is just a bad value
-//                m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad property value."));
-//                m_hoverWidget->showHover();
-//              }
-
-//            } else {
-//              m_hoverWidget->hideHover();
-//            }
-//          }
-
-//        } else {
-//          m_hoverWidget->hideHover();
-//        }
-
-//      }/* else {
-
-//hideHover();
-//}*/
-
-//      break;
-//    } // end case Node::PropertyType
-//    } // end switch
-
-//    return;
-
-//  }
-//}
-
-void StylesheetEditPrivate::handleLeaveEvent()
-{
-  if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hideHover();
-  }
-}
-
-void StylesheetEditPrivate::displayBookmark(BookmarkData* data, QPoint pos)
-{
-  if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hideHover();
-  }
-
-  m_hoverWidget->setHoverText(pos, data->text);
-}
-
-void StylesheetEditPrivate::displayError(QString text, QPoint pos)
-{
-  m_hoverWidget->setHoverText(pos, text);
-}
-
-void StylesheetEditPrivate::displayError(WidgetNode* widget, QPoint pos)
-{
-  if (!m_hoverWidget) {
-    m_hoverWidget = new HoverWidget(q_ptr);
-  }
-
-  if (m_hoverWidget->isVisible()) {
-    m_hoverWidget->hideHover();
-  }
-
-  if (!widget->isWidgetValid()) {
-    auto cursor = QTextCursor(widget->cursor());
-    auto rect = q_ptr->cursorRect(cursor);
-    auto left = rect.x();
-    auto right = left;
-    auto top = rect.y();
-    auto x = pos.x();
-    auto y = pos.y();
-    auto fm = q_ptr->fontMetrics();
-    auto height = fm.height();
-    auto bottom = top + height;
-    int width;
-
-    if (y > top && y < bottom) {
-      auto name = widget->name();
-      width = fm.horizontalAdvance(name);
-      right += width;
-      if (x >= left && x <= right) {
-        m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad widget name"));
-      }
-    }
-  }
-}
-
-void StylesheetEditPrivate::displayError(BadBlockNode* widget, QPoint pos)
-{
-  ParserState::Errors errors = widget->errors();
-
-  if (errors.testFlag(ParserState::InvalidWidget)) {
-    m_hoverWidget->setHoverText(pos, q_ptr->tr("This is not a valid Widget"));
-
-  } else if (errors.testFlag(ParserState::InvalidSubControl)) {
-    m_hoverWidget->setHoverText(pos, q_ptr->tr("This is not a valid Sub-Control"));
-
-  } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
-    m_hoverWidget->setHoverText(pos, q_ptr->tr("This is not a valid Pseudo-State"));
-
-  } else if (errors.testFlag(ParserState::AnomalousMarkerType)) {
-    m_hoverWidget->setHoverText(
-      pos,
-      q_ptr->tr(
-        "This could be either a Pseudo-State marker or a Sub-Control marker."));
-
-  } else if (errors.testFlag(ParserState::AnomalousType)) {
-    m_hoverWidget->setHoverText(pos, q_ptr->tr("The type of this is anomalous."));
-  }
-}
-
-void StylesheetEditPrivate::displayError(PropertyNode* property, QPoint pos)
-{
-  auto cursor = QTextCursor(property->cursor());
-  auto rect = q_ptr->cursorRect(cursor);
-  auto left = rect.x();
-  auto right = left;
-  auto top = rect.y();
-  auto x = pos.x();
-  auto y = pos.y();
-  auto fm = q_ptr->fontMetrics();
-  auto offsets = property->offsets();
-  auto values = property->values();
-  auto checks = property->checks();
-  auto height = fm.height();
-  auto bottom = top + height;
-  int width;
-
-  if (y > top && y < bottom) {
-    auto name = property->name();
-
-    if (!m_hoverWidget) {
-      m_hoverWidget = new HoverWidget(q_ptr);
-    }
-
-    if (m_hoverWidget->isVisible()) {
-      m_hoverWidget->hideHover();
-    }
-
-    width = fm.horizontalAdvance(name);
-    right += width;
-
-    if (x >= left && x <= right) {
-      // inside property name
-      if (!property->hasPropertyMarker()) {
-        m_hoverWidget->setHoverText(pos, q_ptr->tr("Missing property marker (:)!"));
+  auto widget = qobject_cast<WidgetNode*>(nNode);
+
+  if (isin.first == WidgetNode::Name) {
+    if (!widget->isWidgetValid()) {
+      // not a valid node
+      if (widget == m_currentHover) {
+        // already has a message just changing position
+        m_hoverWidget->setPosition(pos);
 
       } else {
-        m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad property name!"));
-      }
-      return;
-    }
-
-    for (int i = 0; i < offsets.count(); i++) {
-      auto check = checks.at(i);
-      auto value = values.at(i);
-      auto offset = offsets.at(i);
-
-      //      if (check == PropertyNode::GoodValue) {
-      //        // This is a good property name and value value.
-      //        m_hoverWidget->show(pos, q_ptr->tr("Good property value."));
-      //        return;
-      //      }
-
-      cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, offset);
-      rect = q_ptr->cursorRect(property->cursor());
-      width = fm.horizontalAdvance(value);
-      left = rect.x();
-      right = rect.x() + width;
-
-      if (x >= left && x <= right) {
-        // inside the value.
-        if (check == PropertyNode::ValidPropertyType) {
-          // This is a valid property but the property name is wrong.
-          // TODO handle different attribute types here?
-          m_hoverWidget->setHoverText(pos, q_ptr->tr("Good property value.\nIncorrect property name!"));
-
-        } else if (check == PropertyNode::BadValue) {
-          // This is just a bad value
-          m_hoverWidget->setHoverText(pos, q_ptr->tr("Bad property value."));
-
-        } else {
-          // TODO
-        }
+        // new node so restart message
+        m_hoverWidget->setHoverText(
+          q_ptr->tr("%1 is not a valid widget name").arg(widget->name()));
+        m_hoverWidget->setPosition(pos);
+        m_currentHover = widget;
       }
     }
   }
 }
 
-QString StylesheetEditPrivate::getValueAtCursor(int pos, const QString& text)
+void
+StylesheetEditPrivate::hoverPseudoStateType(
+  NamedNode* nNode,
+  QPair<NameNode::SectionType, int> isin,
+  QPoint pos)
+{
+  auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
+
+  if (isin.first == PseudoStateNode::Name) {
+    if (!pseudostate->isStateValid()) {
+      // not a valid node
+      if (pseudostate == m_currentHover) {
+        // already has a message just changing position
+        m_hoverWidget->setPosition(pos);
+
+      } else {
+        // new node so restart message
+        m_hoverWidget->setHoverText(
+          q_ptr->tr("%1 is not a valid pseudo state").arg(pseudostate->name()));
+        m_hoverWidget->setPosition(pos);
+        m_currentHover = pseudostate;
+      }
+    }
+  }
+}
+
+void
+StylesheetEditPrivate::hoverSubControlType(
+  NamedNode* nNode,
+  QPair<NameNode::SectionType, int> isin,
+  QPoint pos)
+{
+  auto subcontrol = qobject_cast<SubControlNode*>(nNode);
+
+  if (isin.first == PseudoStateNode::Name) {
+    if (!subcontrol->isStateValid()) {
+      // not a valid node
+      if (subcontrol == m_currentHover) {
+        // already has a message just changing position
+        m_hoverWidget->setPosition(pos);
+
+      } else {
+        // new node so restart message
+        m_hoverWidget->setHoverText(
+          q_ptr->tr("%1 is not a valid sub-control").arg(subcontrol->name()));
+        m_hoverWidget->setPosition(pos);
+        m_currentHover = subcontrol;
+      }
+    }
+  }
+}
+
+void
+StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
+                                         QPair<NameNode::SectionType, int> isin,
+                                         QPoint pos)
+{
+  auto property = qobject_cast<PropertyNode*>(nNode);
+
+  switch (isin.first) {
+    case PropertyNode::None:
+      m_hoverWidget->hideHover();
+      break;
+
+    case PropertyNode::Name: {
+      auto propertyName = property->name();
+
+      if (property->checks().contains(PropertyNode::MissingPropertyEnd) &&
+          !property->hasPropertyMarker()) {
+        m_hoverWidget->setHoverText(
+          q_ptr
+            ->tr("%1 is not a valid property name!\nMissing property "
+                 "marker (:)!")
+            .arg(propertyName));
+        m_hoverWidget->setPosition(pos);
+
+      } else if (property->checks().contains(
+                   PropertyNode::MissingPropertyEnd)) {
+        m_hoverWidget->setHoverText(
+          q_ptr->tr("%1 is not a valid property name!").arg(propertyName));
+        m_hoverWidget->setPosition(pos);
+
+      } else if (!property->hasPropertyMarker()) {
+        m_hoverWidget->setHoverText(q_ptr->tr("Missing property marker (:)!"));
+        m_hoverWidget->setPosition(pos);
+
+      } else if (!property->isValidProperty()) {
+        m_hoverWidget->setHoverText(q_ptr->tr("Invalid property name!"));
+        m_hoverWidget->setPosition(pos);
+      }
+
+      break;
+    }
+
+    case PropertyNode::Value: {
+      /*if (property->checks().at(isin.second) ==
+          PropertyNode::ValidPropertyType) {
+        // This is a valid property but the property name is wrong.
+        // TODO handle different attribute types here?
+        m_hoverWidget->setHoverText(
+          q_ptr->tr("%1 is a good property value.\nIncorrect property name!")
+          .arg(property->values().at(isin.second)));
+        m_hoverWidget->setPosition(pos);
+
+        } else*/
+      if (property->checks().at(isin.second) == PropertyNode::BadValue) {
+        m_hoverWidget->setHoverText(q_ptr->tr("%1 is a bad property value.")
+                                      .arg(property->values().at(isin.second)));
+        m_hoverWidget->setPosition(pos);
+      }
+
+      break;
+    }
+  }
+}
+
+void
+StylesheetEditPrivate::handleMouseMove(QPoint pos)
+{
+  //  NamedNode* nNode = nullptr;
+  //  auto isin = nodeForPoint(pos, &nNode);
+
+  //  if (!nNode || isin.first == NamedNode::None) {
+  //    m_hoverWidget->hideHover();
+  //    return;
+
+  //  } else {
+  //    switch (nNode->type()) {
+
+  //      case Node::WidgetType: {
+  //        hoverWidgetType(nNode, isin, pos);
+  //        break;
+  //      }
+
+  //      case Node::PseudoStateType: {
+  //        hoverPseudoStateType(nNode, isin, pos);
+  //        break;
+  //      }
+
+  //      case Node::SubControlType: {
+  //        hoverSubControlType(nNode, isin, pos);
+  //        break;
+  //      }
+
+  //      case Node::PropertyType: {
+  //        hoverPropertyType(nNode, isin, pos);
+  //        break;
+  //      }
+
+  //      case Node::BadNodeType: {
+  //        auto badNode = qobject_cast<BadBlockNode*>(nNode);
+
+  //        //      if (badNode) {
+  //        //        ParserState::Errors errors = badNode->errors();
+
+  //        //        if (errors.testFlag(ParserState::InvalidWidget)) {
+  //        //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid
+  //        //          Widget"));
+
+  //        //        } else if
+  //        (errors.testFlag(ParserState::InvalidSubControl)) {
+  //        //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid
+  //        //          Sub-Control"));
+
+  //        //        } else if
+  //        (errors.testFlag(ParserState::InvalidPseudoState)) {
+  //        //          m_hoverWidget->show(pos, q_ptr->tr("This is not a valid
+  //        //          Pseudo-State"));
+
+  //        //        } else if
+  //        (errors.testFlag(ParserState::AnomalousMarkerType))
+  //        //        {
+  //        //          m_hoverWidget->show(
+  //        //            pos,
+  //        //            q_ptr->tr(
+  //        //              "This could be either a Pseudo-State marker or a
+  //        //              Sub-Control marker."));
+
+  //        //        } else if (errors.testFlag(ParserState::AnomalousType)) {
+  //        //          m_hoverWidget->show(pos, q_ptr->tr("The type of this is
+  //        //          anomalous."));
+
+  //        //        } else {
+  //        //          hideHover();
+  //        //        }
+
+  //        //      }
+
+  //        break;
+  //      } // end case Node::BadNodeType
+
+  //      default:
+  //        m_hoverWidget->hideHover();
+  //    }
+  //  }
+}
+
+void
+StylesheetEditPrivate::handleLeaveEvent()
+{
+  if (m_hoverWidget && m_hoverWidget->isVisible()) {
+    m_hoverWidget->hideHover();
+  }
+}
+
+void
+StylesheetEditPrivate::displayBookmark(BookmarkData* data, QPoint pos)
+{
+  if (m_hoverWidget && m_hoverWidget->isVisible()) {
+    m_hoverWidget->hideHover();
+  }
+
+  m_hoverWidget->setHoverText(data->text);
+  m_hoverWidget->setPosition(pos);
+}
+
+QString
+StylesheetEditPrivate::getValueAtCursor(int pos, const QString& text)
 {
   QChar c;
   QString value;
@@ -1117,45 +1034,46 @@ QString StylesheetEditPrivate::getValueAtCursor(int pos, const QString& text)
   return value;
 }
 
-QString StylesheetEditPrivate::getOldNodeValue(CursorData* data)
+QString
+StylesheetEditPrivate::getOldNodeValue(CursorData* data)
 {
   QString oldValue;
 
   switch (data->node->type()) {
-  case Node::WidgetType:
-  case Node::PropertyType:
-    oldValue = qobject_cast<PropertyNode*>(data->node)->name();
-    break;
+    case Node::WidgetType:
+    case Node::PropertyType:
+      oldValue = qobject_cast<PropertyNode*>(data->node)->name();
+      break;
 
-  case Node::SubControlType:
-  case Node::PseudoStateType:
-    oldValue = qobject_cast<PseudoStateNode*>(data->node)->name();
-    break;
+    case Node::SubControlType:
+    case Node::PseudoStateType:
+      oldValue = qobject_cast<PseudoStateNode*>(data->node)->name();
+      break;
 
-  case Node::SubControlMarkerType:
-    oldValue = "::";
-    break;
+    case Node::SubControlMarkerType:
+      oldValue = "::";
+      break;
 
-  case Node::PseudoStateMarkerType:
-    oldValue = ":";
-    break;
+    case Node::PseudoStateMarkerType:
+      oldValue = ":";
+      break;
 
-  case Node::StartBraceType:
-    oldValue = "{";
-    break;
+    case Node::StartBraceType:
+      oldValue = "{";
+      break;
 
-  case Node::EndBraceType:
-    oldValue = "}";
-    break;
+    case Node::EndBraceType:
+      oldValue = "}";
+      break;
 
-  case Node::SemiColonType:
-    oldValue = ";";
-    break;
+    case Node::SemiColonType:
+      oldValue = ";";
+      break;
 
-  //  case Node::ValueType:
+      //  case Node::ValueType:
 
-  default:
-    break;
+    default:
+      break;
   }
 
   return oldValue;
@@ -1166,12 +1084,14 @@ QString StylesheetEditPrivate::getOldNodeValue(CursorData* data)
 //  setViewportMargins(bookmarkAreaWidth() + lineNumberAreaWidth(), 0, 0, 0);
 //}
 
-void StylesheetEdit::updateLeftAreaWidth(int)
+void
+StylesheetEdit::updateLeftAreaWidth(int)
 {
   setViewportMargins(bookmarkAreaWidth() + lineNumberAreaWidth(), 0, 0, 0);
 }
 
-void StylesheetEdit::updateLeftArea(const QRect& rect, int dy)
+void
+StylesheetEdit::updateLeftArea(const QRect& rect, int dy)
 {
   d_ptr->updateLeftArea(rect, dy);
 }
@@ -1181,7 +1101,8 @@ void StylesheetEdit::updateLeftArea(const QRect& rect, int dy)
 //  d_ptr->updateLineNumberArea(rect, dy);
 //}
 
-void StylesheetEditPrivate::updateLeftArea(const QRect& rect, int dy)
+void
+StylesheetEditPrivate::updateLeftArea(const QRect& rect, int dy)
 {
   if (dy) {
     m_bookmarkArea->scroll(0, dy);
@@ -1200,15 +1121,11 @@ void StylesheetEditPrivate::updateLeftArea(const QRect& rect, int dy)
   }
 }
 
-void StylesheetEdit::handleCursorPositionChanged()
-{
-  d_ptr->handleCursorPositionChanged(textCursor());
-}
-
 /*
    Calculates current line number and total line count.
 */
-int StylesheetEditPrivate::calculateLineNumber(QTextCursor textCursor)
+int
+StylesheetEditPrivate::calculateLineNumber(QTextCursor textCursor)
 {
   QTextCursor cursor(textCursor);
   cursor.movePosition(QTextCursor::StartOfLine);
@@ -1244,14 +1161,112 @@ int StylesheetEditPrivate::calculateLineNumber(QTextCursor textCursor)
 /*
    Calculates the current text column.
 */
-int StylesheetEditPrivate::calculateColumn(QTextCursor textCursor)
+int
+StylesheetEditPrivate::calculateColumn(QTextCursor textCursor)
 {
   QTextCursor cursor(textCursor);
   cursor.movePosition(QTextCursor::StartOfLine);
   return textCursor.anchor() - cursor.anchor();
 }
 
-void StylesheetEditPrivate::handleCursorPositionChanged(QTextCursor textCursor)
+void
+StylesheetEdit::handleCursorPositionChanged()
+{
+  d_ptr->handleCursorPositionChanged(textCursor());
+}
+
+QList<int>
+StylesheetEditPrivate::reverseLastNValues(QMap<int, QString> matches)
+{
+
+  QMap<int, QString> rMatches;
+  auto keys = matches.keys();
+  QList<int> reversed;
+  QList<int>::reverse_iterator i;
+
+  for (i = keys.rbegin(); i != keys.rend(); ++i) {
+    if (reversed.size() > m_maxSuggestionCount) {
+      break;
+    }
+
+    reversed << *i;
+  }
+
+  return reversed;
+}
+
+void
+StylesheetEditPrivate::updateContextMenu(QMenu* contextMenu,
+                                         QMap<int, QString> matches,
+                                         NamedNode* nNode)
+{
+  auto first = contextMenu->actions().first();
+  QString typeName;
+
+  switch (nNode->type()) {
+    case Node::WidgetType:
+      typeName = "widget";
+      break;
+
+    case Node::PseudoStateType:
+      typeName = "pseudo state";
+      break;
+
+    case Node::SubControlType:
+      typeName = "sub control";
+      break;
+
+    case Node::PropertyType:
+      typeName = "property";
+      break;
+  }
+
+  QAction* act = new QAction(
+    q_ptr->tr("%1 is not a valid %2 name").arg(nNode->name()).arg(typeName));
+  contextMenu->insertAction(first, act);
+  auto reversed = reverseLastNValues(matches);
+  contextMenu->insertSeparator(first);
+
+  for (auto key : reversed) {
+    act = new QAction(matches.value(key));
+    contextMenu->insertAction(first, act);
+    QVariant v;
+    v.setValue(nNode);
+    act->setData(v);
+    q_ptr->connect(
+      act, &QAction::triggered, q_ptr, &StylesheetEdit::suggestion);
+  }
+
+  contextMenu->insertSeparator(first);
+}
+
+void
+StylesheetEditPrivate::updatePropertyContextMenu(QMenu* contextMenu,
+                                                 QMap<int, QString> matches,
+                                                 NamedNode* nNode)
+{
+  auto first = contextMenu->actions().first();
+  QAction* act = new QAction(
+    q_ptr->tr("%1 is not a valid property value").arg(nNode->name()));
+  contextMenu->insertAction(first, act);
+  auto reversed = reverseLastNValues(matches);
+  contextMenu->insertSeparator(first);
+
+  for (auto key : reversed) {
+    act = new QAction(matches.value(key));
+    contextMenu->insertAction(first, act);
+    QVariant v;
+    v.setValue(nNode);
+    act->setData(v);
+    q_ptr->connect(
+      act, &QAction::triggered, q_ptr, &StylesheetEdit::suggestion);
+  }
+
+  contextMenu->insertSeparator(first);
+}
+
+void
+StylesheetEditPrivate::handleCursorPositionChanged(QTextCursor textCursor)
 {
   if (m_manualMove) {
     return;
@@ -1315,25 +1330,235 @@ void StylesheetEditPrivate::handleCursorPositionChanged(QTextCursor textCursor)
           break;
         }
       } // end for
-    }   // end end brace type
-  }     // end if node
+
+    } else {
+      NamedNode* nNode = qobject_cast<NamedNode*>(node);
+
+      if (nNode) {
+        switch (nNode->type()) {
+
+          case Node::WidgetType: {
+            auto widget = qobject_cast<WidgetNode*>(nNode);
+
+            if (!widget->isWidgetValid()) {
+              // not a valid node
+              if (widget != m_currentWidget) {
+                auto matches = m_datastore->fuzzySearchWidgets(nNode->name());
+                auto contextMenu = createContextMenu();
+                updateContextMenu(contextMenu, matches, nNode);
+                m_contextMenu = contextMenu;
+              }
+            }
+
+            break;
+          } // end WidgetType
+
+          case Node::PseudoStateType: {
+            auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
+
+            if (!pseudostate->isStateValid()) {
+              // not a valid node
+              if (pseudostate != m_currentWidget) {
+                auto matches =
+                  m_datastore->fuzzySearchPseudoStates(nNode->name());
+                auto contextMenu = createContextMenu();
+                updateContextMenu(contextMenu, matches, nNode);
+                m_contextMenu = contextMenu;
+              }
+            }
+
+            break;
+          } // end PseudoStateType
+
+          case Node::SubControlType: {
+            auto subcontrol = qobject_cast<SubControlNode*>(nNode);
+
+            if (!subcontrol->isStateValid()) {
+              // not a valid node
+              if (subcontrol != m_currentWidget) {
+                auto matches =
+                  m_datastore->fuzzySearchSubControl(nNode->name());
+                auto contextMenu = createContextMenu();
+                updateContextMenu(contextMenu, matches, nNode);
+                m_contextMenu = contextMenu;
+              }
+            }
+
+            break;
+          } // end SubControlType
+
+          case Node::PropertyType: {
+            auto property = qobject_cast<PropertyNode*>(nNode);
+
+            if (property != m_currentWidget) {
+              auto offset = textCursor.anchor() - property->cursor().anchor();
+              auto isProperty = property->isProperty(offset);
+
+              if (isProperty.first) {
+                auto matches =
+                  m_datastore->fuzzySearchProperty(isProperty.second);
+                auto contextMenu = createContextMenu();
+                updateContextMenu(contextMenu, matches, nNode);
+                m_contextMenu = contextMenu;
+
+              } else {
+                if (!isProperty.second.isEmpty()) {
+                  if (property->isValidProperty()) {
+                    // must have a valid property to check value types.
+                    auto matches =
+                      m_datastore->fuzzySearchPropertyValue(property->name(), isProperty.second);
+                    auto contextMenu = createContextMenu();
+                    updatePropertyContextMenu(contextMenu, matches, nNode);
+                    m_contextMenu = contextMenu;
+                  } else {
+                    m_contextMenu = createContextMenu();
+                  }
+                }
+              }
+            }
+
+            break;
+          } // end
+
+          case Node::BadNodeType: {
+            //          auto badNode = qobject_cast<BadBlockNode*>(nNode);
+
+            //          //      if (badNode) {
+            //          //        ParserState::Errors errors =
+            //          badNode->errors();
+
+            //          //        if
+            //          (errors.testFlag(ParserState::InvalidWidget)) {
+            //          //          m_hoverWidget->show(pos, q_ptr->tr("This is
+            //          not a valid
+            //          //          Widget"));
+
+            //          //        } else if
+            //          (errors.testFlag(ParserState::InvalidSubControl)) {
+            //            //          m_hoverWidget->show(pos, q_ptr->tr("This
+            //            is not a valid
+            //            //          Sub-Control"));
+
+            //            //        } else if
+            //            (errors.testFlag(ParserState::InvalidPseudoState)) {
+            //              //          m_hoverWidget->show(pos, q_ptr->tr("This
+            //              is not a valid
+            //              //          Pseudo-State"));
+
+            //              //        } else if
+            //              (errors.testFlag(ParserState::AnomalousMarkerType))
+            //              //        {
+            //              //          m_hoverWidget->show(
+            //              //            pos,
+            //              //            q_ptr->tr(
+            //              //              "This could be either a Pseudo-State
+            //              marker or a
+            //              //              Sub-Control marker."));
+
+            //              //        } else if
+            //              (errors.testFlag(ParserState::AnomalousType)) {
+            //              //          m_hoverWidget->show(pos, q_ptr->tr("The
+            //              type of this is
+            //              //          anomalous."));
+
+            //              //        } else {
+            //              //          hideHover();
+            //              //        }
+
+            //              //      }
+
+            //              break;
+          } // end case Node::BadNodeType
+
+          default:
+            m_hoverWidget->hideHover();
+        }
+      }
+    } // end end brace type
+  }   // end if node
 
   if (modified) {
     m_highlighter->rehighlight();
   }
 }
 
-void StylesheetEdit::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
+void
+StylesheetEditPrivate::handleSuggestion(QAction* act)
+{
+  QVariant v = act->data();
+  NamedNode* nNode = v.value<NamedNode*>();
+
+  if (nNode) {
+    nNode->setName(act->text());
+    auto originalCursor = nNode->cursor().anchor();
+    nNode->cursor().movePosition(
+      QTextCursor::Right, QTextCursor::KeepAnchor, nNode->length());
+    nNode->cursor().removeSelectedText();
+    nNode->cursor().insertText(act->text());
+
+    switch (nNode->type()) {
+      case Node::WidgetType: {
+        auto widget = qobject_cast<WidgetNode*>(nNode);
+
+        if (widget) {
+          widget->setWidgetValid(true);
+          widget->setStart(originalCursor);
+        }
+
+        break;
+      }
+
+      case Node::PseudoStateType: {
+        auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
+
+        if (pseudostate) {
+          pseudostate->setStateValid(true);
+          pseudostate->setStart(originalCursor);
+        }
+
+        break;
+      }
+
+      case Node::SubControlType: {
+        auto subcontrol = qobject_cast<PseudoStateNode*>(nNode);
+
+        if (subcontrol) {
+          subcontrol->setStateValid(true);
+          subcontrol->setStart(originalCursor);
+        }
+
+        break;
+      }
+
+      case Node::PropertyType: {
+        auto property = qobject_cast<PropertyNode*>(nNode);
+
+        if (property) {
+          property->setStart(originalCursor);
+        }
+
+        break;
+      }
+    }
+
+    m_highlighter->rehighlight();
+  }
+}
+
+void
+StylesheetEdit::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 {
   d_ptr->onDocumentChanged(pos, charsRemoved, charsAdded);
 }
 
-void StylesheetEdit::handleTextChanged()
+void
+StylesheetEdit::handleTextChanged()
 {
   //  d_ptr->handleTextChanged();
 }
 
-Node* StylesheetEditPrivate::nextNode(QTextCursor cursor)
+Node*
+StylesheetEditPrivate::nextNode(QTextCursor cursor)
 {
   QList<QTextCursor> keys = m_nodes->keys();
   int index = keys.indexOf(cursor) + 1; // next index
@@ -1346,7 +1571,8 @@ Node* StylesheetEditPrivate::nextNode(QTextCursor cursor)
   return nullptr;
 }
 
-Node* StylesheetEditPrivate::previousNode(QTextCursor cursor)
+Node*
+StylesheetEditPrivate::previousNode(QTextCursor cursor)
 {
   QList<QTextCursor> keys = m_nodes->keys();
   int index = keys.indexOf(cursor) - 1; // previous index
@@ -1359,11 +1585,12 @@ Node* StylesheetEditPrivate::previousNode(QTextCursor cursor)
   return nullptr;
 }
 
-void StylesheetEditPrivate::updatePropertyValues(int pos,
-    PropertyNode* property,
-    int charsAdded,
-    int charsRemoved,
-    const QString& newValue)
+void
+StylesheetEditPrivate::updatePropertyValues(int pos,
+                                            PropertyNode* property,
+                                            int charsAdded,
+                                            int charsRemoved,
+                                            const QString& newValue)
 {
   bool updated = false;
   auto values = property->values();
@@ -1386,13 +1613,15 @@ void StylesheetEditPrivate::updatePropertyValues(int pos,
     if (pos >= start && pos < end) {
       values.replace(i, newValue);
 
-      if (m_datastore->isValidPropertyValueForProperty(property->name(), newValue)) {
+      if (m_datastore->isValidPropertyValueForProperty(property->name(),
+                                                       newValue)) {
         checks.replace(i, PropertyNode::GoodValue);
 
       } else {
         DataStore::AttributeType attribute = DataStore::NoAttributeValue;
 
-        if ((attribute = m_datastore->propertyValueAttribute(newValue)) != DataStore::NoAttributeValue) {
+        if ((attribute = m_datastore->propertyValueAttribute(newValue)) !=
+            DataStore::NoAttributeValue) {
           attributes[i] = attribute;
         }
       }
@@ -1407,9 +1636,10 @@ void StylesheetEditPrivate::updatePropertyValues(int pos,
   property->setAttributeTypes(attributes);
 }
 
-void StylesheetEditPrivate::onDocumentChanged(int pos,
-    int charsRemoved,
-    int charsAdded)
+void
+StylesheetEditPrivate::onDocumentChanged(int pos,
+                                         int charsRemoved,
+                                         int charsAdded)
 {
   if (m_nodes->isEmpty()) {
     // initial text has not yet been parsed.
@@ -1429,192 +1659,192 @@ void StylesheetEditPrivate::onDocumentChanged(int pos,
     QString value, newValue;
 
     switch (node->type()) {
-    //    case Node::WidgetType: {
-    //      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
-    //      value = widget->value();
-    //      break;
-    //    }
+        //    case Node::WidgetType: {
+        //      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
+        //      value = widget->value();
+        //      break;
+        //    }
 
-    case Node::PropertyType: {
-      PropertyNode* property = qobject_cast<PropertyNode*>(node);
-      QTextCursor cursor = q_ptr->textCursor();
-      cursor.select(QTextCursor::WordUnderCursor);
-      newValue = cursor.selectedText();
+      case Node::PropertyType: {
+        PropertyNode* property = qobject_cast<PropertyNode*>(node);
+        QTextCursor cursor = q_ptr->textCursor();
+        cursor.select(QTextCursor::WordUnderCursor);
+        newValue = cursor.selectedText();
 
-      if (newValue == ";") {
-        Node* next;
+        if (newValue == ";") {
+          Node* next;
 
-        if (property->hasPropertyMarker()) {
-          next = nextNode(property->cursor());
-          next = nextNode(next->cursor());
+          if (property->hasPropertyMarker()) {
+            next = nextNode(property->cursor());
+            next = nextNode(next->cursor());
 
-        } else {
-          next = nextNode(property->cursor());
-        }
+          } else {
+            next = nextNode(property->cursor());
+          }
 
-        if (next->type() == Node::PropertyEndType) {
-          PropertyEndMarkerNode* marker =
-            new PropertyEndMarkerNode(next->cursor(), q_ptr);
-          m_nodes->insert(next->cursor(), marker);
-          next->deleteLater();
+          if (next->type() == Node::PropertyEndType) {
+            PropertyEndMarkerNode* marker =
+              new PropertyEndMarkerNode(next->cursor(), q_ptr);
+            m_nodes->insert(next->cursor(), marker);
+            next->deleteLater();
 
-          if (property->count() > 0) {
-            auto checks = property->checks();
-            auto check = checks.last();
+            if (property->count() > 0) {
+              auto checks = property->checks();
+              auto check = checks.last();
 
-            if (check == PropertyNode::MissingPropertyEnd) {
-              checks.replace(checks.size() - 1, PropertyNode::GoodValue);
-              property->setChecks(checks);
+              if (check == PropertyNode::MissingPropertyEnd) {
+                checks.replace(checks.size() - 1, PropertyNode::GoodValue);
+                property->setChecks(checks);
+              }
             }
           }
-        }
 
-      } else if (newValue == ":") {
-        int start = node->start();
-        int end = node->end();
-        int anchor = cursor.anchor();
+        } else if (newValue == ":") {
+          int start = node->start();
+          int end = node->end();
+          int anchor = cursor.anchor();
 
-        if (anchor > start && anchor < end) {
-          // is in property.
-          int nameEnd = start + property->name().length();
+          if (anchor > start && anchor < end) {
+            // is in property.
+            int nameEnd = start + property->name().length();
 
-          if (!property->hasPropertyMarker() && anchor >= nameEnd) {
-            //            QTextCursor propCursor(q_ptr->document());
-            //            propCursor.setPosition(pos);
-            //            PropertyMarkerNode* marker =
-            //              new PropertyMarkerNode(propCursor, q_ptr);
-            //            m_nodes->insert(propCursor, marker);
-            property->setPropertyMarkerExists(true);
-            property->setPropertyMarkerOffset(pos);
+            if (!property->hasPropertyMarker() && anchor >= nameEnd) {
+              //            QTextCursor propCursor(q_ptr->document());
+              //            propCursor.setPosition(pos);
+              //            PropertyMarkerNode* marker =
+              //              new PropertyMarkerNode(propCursor, q_ptr);
+              //            m_nodes->insert(propCursor, marker);
+              property->setPropertyMarkerExists(true);
+              property->setPropertyMarkerOffset(pos);
+            }
           }
+
+        } else {
+          updatePropertyValues(
+            cursor.anchor(), property, charsAdded, charsRemoved, newValue);
         }
 
-      } else {
-        updatePropertyValues(
-          cursor.anchor(), property, charsAdded, charsRemoved, newValue);
+        break;
       }
 
-      break;
-    }
+      case Node::BadNodeType: {
+        BadBlockNode* badNode = qobject_cast<BadBlockNode*>(node);
+        value = badNode->name();
+        ParserState::Errors errors = badNode->errors();
 
-    case Node::BadNodeType: {
-      BadBlockNode* badNode = qobject_cast<BadBlockNode*>(node);
-      value = badNode->name();
-      ParserState::Errors errors = badNode->errors();
+        if (errors.testFlag(ParserState::AnomalousType)) {
+          QTextCursor cursor(badNode->cursor());
+          cursor.select(QTextCursor::WordUnderCursor);
+          newValue = cursor.selectedText();
 
-      if (errors.testFlag(ParserState::AnomalousType)) {
-        QTextCursor cursor(badNode->cursor());
-        cursor.select(QTextCursor::WordUnderCursor);
-        newValue = cursor.selectedText();
+          if (m_datastore->containsWidget(newValue)) {
+            Node* widget = new WidgetNode(newValue, badNode->cursor(), q_ptr);
+            m_nodes->insert(badNode->cursor(), widget);
+            Node* next = nextNode(badNode->cursor());
 
-        if (m_datastore->containsWidget(newValue)) {
-          Node* widget = new WidgetNode(newValue, badNode->cursor(), q_ptr);
-          m_nodes->insert(badNode->cursor(), widget);
-          Node* next = nextNode(badNode->cursor());
+            if (next) {
+              if (next->type() == Node::BadSubControlMarkerType) {
+                Node* subcontrolmarker =
+                  new SubControlMarkerNode(next->cursor(), q_ptr);
+                m_nodes->insert(next->cursor(), subcontrolmarker);
+                next->deleteLater();
 
-          if (next) {
-            if (next->type() == Node::BadSubControlMarkerType) {
-              Node* subcontrolmarker =
-                new SubControlMarkerNode(next->cursor(), q_ptr);
-              m_nodes->insert(next->cursor(), subcontrolmarker);
-              next->deleteLater();
-
-            } else if (next->type() == Node::BadPseudoStateMarkerType) {
-              Node* pseudostatemarker =
-                new PseudoStateMarkerNode(next->cursor(), q_ptr);
-              m_nodes->insert(next->cursor(), pseudostatemarker);
-              next->deleteLater();
+              } else if (next->type() == Node::BadPseudoStateMarkerType) {
+                Node* pseudostatemarker =
+                  new PseudoStateMarkerNode(next->cursor(), q_ptr);
+                m_nodes->insert(next->cursor(), pseudostatemarker);
+                next->deleteLater();
+              }
             }
-          }
 
-          badNode->deleteLater();
+            badNode->deleteLater();
 
-        } else if (m_datastore->containsSubControl(newValue)) {
-          Node* subcontrol =
-            new SubControlNode(newValue, badNode->cursor(), q_ptr);
-          m_nodes->insert(badNode->cursor(), subcontrol);
-          Node* prev = previousNode(badNode->cursor());
+          } else if (m_datastore->containsSubControl(newValue)) {
+            Node* subcontrol =
+              new SubControlNode(newValue, badNode->cursor(), q_ptr);
+            m_nodes->insert(badNode->cursor(), subcontrol);
+            Node* prev = previousNode(badNode->cursor());
 
-          if (prev) {
-            if (prev->type() == Node::BadSubControlMarkerType) {
-              Node* subcontrolmarker =
-                new SubControlMarkerNode(prev->cursor(), q_ptr);
-              m_nodes->insert(prev->cursor(), subcontrolmarker);
-              prev->deleteLater();
+            if (prev) {
+              if (prev->type() == Node::BadSubControlMarkerType) {
+                Node* subcontrolmarker =
+                  new SubControlMarkerNode(prev->cursor(), q_ptr);
+                m_nodes->insert(prev->cursor(), subcontrolmarker);
+                prev->deleteLater();
+              }
             }
-          }
 
-          badNode->deleteLater();
+            badNode->deleteLater();
 
-        } else if (m_datastore->containsPseudoState(newValue)) {
-          Node* pseudostate =
-            new PseudoStateNode(newValue, badNode->cursor(), q_ptr);
-          m_nodes->insert(badNode->cursor(), pseudostate);
-          Node* prev = previousNode(badNode->cursor());
+          } else if (m_datastore->containsPseudoState(newValue)) {
+            Node* pseudostate =
+              new PseudoStateNode(newValue, badNode->cursor(), q_ptr);
+            m_nodes->insert(badNode->cursor(), pseudostate);
+            Node* prev = previousNode(badNode->cursor());
 
-          if (prev) {
-            if (prev->type() == Node::BadPseudoStateMarkerType) {
-              Node* pseudostatemarker =
-                new PseudoStateMarkerNode(prev->cursor(), q_ptr);
-              m_nodes->insert(prev->cursor(), pseudostatemarker);
-              prev->deleteLater();
+            if (prev) {
+              if (prev->type() == Node::BadPseudoStateMarkerType) {
+                Node* pseudostatemarker =
+                  new PseudoStateMarkerNode(prev->cursor(), q_ptr);
+                m_nodes->insert(prev->cursor(), pseudostatemarker);
+                prev->deleteLater();
+              }
             }
+
+            badNode->deleteLater();
+
+          } else {
+            // still bad, just update text.
+            badNode->setName(newValue);
           }
-
-          badNode->deleteLater();
-
-        } else {
-          // still bad, just update text.
-          badNode->setName(newValue);
         }
+
+        if (errors.testFlag(ParserState::InvalidWidget)) {
+          QTextCursor cursor(data.cursor);
+          cursor.select(QTextCursor::WordUnderCursor);
+          newValue = cursor.selectedText();
+
+          if (m_datastore->containsWidget(newValue)) {
+            badNode->deleteLater();
+            Node* subcontrol = new WidgetNode(newValue, data.cursor, q_ptr);
+            m_nodes->insert(data.cursor, subcontrol);
+
+          } else {
+            badNode->setName(newValue);
+          }
+
+        } else if (errors.testFlag(ParserState::InvalidSubControl)) {
+          QTextCursor cursor(data.cursor);
+          cursor.select(QTextCursor::WordUnderCursor);
+          newValue = cursor.selectedText();
+
+          if (m_datastore->containsSubControl(newValue)) {
+            Node* subcontrol = new SubControlNode(newValue, data.cursor, q_ptr);
+            m_nodes->insert(data.cursor, subcontrol);
+            badNode->deleteLater();
+
+          } else {
+            badNode->setName(newValue);
+          }
+
+        } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
+          QTextCursor cursor(data.cursor);
+          cursor.select(QTextCursor::WordUnderCursor);
+          newValue = cursor.selectedText();
+
+          if (m_datastore->containsPseudoState(newValue)) {
+            badNode->deleteLater();
+            Node* subcontrol =
+              new PseudoStateNode(newValue, data.cursor, q_ptr);
+            m_nodes->insert(data.cursor, subcontrol);
+
+          } else {
+            badNode->setName(newValue);
+          }
+        }
+
+        break;
       }
-
-      if (errors.testFlag(ParserState::InvalidWidget)) {
-        QTextCursor cursor(data.cursor);
-        cursor.select(QTextCursor::WordUnderCursor);
-        newValue = cursor.selectedText();
-
-        if (m_datastore->containsWidget(newValue)) {
-          badNode->deleteLater();
-          Node* subcontrol = new WidgetNode(newValue, data.cursor, q_ptr);
-          m_nodes->insert(data.cursor, subcontrol);
-
-        } else {
-          badNode->setName(newValue);
-        }
-
-      } else if (errors.testFlag(ParserState::InvalidSubControl)) {
-        QTextCursor cursor(data.cursor);
-        cursor.select(QTextCursor::WordUnderCursor);
-        newValue = cursor.selectedText();
-
-        if (m_datastore->containsSubControl(newValue)) {
-          Node* subcontrol = new SubControlNode(newValue, data.cursor, q_ptr);
-          m_nodes->insert(data.cursor, subcontrol);
-          badNode->deleteLater();
-
-        } else {
-          badNode->setName(newValue);
-        }
-
-      } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
-        QTextCursor cursor(data.cursor);
-        cursor.select(QTextCursor::WordUnderCursor);
-        newValue = cursor.selectedText();
-
-        if (m_datastore->containsPseudoState(newValue)) {
-          badNode->deleteLater();
-          Node* subcontrol =
-            new PseudoStateNode(newValue, data.cursor, q_ptr);
-          m_nodes->insert(data.cursor, subcontrol);
-
-        } else {
-          badNode->setName(newValue);
-        }
-      }
-
-      break;
-    }
     }
 
     q_ptr->document()->markContentsDirty(
@@ -1625,44 +1855,46 @@ void StylesheetEditPrivate::onDocumentChanged(int pos,
   }
 }
 
-void StylesheetEditPrivate::handleTextChanged()
+void
+StylesheetEditPrivate::handleTextChanged()
 {
+  // TODO possibly remove this.
   //  //  m_highlighter->rehighlight();
   //  QTextCursor cursor = q_ptr->textCursor();
   //  qWarning();
   //  m_highlighter->rehighlight();
 }
 
-void StylesheetEditPrivate::stashPropertyEndNode(int position, Node** endnode)
+void
+StylesheetEditPrivate::stashPropertyEndNode(int position, Node** endnode)
 {
   QTextCursor cursor = getCursorForNode(position);
   *endnode = new PropertyEndNode(cursor, q_ptr);
   m_nodes->insert(cursor, *endnode);
 }
 
-void StylesheetEditPrivate::stashPropertyEndMarkerNode(int position, Node** endnode)
+void
+StylesheetEditPrivate::stashPropertyEndMarkerNode(int position, Node** endnode)
 {
   QTextCursor cursor = getCursorForNode(position);
   *endnode = new PropertyEndMarkerNode(cursor, q_ptr);
   m_nodes->insert(cursor, *endnode);
 }
 
-int StylesheetEditPrivate::parsePropertyWithValues(QTextCursor cursor,
-    PropertyNode* property,
-    const QString& text,
-    int start,
-    int& pos,
-    QString& block,
-    Node** endnode)
+int
+StylesheetEditPrivate::parsePropertyWithValues(QTextCursor cursor,
+                                               PropertyNode* property,
+                                               const QString& text,
+                                               int start,
+                                               int& pos,
+                                               QString& block,
+                                               Node** endnode)
 {
   QString propertyName = property->name();
 
   while (!(block = findNext(text, pos)).isEmpty()) {
     if (block == ":") {
       if (!property->hasPropertyMarker()) {
-        //        cursor = getCursorForNode(start + property->length());
-        //        Node* marker = new PropertyMarkerNode(cursor, q_ptr);
-        //        m_nodes->insert(cursor, marker);
         property->setPropertyMarkerExists(true);
         property->setPropertyMarkerOffset(pos);
       }
@@ -1685,13 +1917,17 @@ int StylesheetEditPrivate::parsePropertyWithValues(QTextCursor cursor,
       break;
 
     } else {
-      bool validForProperty = m_datastore->isValidPropertyValueForProperty(propertyName, block);
-      DataStore::AttributeType attributeType = m_datastore->propertyValueAttribute(block);
+      bool validForProperty =
+        m_datastore->isValidPropertyValueForProperty(propertyName, block);
+      DataStore::AttributeType attributeType =
+        m_datastore->propertyValueAttribute(block);
 
       if (validForProperty) {
         // valid property and valid value.
-        property->addValue(
-          block, PropertyNode::GoodValue, (pos - block.length()) - start, attributeType);
+        property->addValue(block,
+                           PropertyNode::GoodValue,
+                           (pos - block.length()) - start,
+                           attributeType);
 
       } else {
 
@@ -1706,21 +1942,25 @@ int StylesheetEditPrivate::parsePropertyWithValues(QTextCursor cursor,
               // set the last check value to missing property end.
               property->setBadCheck(PropertyNode::MissingPropertyEnd);
               stashPropertyEndNode(property->end(), endnode);
-
             }
 
             pos -= block.length(); // skip back before block.
             return property->end();
 
           } else {
-            property->addValue(
-              block, PropertyNode::BadValue, (pos - block.length()) - start, attributeType);
+            property->addValue(block,
+                               PropertyNode::BadValue,
+                               (pos - block.length()) - start,
+                               attributeType);
           }
 
         } else {
-          // invalid property name but this is a valid property attribute anyway.
-          property->addValue(
-            block, PropertyNode::ValidPropertyType, (pos - block.length()) - start, attributeType);
+          // invalid property name but this is a valid property attribute
+          // anyway.
+          property->addValue(block,
+                             PropertyNode::ValidPropertyType,
+                             (pos - block.length()) - start,
+                             attributeType);
         }
       }
     }
@@ -1729,7 +1969,8 @@ int StylesheetEditPrivate::parsePropertyWithValues(QTextCursor cursor,
   return property->end();
 }
 
-void StylesheetEditPrivate::parseComment(const QString& text, int& pos)
+void
+StylesheetEditPrivate::parseComment(const QString& text, int& pos)
 {
   m_startComment = true;
   QTextCursor cursor = getCursorForNode(pos);
@@ -1758,7 +1999,6 @@ void StylesheetEditPrivate::parseComment(const QString& text, int& pos)
           break;
 
         } else {
-          //          comment->append('*');
           comment->append(c);
         }
       }
@@ -1766,32 +2006,38 @@ void StylesheetEditPrivate::parseComment(const QString& text, int& pos)
   }
 }
 
-void StylesheetEditPrivate::stashBadNode(int position,
-    const QString& block,
-    ParserState::Error error)
+void
+StylesheetEditPrivate::stashBadNode(int position,
+                                    const QString& block,
+                                    ParserState::Error error)
 {
   auto cursor = getCursorForNode(position);
   auto badblock = new BadBlockNode(block, cursor, error, q_ptr);
   m_nodes->insert(cursor, badblock);
 }
 
-void StylesheetEditPrivate::stashBadSubControlMarkerNode(int position,
-    ParserState::Error error)
+void
+StylesheetEditPrivate::stashBadSubControlMarkerNode(int position,
+                                                    ParserState::Error error)
 {
   auto cursor = getCursorForNode(position);
   auto badblock = new BadSubControlMarkerNode(cursor, error, q_ptr);
   m_nodes->insert(cursor, badblock);
 }
 
-void StylesheetEditPrivate::stashBadPseudoStateMarkerNode(int position,
-    ParserState::Error error)
+void
+StylesheetEditPrivate::stashBadPseudoStateMarkerNode(int position,
+                                                     ParserState::Error error)
 {
   auto cursor = getCursorForNode(position);
   auto badblock = new BadPseudoStateMarkerNode(cursor, error, q_ptr);
   m_nodes->insert(cursor, badblock);
 }
 
-void StylesheetEditPrivate::stashPseudoState(int position, const QString& block, bool valid)
+void
+StylesheetEditPrivate::stashPseudoState(int position,
+                                        const QString& block,
+                                        bool valid)
 {
   auto cursor = getCursorForNode(position);
   auto pseudostate = new PseudoStateNode(block, cursor, q_ptr);
@@ -1799,7 +2045,10 @@ void StylesheetEditPrivate::stashPseudoState(int position, const QString& block,
   m_nodes->insert(cursor, pseudostate);
 }
 
-void StylesheetEditPrivate::stashSubControl(int position, const QString& block, bool valid)
+void
+StylesheetEditPrivate::stashSubControl(int position,
+                                       const QString& block,
+                                       bool valid)
 {
   auto cursor = getCursorForNode(position);
   auto subcontrol = new SubControlNode(block, cursor, q_ptr);
@@ -1807,7 +2056,8 @@ void StylesheetEditPrivate::stashSubControl(int position, const QString& block, 
   m_nodes->insert(cursor, subcontrol);
 }
 
-void StylesheetEditPrivate::stashEndBrace(int position)
+void
+StylesheetEditPrivate::stashEndBrace(int position)
 {
   m_braceCount--;
   auto cursor = getCursorForNode(position);
@@ -1816,7 +2066,8 @@ void StylesheetEditPrivate::stashEndBrace(int position)
   m_endbraces.append(brace);
 }
 
-void StylesheetEditPrivate::stashStartBrace(int position)
+void
+StylesheetEditPrivate::stashStartBrace(int position)
 {
   m_braceCount++;
   auto cursor = getCursorForNode(position);
@@ -1825,21 +2076,26 @@ void StylesheetEditPrivate::stashStartBrace(int position)
   m_startbraces.append(brace);
 }
 
-void StylesheetEditPrivate::stashPseudoStateMarker(int position)
+void
+StylesheetEditPrivate::stashPseudoStateMarker(int position)
 {
   auto cursor = getCursorForNode(position);
   auto marker = new PseudoStateMarkerNode(cursor, q_ptr);
   m_nodes->insert(cursor, marker);
 }
 
-void StylesheetEditPrivate::stashSubControlMarker(int position)
+void
+StylesheetEditPrivate::stashSubControlMarker(int position)
 {
   auto cursor = getCursorForNode(position);
   auto marker = new SubControlMarkerNode(cursor, q_ptr);
   m_nodes->insert(cursor, marker);
 }
 
-void StylesheetEditPrivate::stashWidget(int position, const QString& block, bool valid)
+void
+StylesheetEditPrivate::stashWidget(int position,
+                                   const QString& block,
+                                   bool valid)
 {
   auto cursor = getCursorForNode(position);
   auto widgetnode = new WidgetNode(block, cursor, q_ptr);
@@ -1847,7 +2103,8 @@ void StylesheetEditPrivate::stashWidget(int position, const QString& block, bool
   m_nodes->insert(cursor, widgetnode);
 }
 
-void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
+void
+StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
 {
   m_braceCount = 0;
   QString block;
@@ -1905,7 +2162,7 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             PropertyNode* property = new PropertyNode(block, cursor, q_ptr);
             m_nodes->insert(cursor, property);
             int end = parsePropertyWithValues(
-                        cursor, property, text, start, pos, block, &endnode);
+              cursor, property, text, start, pos, block, &endnode);
 
             // run out of text.
             if (!endnode) {
@@ -1946,7 +2203,7 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
                 property->setPropertyMarkerOffset(pos);
                 m_nodes->insert(cursor, property);
                 int end = parsePropertyWithValues(
-                            cursor, property, text, start, pos, block, &endnode);
+                  cursor, property, text, start, pos, block, &endnode);
 
                 // run out of text.
                 if (!endnode) {
@@ -2008,7 +2265,7 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
       PropertyNode* property = new PropertyNode(block, cursor, q_ptr);
       m_nodes->insert(cursor, property);
       int end = parsePropertyWithValues(
-                  cursor, property, text, start, pos, block, &endnode);
+        cursor, property, text, start, pos, block, &endnode);
 
       // run out of text.
       if (!endnode) {
@@ -2033,7 +2290,8 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             stashPseudoState(pos - nextBlock.length(), nextBlock);
             continue;
 
-          } else if (m_datastore->propertyValueAttribute(nextBlock) != DataStore::NoAttributeValue) {
+          } else if (m_datastore->propertyValueAttribute(nextBlock) !=
+                     DataStore::NoAttributeValue) {
             Node* endnode = nullptr;
             cursor = getCursorForNode(start);
             PropertyNode* property = new PropertyNode(block, cursor, q_ptr);
@@ -2042,7 +2300,7 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             m_nodes->insert(cursor, property);
             pos -= block.length(); // step back
             int end = parsePropertyWithValues(
-                        cursor, property, text, start, pos, block, &endnode);
+              cursor, property, text, start, pos, block, &endnode);
 
             // run out of text.
             if (!endnode) {
@@ -2062,7 +2320,6 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             stashSubControlMarker(oldPos);
             stashSubControl(pos - nextBlock.length(), block);
             continue;
-
           }
         }
 
@@ -2085,7 +2342,7 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
           stashWidget(start, block, false);
         }
 
-      } else {// anomalous type - see what comes next.
+      } else { // anomalous type - see what comes next.
         int oldPos = pos;
         nextBlock = findNext(text, pos);
 
@@ -2098,7 +2355,8 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             stashPseudoState(pos - nextBlock.length(), nextBlock);
             continue;
 
-          } else if (m_datastore->propertyValueAttribute(nextBlock) != DataStore::NoAttributeValue) {
+          } else if (m_datastore->propertyValueAttribute(nextBlock) !=
+                     DataStore::NoAttributeValue) {
             Node* endnode = nullptr;
             cursor = getCursorForNode(start);
             PropertyNode* property = new PropertyNode(block, cursor, q_ptr);
@@ -2107,7 +2365,7 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             m_nodes->insert(cursor, property);
             pos -= block.length(); // step back
             int end = parsePropertyWithValues(
-                        cursor, property, text, start, pos, block, &endnode);
+              cursor, property, text, start, pos, block, &endnode);
 
             // run out of text.
             if (!endnode) {
@@ -2127,7 +2385,6 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
             stashSubControlMarker(oldPos);
             stashSubControl(pos - nextBlock.length(), block);
             continue;
-
           }
         }
 
@@ -2137,7 +2394,8 @@ void StylesheetEditPrivate::parseInitialText(const QString& text, int pos)
   }
 }
 
-void StylesheetEditPrivate::skipBlanks(const QString& text, int& pos)
+void
+StylesheetEditPrivate::skipBlanks(const QString& text, int& pos)
 {
   QChar c;
 
@@ -2153,7 +2411,8 @@ void StylesheetEditPrivate::skipBlanks(const QString& text, int& pos)
   }
 }
 
-QTextCursor StylesheetEditPrivate::getCursorForNode(int position)
+QTextCursor
+StylesheetEditPrivate::getCursorForNode(int position)
 {
   QTextCursor c(q_ptr->document());
   c.movePosition(QTextCursor::Start);
@@ -2161,7 +2420,8 @@ QTextCursor StylesheetEditPrivate::getCursorForNode(int position)
   return c;
 }
 
-QString StylesheetEditPrivate::findNext(const QString& text, int& pos)
+QString
+StylesheetEditPrivate::findNext(const QString& text, int& pos)
 {
   QString block;
   QChar c;
@@ -2230,7 +2490,8 @@ QString StylesheetEditPrivate::findNext(const QString& text, int& pos)
   return QString();
 }
 
-CursorData StylesheetEditPrivate::getNodeAtCursor(QTextCursor cursor)
+CursorData
+StylesheetEditPrivate::getNodeAtCursor(QTextCursor cursor)
 {
   CursorData data;
   data.cursor = cursor;
@@ -2240,7 +2501,8 @@ CursorData StylesheetEditPrivate::getNodeAtCursor(QTextCursor cursor)
   return data;
 }
 
-CursorData StylesheetEditPrivate::getNodeAtCursor(int position)
+CursorData
+StylesheetEditPrivate::getNodeAtCursor(int position)
 {
   CursorData data;
   data.cursor = QTextCursor(q_ptr->document());
@@ -2250,7 +2512,8 @@ CursorData StylesheetEditPrivate::getNodeAtCursor(int position)
   return data;
 }
 
-void StylesheetEditPrivate::nodeAtCursorPosition(CursorData* data, int position)
+void
+StylesheetEditPrivate::nodeAtCursorPosition(CursorData* data, int position)
 {
   Node* previous;
 
@@ -2260,6 +2523,9 @@ void StylesheetEditPrivate::nodeAtCursorPosition(CursorData* data, int position)
     if (!node) {
       return;
     }
+
+    auto start = node->start();
+    auto end = node->end();
 
     if (position > node->end()) {
       previous = node;
@@ -2276,12 +2542,14 @@ void StylesheetEditPrivate::nodeAtCursorPosition(CursorData* data, int position)
   }
 }
 
-int StylesheetEditPrivate::bookmarkLineNumber() const
+int
+StylesheetEditPrivate::bookmarkLineNumber() const
 {
   return m_bookmarkLineNumber;
 }
 
-void StylesheetEditPrivate::setBookmarkLineNumber(int bookmarkLineNumber)
+void
+StylesheetEditPrivate::setBookmarkLineNumber(int bookmarkLineNumber)
 {
   m_bookmarkLineNumber = bookmarkLineNumber;
 }
@@ -2296,12 +2564,14 @@ LineNumberArea::LineNumberArea(StylesheetEdit* editor)
   , m_left(0)
 {}
 
-QSize LineNumberArea::sizeHint() const
+QSize
+LineNumberArea::sizeHint() const
 {
   return QSize(m_codeEditor->lineNumberAreaWidth(), 0);
 }
 
-void LineNumberArea::paintEvent(QPaintEvent* event)
+void
+LineNumberArea::paintEvent(QPaintEvent* event)
 {
   QRect rect;
   rect.setLeft(m_left);
@@ -2311,8 +2581,8 @@ void LineNumberArea::paintEvent(QPaintEvent* event)
   QTextBlock block = m_codeEditor->firstVisibleBlock();
   int blockNumber = block.blockNumber();
   int top = qRound(m_codeEditor->blockBoundingGeometry(block)
-                   .translated(m_codeEditor->contentOffset())
-                   .top());
+                     .translated(m_codeEditor->contentOffset())
+                     .top());
   int bottom = top + qRound(m_codeEditor->blockBoundingRect(block).height());
   int height = m_codeEditor->fontMetrics().height();
   double blockHeight = m_codeEditor->blockBoundingRect(block).height();
@@ -2344,42 +2614,50 @@ void LineNumberArea::paintEvent(QPaintEvent* event)
   }
 }
 
-int LineNumberArea::left() const
+int
+LineNumberArea::left() const
 {
   return m_left;
 }
 
-void LineNumberArea::setLeft(int left)
+void
+LineNumberArea::setLeft(int left)
 {
   m_left = left;
 }
 
-int LineNumberArea::currentLineNumber() const
+int
+LineNumberArea::currentLineNumber() const
 {
   return m_currentLineNumber;
 }
 
-int StylesheetEdit::bookmarkAreaWidth()
+int
+StylesheetEdit::bookmarkAreaWidth()
 {
   return d_ptr->bookmarkAreaWidth();
 }
 
-int StylesheetEditPrivate::bookmarkAreaWidth()
+int
+StylesheetEditPrivate::bookmarkAreaWidth()
 {
   return m_bookmarkArea->bookmarkAreaWidth();
 }
 
-int StylesheetEdit::lineNumberAreaWidth()
+int
+StylesheetEdit::lineNumberAreaWidth()
 {
   return d_ptr->lineNumberAreaWidth();
 }
 
-int StylesheetEditPrivate::lineNumberAreaWidth()
+int
+StylesheetEditPrivate::lineNumberAreaWidth()
 {
   return m_lineNumberArea->lineNumberAreaWidth();
 }
 
-int LineNumberArea::lineNumberAreaWidth()
+int
+LineNumberArea::lineNumberAreaWidth()
 {
   int digits = 1;
   int max = qMax(1, m_codeEditor->blockCount());
@@ -2396,63 +2674,75 @@ int LineNumberArea::lineNumberAreaWidth()
   return space;
 }
 
-QMap<int, BookmarkData*>* StylesheetEdit::bookmarks()
+QMap<int, BookmarkData*>*
+StylesheetEdit::bookmarks()
 {
   return d_ptr->bookmarks();
 }
 
-QMap<int, BookmarkData*>* StylesheetEditPrivate::bookmarks()
+QMap<int, BookmarkData*>*
+StylesheetEditPrivate::bookmarks()
 {
   return m_bookmarkArea->bookmarks();
 }
 
-void StylesheetEdit::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
+void
+StylesheetEdit::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
 {
   d_ptr->setBookmarks(bookmarks);
 }
 
-void StylesheetEditPrivate::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
+void
+StylesheetEditPrivate::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
 {
   m_bookmarkArea->setBookmarks(bookmarks);
 }
 
-void StylesheetEdit::handleAddBookmark(bool)
+void
+StylesheetEdit::handleAddBookmark(bool)
 {
   d_ptr->insertBookmark();
 }
 
-void StylesheetEdit::insertBookmark(int bookmark, const QString& text)
+void
+StylesheetEdit::insertBookmark(int bookmark, const QString& text)
 {
   d_ptr->insertBookmark(bookmark, text);
 }
 
-void StylesheetEditPrivate::insertBookmark(int bookmark, const QString& text)
+void
+StylesheetEditPrivate::insertBookmark(int bookmark, const QString& text)
 {
   int bm = (bookmark >= 0 ? bookmark : m_bookmarkLineNumber);
   m_bookmarkArea->insertBookmark(bm, text);
 }
 
-void StylesheetEdit::toggleBookmark(int bookmark)
+void
+StylesheetEdit::toggleBookmark(int bookmark)
 {
   d_ptr->toggleBookmark(bookmark);
 }
 
-void StylesheetEditPrivate::toggleBookmark(int bookmark)
+void
+StylesheetEditPrivate::toggleBookmark(int bookmark)
 {
   m_bookmarkArea->toggleBookmark(bookmark);
 }
 
-void StylesheetEdit::editBookmark(int bookmark)
+void
+StylesheetEdit::editBookmark(int bookmark)
 {
   d_ptr->editBookmark(bookmark);
 }
 
-void StylesheetEdit::handleEditBookmark(bool)
+void
+StylesheetEdit::handleEditBookmark(bool)
 {
   d_ptr->editBookmark();
 }
 
-void StylesheetEditPrivate::editBookmark(int bookmark)
+void
+StylesheetEditPrivate::editBookmark(int bookmark)
 {
   int lineNumber = (bookmark >= 0 ? bookmark : m_bookmarkLineNumber);
   QString text = bookmarkText(lineNumber);
@@ -2469,87 +2759,102 @@ void StylesheetEditPrivate::editBookmark(int bookmark)
   }
 }
 
-void StylesheetEdit::removeBookmark(int bookmark)
+void
+StylesheetEdit::removeBookmark(int bookmark)
 {
   d_ptr->removeBookmark(bookmark);
 }
 
-void StylesheetEdit::handleRemoveBookmark(bool)
+void
+StylesheetEdit::handleRemoveBookmark(bool)
 {
   d_ptr->removeBookmark();
 }
 
-void StylesheetEditPrivate::removeBookmark(int bookmark)
+void
+StylesheetEditPrivate::removeBookmark(int bookmark)
 {
   int lineNumber = (bookmark >= 0 ? bookmark : m_bookmarkLineNumber);
   m_bookmarkArea->removeBookmark(lineNumber);
 }
 
-void StylesheetEdit::clearBookmarks()
+void
+StylesheetEdit::clearBookmarks()
 {
   d_ptr->clearBookmarks();
 }
 
-void StylesheetEdit::handleClearBookmarks(bool)
+void
+StylesheetEdit::handleClearBookmarks(bool)
 {
   auto btn = QMessageBox::warning(
-               this,
-               tr("Clearing Book marks"),
-               tr("You are about to remove ALL bookmarks!\nAre you sure?"),
-               QMessageBox::Cancel | QMessageBox::Ok,
-               QMessageBox::Cancel);
+    this,
+    tr("Clearing Book marks"),
+    tr("You are about to remove ALL bookmarks!\nAre you sure?"),
+    QMessageBox::Cancel | QMessageBox::Ok,
+    QMessageBox::Cancel);
 
   if (btn == QMessageBox::Ok) {
     d_ptr->clearBookmarks();
   }
 }
 
-void StylesheetEditPrivate::clearBookmarks()
+void
+StylesheetEditPrivate::clearBookmarks()
 {
   m_bookmarkArea->clearBookmarks();
 }
 
-bool StylesheetEdit::hasBookmark(int bookmark)
+bool
+StylesheetEdit::hasBookmark(int bookmark)
 {
   return d_ptr->hasBookmark(bookmark);
 }
 
-bool StylesheetEditPrivate::hasBookmark(int linenumber)
+bool
+StylesheetEditPrivate::hasBookmark(int linenumber)
 {
   return m_bookmarkArea->hasBookmark(linenumber);
 }
 
-bool StylesheetEdit::hasBookmarkText(int bookmark)
+bool
+StylesheetEdit::hasBookmarkText(int bookmark)
 {
   return d_ptr->hasBookmarkText(bookmark);
 }
 
-bool StylesheetEditPrivate::hasBookmarkText(int bookmark)
+bool
+StylesheetEditPrivate::hasBookmarkText(int bookmark)
 {
   return m_bookmarkArea->hasBookmarkText(bookmark);
 }
 
-QString StylesheetEdit::bookmarkText(int bookmark)
+QString
+StylesheetEdit::bookmarkText(int bookmark)
 {
   return d_ptr->bookmarkText(bookmark);
 }
 
-QString StylesheetEditPrivate::bookmarkText(int bookmark)
+QString
+StylesheetEditPrivate::bookmarkText(int bookmark)
 {
   return m_bookmarkArea->bookmarkText(bookmark);
 }
 
-void StylesheetEdit::gotoBookmark(int bookmark)
+void
+StylesheetEdit::gotoBookmark(int bookmark)
 {
   d_ptr->gotoBookmark(bookmark);
 }
 
-void StylesheetEdit::gotoBookmarkDialog(bool)
+void
+StylesheetEdit::gotoBookmarkDialog(bool)
 {
   handleGotoBookmark();
 }
 
-void StylesheetEdit::handleGotoBookmark()
+void
+StylesheetEdit::handleGotoBookmark()
 {
   GoToBookmarkDialog* dlg = new GoToBookmarkDialog(bookmarks(), this);
 
@@ -2562,45 +2867,99 @@ void StylesheetEdit::handleGotoBookmark()
   }
 }
 
-void StylesheetEditPrivate::gotoBookmark(int bookmark)
+void
+StylesheetEditPrivate::gotoBookmark(int bookmark)
 {
   if (hasBookmark(bookmark)) {
     setLineNumber(bookmark);
   }
 }
 
-QTextCursor StylesheetEditPrivate::currentCursor() const
+void
+StylesheetEditPrivate::handleContextMenuEvent(QPoint pos)
+{
+  m_contextMenu->exec(pos);
+}
+
+void
+StylesheetEditPrivate::handleBookmarkMenuEvent(QPoint pos)
+{
+  auto tc = q_ptr->cursorForPosition(pos);
+  int lineNumber = calculateLineNumber(tc);
+  setBookmarkLineNumber(lineNumber);
+
+  if (hasBookmark(lineNumber)) {
+    m_addBookmarkAct->setEnabled(false);
+    m_editBookmarkAct->setEnabled(true);
+    m_removeBookmarkAct->setEnabled(true);
+
+  } else {
+    m_addBookmarkAct->setEnabled(true);
+    m_editBookmarkAct->setEnabled(false);
+    m_removeBookmarkAct->setEnabled(false);
+  }
+
+  if (bookmarkCount() == 0) {
+    m_clearBookmarksAct->setEnabled(false);
+    m_gotoBookmarkAct->setEnabled(false);
+
+  } else {
+    m_clearBookmarksAct->setEnabled(true);
+    m_gotoBookmarkAct->setEnabled(true);
+  }
+
+  m_bookmarkMenu->exec(pos);
+}
+
+QTextCursor
+StylesheetEditPrivate::currentCursor() const
 {
   return m_currentCursor;
 }
 
-void StylesheetEditPrivate::setCurrentCursor(const QTextCursor& currentCursor)
+void
+StylesheetEditPrivate::setCurrentCursor(const QTextCursor& currentCursor)
 {
   m_currentCursor = currentCursor;
   setLineData(currentCursor);
 }
 
-int StylesheetEdit::currentLineNumber() const
+int
+StylesheetEdit::currentLineNumber() const
 {
   return d_ptr->currentLineNumber();
 }
 
-int StylesheetEditPrivate::currentLineNumber() const
+int
+StylesheetEditPrivate::currentLineNumber() const
 {
   return m_lineNumberArea->currentLineNumber();
 }
 
-int StylesheetEditPrivate::currentLineCount() const
+int
+StylesheetEditPrivate::currentLineCount() const
 {
   return m_lineCount;
 }
 
-void StylesheetEdit::setLineNumber(int lineNumber)
+void
+StylesheetEdit::setLineNumber(int lineNumber)
 {
   d_ptr->setLineNumber(lineNumber);
 }
 
-void StylesheetEditPrivate::setLineNumber(int linenumber)
+void
+StylesheetEdit::suggestion(bool)
+{
+  auto act = dynamic_cast<QAction*>(sender());
+
+  if (act) {
+    d_ptr->handleSuggestion(act);
+  }
+}
+
+void
+StylesheetEditPrivate::setLineNumber(int linenumber)
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2613,17 +2972,20 @@ void StylesheetEditPrivate::setLineNumber(int linenumber)
   m_manualMove = false;
 }
 
-void StylesheetEdit::up(bool)
+void
+StylesheetEdit::up(bool)
 {
   up(1);
 }
 
-void StylesheetEdit::up(int n)
+void
+StylesheetEdit::up(int n)
 {
   d_ptr->up(n);
 }
 
-void StylesheetEditPrivate::setLineData(QTextCursor cursor)
+void
+StylesheetEditPrivate::setLineData(QTextCursor cursor)
 {
   // this handles display of linenumber, linecount and character column.
   int ln = calculateLineNumber(cursor);
@@ -2633,7 +2995,8 @@ void StylesheetEditPrivate::setLineData(QTextCursor cursor)
   emit q_ptr->lineCount(m_lineCount);
 }
 
-void StylesheetEditPrivate::up(int n)
+void
+StylesheetEditPrivate::up(int n)
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2644,17 +3007,20 @@ void StylesheetEditPrivate::up(int n)
   m_manualMove = false;
 }
 
-void StylesheetEdit::down(bool)
+void
+StylesheetEdit::down(bool)
 {
   down(1);
 }
 
-void StylesheetEdit::down(int n)
+void
+StylesheetEdit::down(int n)
 {
   d_ptr->down(n);
 }
 
-void StylesheetEditPrivate::down(int n)
+void
+StylesheetEditPrivate::down(int n)
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2665,17 +3031,20 @@ void StylesheetEditPrivate::down(int n)
   m_manualMove = false;
 }
 
-void StylesheetEdit::left(bool)
+void
+StylesheetEdit::left(bool)
 {
   left(1);
 }
 
-void StylesheetEdit::left(int n)
+void
+StylesheetEdit::left(int n)
 {
   d_ptr->left(n);
 }
 
-void StylesheetEditPrivate::left(int n)
+void
+StylesheetEditPrivate::left(int n)
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2686,17 +3055,20 @@ void StylesheetEditPrivate::left(int n)
   m_manualMove = false;
 }
 
-void StylesheetEdit::right(bool)
+void
+StylesheetEdit::right(bool)
 {
   right(1);
 }
 
-void StylesheetEdit::right(int n)
+void
+StylesheetEdit::right(int n)
 {
   d_ptr->right(n);
 }
 
-void StylesheetEditPrivate::right(int n)
+void
+StylesheetEditPrivate::right(int n)
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2707,12 +3079,14 @@ void StylesheetEditPrivate::right(int n)
   m_manualMove = false;
 }
 
-void StylesheetEdit::start()
+void
+StylesheetEdit::start()
 {
   d_ptr->start();
 }
 
-void StylesheetEditPrivate::start()
+void
+StylesheetEditPrivate::start()
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2723,12 +3097,14 @@ void StylesheetEditPrivate::start()
   m_manualMove = false;
 }
 
-void StylesheetEdit::end()
+void
+StylesheetEdit::end()
 {
   d_ptr->end();
 }
 
-void StylesheetEditPrivate::end()
+void
+StylesheetEditPrivate::end()
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2739,12 +3115,14 @@ void StylesheetEditPrivate::end()
   m_manualMove = false;
 }
 
-void StylesheetEdit::startOfLine()
+void
+StylesheetEdit::startOfLine()
 {
   d_ptr->startOfLine();
 }
 
-void StylesheetEditPrivate::startOfLine()
+void
+StylesheetEditPrivate::startOfLine()
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2755,12 +3133,14 @@ void StylesheetEditPrivate::startOfLine()
   m_manualMove = false;
 }
 
-void StylesheetEdit::endOfLine()
+void
+StylesheetEdit::endOfLine()
 {
   d_ptr->endOfLine();
 }
 
-void StylesheetEditPrivate::endOfLine()
+void
+StylesheetEditPrivate::endOfLine()
 {
   m_manualMove = true;
   QTextCursor cursor(currentCursor());
@@ -2771,62 +3151,74 @@ void StylesheetEditPrivate::endOfLine()
   m_manualMove = false;
 }
 
-void StylesheetEdit::goToLine(int lineNumber)
+void
+StylesheetEdit::goToLine(int lineNumber)
 {
   d_ptr->setLineNumber(lineNumber);
 }
 
-int StylesheetEdit::bookmarkCount()
+int
+StylesheetEdit::bookmarkCount()
 {
   return d_ptr->bookmarkCount();
 }
 
-int StylesheetEditPrivate::bookmarkCount()
+int
+StylesheetEditPrivate::bookmarkCount()
 {
   return m_bookmarkArea->count();
 }
 
-QFont::Weight LineNumberArea::weight() const
+QFont::Weight
+LineNumberArea::weight() const
 {
   return m_weight;
 }
 
-void LineNumberArea::setWeight(const QFont::Weight& weight)
+void
+LineNumberArea::setWeight(const QFont::Weight& weight)
 {
   m_weight = weight;
 }
 
-QColor LineNumberArea::back() const
+QColor
+LineNumberArea::back() const
 {
   return m_back;
 }
 
-void LineNumberArea::setBack(const QColor& back)
+void
+LineNumberArea::setBack(const QColor& back)
 {
   m_back = back;
 }
 
-QColor LineNumberArea::foreSelected() const
+QColor
+LineNumberArea::foreSelected() const
 {
   return m_foreSelected;
 }
 
-void LineNumberArea::setForeSelected(const QColor& fore)
+void
+LineNumberArea::setForeSelected(const QColor& fore)
 {
   m_foreSelected = fore;
 }
 
-QColor LineNumberArea::foreUnselected() const
+QColor
+LineNumberArea::foreUnselected() const
 {
   return m_foreUnselected;
 }
 
-void LineNumberArea::setForeUnselected(const QColor& fore)
+void
+LineNumberArea::setForeUnselected(const QColor& fore)
 {
   m_foreUnselected = fore;
 }
 
-void LineNumberArea::setLineNumber(int lineNumber)
+void
+LineNumberArea::setLineNumber(int lineNumber)
 {
   m_currentLineNumber = lineNumber;
 }

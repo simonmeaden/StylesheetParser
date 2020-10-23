@@ -65,6 +65,7 @@ target_sources(tst_parser
       src/abstractlabelledwidget.cpp
       src/labelledlineedit.cpp
       src/labelledspinbox.cpp
+      src/fts_fuzzy_match.h
 
    )
 target_include_directories(tst_parser

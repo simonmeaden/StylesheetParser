@@ -173,6 +173,11 @@ QPair<NameNode::SectionType, int> NamedNode::isIn(QPoint pos)
   return qMakePair<SectionType, int>(NameNode::None, -1);
 }
 
+int NamedNode::end() const
+{
+  return start() + length();
+}
+
 
 BadBlockNode::BadBlockNode(const QString& name,
                            QTextCursor start,
@@ -411,6 +416,22 @@ QPair<NameNode::SectionType, int> PropertyNode::isIn(QPoint pos)
   } // else return not inside.
 
   return qMakePair<SectionType, int>(NamedNode::None, -1);
+}
+
+QPair<bool, QString> PropertyNode::isProperty(int pos)
+{
+  if (pos < m_name.length()) {
+    return qMakePair<bool, QString>(true, m_name);
+  } else {
+    for (int i = 0; i < m_values.size(); i++) {
+      auto value = m_values.at(i);
+      auto offset = m_offsets.at(i);
+      if (pos >= offset && pos < offset + value.length()) {
+        return qMakePair<bool, QString>(false, value);
+      }
+    }
+  }
+  return qMakePair<bool, QString>(false, QString());
 }
 
 void PropertyNode::setAttributeTypes(const QList<DataStore::AttributeType>& attributeTypes)

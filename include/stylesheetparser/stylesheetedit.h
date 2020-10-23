@@ -199,6 +199,10 @@ public:
   void contextBookmarkMenuEvent(QContextMenuEvent* event);
 //  void drawHoverWidget(QPoint pos, QString text);
 
+  int maxSuggestionCount() const;
+  void setMaxSuggestionCount(int maxSuggestionCount);
+
+
   /// \cond DO_NOT_DOCUMENT
   // These should not be documented as they are only removing protected status.
   QTextBlock firstVisibleBlock() {
@@ -231,14 +235,12 @@ protected:
   void leaveEvent(QEvent *event) override;
 
   void setLineNumber(int lineNumber);
+  void suggestion(bool);
 
 
 private:
   StylesheetEditPrivate* d_ptr;
   Node* m_hoverNode;
-  QAction* m_formatAct;
-  QAction* m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct, *m_clearBookmarksAct, *m_gotoBookmarkAct;
-  QMenu* m_contextMenu, *m_bookmarkMenu;
 
   void initActions();
   void initMenus();
@@ -254,6 +256,7 @@ private:
   void updateLeftArea(const QRect& rect, int dy);
   void updateLeftAreaWidth(int);
 
+  
 public:
   static const QChar m_arrow;
 

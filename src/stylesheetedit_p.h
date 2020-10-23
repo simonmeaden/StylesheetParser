@@ -123,9 +123,23 @@ struct StylesheetEditPrivate
   StylesheetData m_stylesheetData;
   bool m_startComment;
   HoverWidget* m_hoverWidget;
+  Node* m_currentHover;
+  NamedNode* m_currentWidget;
   bool m_manualMove;
   QTextCursor m_currentCursor;
   int m_lineCount;
+
+  QAction* m_formatAct;
+  QAction* m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct, *m_clearBookmarksAct, *m_gotoBookmarkAct;
+  QMenu* m_contextMenu, *m_bookmarkMenu;
+  void initActions();
+  void initMenus();
+  QMenu *createContextMenu();
+  void createBookmarkMenu();
+
+
+  // TODO possibly to steup?
+  int m_maxSuggestionCount;
 
   void setPlainText(const QString& text);
 
@@ -135,7 +149,6 @@ struct StylesheetEditPrivate
 
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
-
 
   int currentLineNumber() const;
   int currentLineCount() const;
@@ -168,6 +181,8 @@ struct StylesheetEditPrivate
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
   void handleGotoBookmark(bool);
+  void handleContextMenuEvent(QPoint pos);
+  void handleBookmarkMenuEvent(QPoint pos);
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
@@ -236,12 +251,14 @@ struct StylesheetEditPrivate
   void handleMouseMove(QPoint pos);
   void handleLeaveEvent();
   void displayBookmark(BookmarkData*data, QPoint pos);
-  void displayError(QString text, QPoint pos);
-  void displayError(WidgetNode *widget, QPoint pos);
-  void displayError(BadBlockNode* badNode, QPoint pos);
-  void displayError(PropertyNode* property, QPoint pos);
+//  void displayError(QString text, QPoint pos);
+//  void displayError(WidgetNode *widget, QPoint pos);
+//  void displayError(BadBlockNode* badNode, QPoint pos);
+//  void displayError(PropertyNode* property, QPoint pos);
 
   void handleCursorPositionChanged(QTextCursor textCursor);
+  void handleSuggestion(QAction *act);
+
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
   Node* nextNode(QTextCursor cursor);
@@ -299,10 +316,22 @@ struct StylesheetEditPrivate
 public:
   int getLineCount() const;
 
+  int maxSuggestionCount() const;
+  void setMaxSuggestionCount(int maxSuggestionCount);
+
 private:
   void setLineData(QTextCursor cursor);
   void createHover();
   QPair<NameNode::SectionType, int> nodeForPoint(const QPoint &pos, NamedNode **nNode);
+  void hoverWidgetType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
+  void hoverPseudoStateType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
+  void hoverSubControlType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
+  void hoverPropertyType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
+  QList<int> reverseLastNValues(QMap<int, QString> matches);
+
+
+  void updateContextMenu(QMenu *contextMenu, QMap<int, QString> matches, NamedNode *nNode);
+  void updatePropertyContextMenu(QMenu *contextMenu, QMap<int, QString> matches, NamedNode *nNode);
 };
 
 

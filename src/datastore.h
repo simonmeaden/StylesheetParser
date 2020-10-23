@@ -25,6 +25,9 @@
 #include <QMap>
 #include <QFile>
 
+#define FTS_FUZZY_MATCH_IMPLEMENTATION
+#include "fts_fuzzy_match.h"
+
 class StylesheetEdit;
 class StylesheetData;
 
@@ -73,22 +76,29 @@ public:
   };
 
   explicit DataStore(QObject* parent);
+  ~DataStore();
 
-  QStringList widgets() const;
+  //  QStringList widgets() const;
 
   void addWidget(const QString& widget);
   void removeWidget(const QString& widget);
   bool containsWidget(const QString& name);
+  QMap<int, QString> fuzzySearchWidgets(const QString& name);
   bool containsProperty(const QString& name);
+  QMap<int, QString> fuzzySearchProperty(const QString& name);
+  QMap<int, QString> fuzzySearchPropertyValue(const QString& name, const QString &value);
   bool containsStylesheetProperty(const QString& name);
   bool containsPseudoState(const QString& name);
+  QMap<int, QString> fuzzySearchPseudoStates(const QString& name);
   bool containsSubControl(const QString& name);
+  QMap<int, QString> fuzzySearchSubControl(const QString& name);
 
   bool getIfValidStylesheetValue(const QString& propertyname, const QString& valuename,
                                  StylesheetData* data);
   bool isValidPropertyValueForProperty(const QString& propertyname, const QString& value);
-//  QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
+  //  QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
   AttributeType propertyValueAttribute(const QString& value);
+  QMap<int, QString> propertyValueAttributes(const QString &name, const QString& value);
 
   //! Returns the names of all widgets for which this sub-control is valid.
   QStringList possibleSubControlWidgets(const QString& name) const;
@@ -101,12 +111,16 @@ public:
 
 private:
   QStringList m_widgets;
+//  char* m_fuzzyWidgets;
   QStringList m_colors;
   QStringList m_attributeNames;
   QStringList m_properties;
   QStringList m_pseudoStates;
   QStringList m_possibleWidgets;
   QStringList m_StylesheetProperties;
+  QStringList m_alignmentValues;
+  QStringList m_paletteRoles;
+
   QMap<QString, QStringList> m_subControls;
   QMap<QString, AttributeType> m_attributes;
   QMap<QString, AttributeType> m_stylesheetAttributes;
@@ -152,7 +166,7 @@ private:
                            StylesheetData* data = nullptr);
   bool checkStylesheetEditBad(const QString& value,
                               StylesheetData* data = nullptr);
-  bool checkStylesheetFontWeight(const QString& value, StylesheetData *data);
+  bool checkStylesheetFontWeight(const QString& value, StylesheetData* data);
 
   QMap<QString, QStringList> initialiseSubControlMap();
   QStringList initialiseWidgetList();
@@ -165,6 +179,7 @@ private:
 
   QStringList addControls(int count, ...);
 
+  QMap<int, QString> fuzzySearch(const QString &name, QStringList list);
 };
 
 

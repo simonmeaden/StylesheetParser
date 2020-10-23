@@ -1,29 +1,30 @@
 /*
   Copyright 2020 Simon Meaden
 
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this
-  software and associated documentation files (the "Software"), to deal in the Software
-  without restriction, including without limitation the rights to use, copy, modify, merge,
-  publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-                                                                         persons to whom the Software is furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in all copies or
-  substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 */
 #include "bookmarkarea.h"
 
 #include "hoverwidget.h"
-#include "stylesheetparser/stylesheetedit.h"
 #include "stylesheetparser/labelledlineedit.h"
 #include "stylesheetparser/labelledspinbox.h"
-
+#include "stylesheetparser/stylesheetedit.h"
 
 BookmarkArea::BookmarkArea(StylesheetEdit* editor)
   : QWidget(editor)
@@ -34,8 +35,16 @@ BookmarkArea::BookmarkArea(StylesheetEdit* editor)
   , m_width(15)
   , m_left(0)
   , m_bookmarks(new QMap<int, BookmarkData*>())
-  , m_hoverWidget(nullptr)
 {
+  m_hoverWidget = new HoverWidget(editor);
+  m_hoverWidget->setVisible(
+    true); // always showing just 0 size when not needed.
+  m_hoverWidget->setPosition(QPoint(0, 0));
+  m_hoverWidget->hideHover();
+  m_hoverWidget->setDefaultBackground(QColor("lightyellow"));
+  m_hoverWidget->setDefaultForeground(QColor("lightgrey"));
+  m_hoverWidget->setHorizontalOffset(0);
+  m_hoverWidget->setVerticalOffset(40);
   setMouseTracking(true);
 }
 
@@ -136,16 +145,11 @@ void BookmarkArea::mouseMoveEvent(QMouseEvent* event)
   QPoint pos = event->pos();
 
   if (underMouse() && m_bookmarks->contains(lineNumber)) {
-    if (!m_hoverWidget) {
-      m_hoverWidget = new HoverWidget(m_editor);
-    }
-
-    m_hoverWidget->setHoverText(pos, bookmarkText(lineNumber));
+    m_hoverWidget->setHoverText(bookmarkText(lineNumber));
+    m_hoverWidget->setPosition(pos);
 
   } else {
-    if (m_hoverWidget && m_hoverWidget->isVisible()) {
-      m_hoverWidget->hideHover();
-    }
+    m_hoverWidget->hideHover();
   }
 }
 
@@ -166,7 +170,7 @@ void BookmarkArea::leaveEvent(QEvent* event)
   }
 }
 
-//void BookmarkArea::drawHoverWidget(QPoint pos, QString text)
+// void BookmarkArea::drawHoverWidget(QPoint pos, QString text)
 //{
 
 //  m_hoverWidget->setText(text);
@@ -175,7 +179,7 @@ void BookmarkArea::leaveEvent(QEvent* event)
 //  m_hoverWidget->show();
 //}
 
-//void BookmarkArea::hideHoverWidget()
+// void BookmarkArea::hideHoverWidget()
 //{
 //  if (m_hoverWidget) {
 //    m_hoverWidget->hide();
@@ -349,7 +353,6 @@ QVariant BookmarkModel::headerData(int section,
   return QVariant();
 }
 
-
 GoToBookmarkDialog::GoToBookmarkDialog(QMap<int, BookmarkData*>* bookmarks,
                                        QWidget* parent)
   : QDialog(parent)
@@ -449,6 +452,5 @@ int BookmarkEditDialog::lineNumber()
 {
   return m_linenumberEdit->value();
 }
-
 
 /// \endcond DO_NOT_DOCUMENT

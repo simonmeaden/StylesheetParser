@@ -32,8 +32,10 @@
 #include <QResizeEvent>
 #include <QTextCharFormat>
 #include <QWidget>
+#include <QThread>
 
 #include "datastore.h"
+#include "common.h"
 #include "node.h"
 #include "parserstate.h"
 #include "stylesheethighlighter.h"
@@ -46,23 +48,9 @@ class StylesheetEdit;
 class BookmarkData;
 class BookmarkArea;
 class HoverWidget;
+class Parser;
+class StylesheetData;
 
-class StylesheetData
-{
-public:
-  QString name;
-  QList<QColor> colors;
-  QList<QFont::Weight> weights;
-  QList<QTextCharFormat::UnderlineStyle> underline;
-};
-
-struct CursorData
-{
-  QTextCursor cursor;
-  Node* node = nullptr;
-  Node* prevNode = nullptr;
-  //  int start;
-};
 
 
 class LineNumberArea : public QWidget
@@ -109,39 +97,40 @@ struct StylesheetEditPrivate
   StylesheetEdit* q_ptr;
   BookmarkArea* m_bookmarkArea;
   LineNumberArea* m_lineNumberArea;
-  DataStore* m_datastore;
-  //  Parser* m_parser;
+//  DataStore* m_datastore;
+    Parser* m_parser;
   StylesheetHighlighter* m_highlighter;
   //  QList<Node*>* m_nodes;
-  QMap<QTextCursor, Node*>* m_nodes;
-  QList<StartBraceNode*> m_startbraces;
-  QList<EndBraceNode*> m_endbraces;
-  int m_braceCount;
+//  QMap<QTextCursor, Node*>* m_nodes;
+//  QList<StartBraceNode*> m_startbraces;
+//  QList<EndBraceNode*> m_endbraces;
+//  int m_braceCount;
   bool m_bracesMatched;
   PropertyNode* m_propertynode = nullptr;
   QString m_stylesheet;
-  StylesheetData m_stylesheetData;
-  bool m_startComment;
+//  StylesheetData m_stylesheetData;
+//  bool m_startComment;
   HoverWidget* m_hoverWidget;
   Node* m_currentHover;
-  NamedNode* m_currentWidget;
-  bool m_manualMove;
-  QTextCursor m_currentCursor;
+//  NamedNode* m_currentWidget;
+//  bool m_manualMove;
+//  QTextCursor m_currentCursor;
   int m_lineCount;
 
-  QAction* m_formatAct;
+//  QAction* m_formatAct,*m_addPropertyMarkerAct;
   QAction* m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct, *m_clearBookmarksAct, *m_gotoBookmarkAct;
-  QMenu* m_contextMenu, *m_bookmarkMenu;
+  QMenu* m_contextMenu, *m_bookmarkMenu, *m_suggestionsMenu;
   void initActions();
   void initMenus();
-  QMenu *createContextMenu();
+//  QMenu *createContextMenu();
   void createBookmarkMenu();
 
 
   // TODO possibly to steup?
-  int m_maxSuggestionCount;
+//  int m_maxSuggestionCount;
 
   void setPlainText(const QString& text);
+  void handleParseComplete();
 
   QMap<QTextCursor, Node*>* nodes();
 
@@ -186,7 +175,7 @@ struct StylesheetEditPrivate
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
-  StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
+//  StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
 
   //  //! Sets a new color/fontweight pair for the highlighter base format
   //! Sets a new color/fontweight pair for the highlighter value format
@@ -261,44 +250,44 @@ struct StylesheetEditPrivate
 
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
-  Node* nextNode(QTextCursor cursor);
-  Node* previousNode(QTextCursor cursor);
+//  Node* nextNode(QTextCursor cursor);
+//  Node* previousNode(QTextCursor cursor);
 
-  void parseInitialText(const QString& text, int pos = 0);
-  int parsePropertyWithValues(QTextCursor cursor,
-                              PropertyNode* property,
-                              const QString& text,
-                              int start,
-                              int& pos,
-                              QString& block,
-                              Node** endnode);
-  void parseComment(const QString& text, int& pos);
-  void stashWidget(int position, const QString& block, bool valid=true);
-  void stashBadNode(int position,
-                    const QString& block,
-                    ParserState::Error error);
-  void stashBadSubControlMarkerNode(int position, ParserState::Error error);
-  void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
-  void stashPseudoState(int position, const QString& block, bool valid=true);
-  void stashSubControl(int position, const QString& block, bool valid=true);
-  void stashEndBrace(int position);
-  void stashStartBrace(int position);
-  void stashPseudoStateMarker(int position);
-  void stashSubControlMarker(int position);
-  void stashPropertyEndNode(int position, Node** endnode);
-  void stashPropertyEndMarkerNode(int position, Node** endnode);
-  void updatePropertyValues(int pos,
-                            PropertyNode* property,
-                            int charsAdded,
-                            int charsRemoved,
-                            const QString& newValue);
+//  void parseInitialText(const QString& text, int pos = 0);
+//  int parsePropertyWithValues(QTextCursor cursor,
+//                              PropertyNode* property,
+//                              const QString& text,
+//                              int start,
+//                              int& pos,
+//                              QString& block,
+//                              Node** endnode);
+//  void parseComment(const QString& text, int& pos);
+//  void stashWidget(int position, const QString& block, bool valid=true);
+//  void stashBadNode(int position,
+//                    const QString& block,
+//                    ParserState::Error error);
+//  void stashBadSubControlMarkerNode(int position, ParserState::Error error);
+//  void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
+//  void stashPseudoState(int position, const QString& block, bool valid=true);
+//  void stashSubControl(int position, const QString& block, bool valid=true);
+//  void stashEndBrace(int position);
+//  void stashStartBrace(int position);
+//  void stashPseudoStateMarker(int position);
+//  void stashSubControlMarker(int position);
+//  void stashPropertyEndNode(int position, Node** endnode);
+//  void stashPropertyEndMarkerNode(int position, Node** endnode);
+//  void updatePropertyValues(int pos,
+//                            PropertyNode* property,
+//                            int charsAdded,
+//                            int charsRemoved,
+//                            const QString& newValue);
 //  int calculateWidth(QString name, int offset, QFontMetrics fm);
 
   // Skips blank characters (inc \n\t etc.) and returns the first non-blank
   // character.
-  void skipBlanks(const QString& text, int& pos);
-  QTextCursor getCursorForNode(int position);
-  QString findNext(const QString& text, int& pos);
+//  void skipBlanks(const QString& text, int& pos);
+//  QTextCursor getCursorForNode(int position);
+//  QString findNext(const QString& text, int& pos);
 
   CursorData getNodeAtCursor(QTextCursor cursor);
   CursorData getNodeAtCursor(int position);
@@ -322,16 +311,18 @@ public:
 private:
   void setLineData(QTextCursor cursor);
   void createHover();
-  QPair<NameNode::SectionType, int> nodeForPoint(const QPoint &pos, NamedNode **nNode);
-  void hoverWidgetType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
-  void hoverPseudoStateType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
-  void hoverSubControlType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
-  void hoverPropertyType(NamedNode *nNode, QPair<NameNode::SectionType, int> isin, QPoint pos);
+//  QPair<NameNode::SectionType, int> nodeForPoint(const QPoint &pos, NamedNode **nNode);
+  void hoverWidgetType(NamedNode *nNode, QPair<SectionType, int> isin, QPoint pos);
+  void hoverPseudoStateType(NamedNode *nNode, QPair<SectionType, int> isin, QPoint pos);
+  void hoverSubControlType(NamedNode *nNode, QPair<SectionType, int> isin, QPoint pos);
+  void hoverPropertyType(NamedNode *nNode, QPair<SectionType, int> isin, QPoint pos);
   QList<int> reverseLastNValues(QMap<int, QString> matches);
 
 
-  void updateContextMenu(QMenu *contextMenu, QMap<int, QString> matches, NamedNode *nNode);
-  void updatePropertyContextMenu(QMenu *contextMenu, QMap<int, QString> matches, NamedNode *nNode);
+//  void updateContextMenu(QMap<int, QString> matches, NamedNode *nNode);
+//  void updatePropertyContextMenu(QMap<int, QString> matches, PropertyNode *property);
+//  void updatePropertyValueContextMenu(QMap<int, QString> matches, PropertyNode *nNode);
+//  void updateMenu(QAction *act, QMap<int, QString> matches, NamedNode *nNode);
 };
 
 

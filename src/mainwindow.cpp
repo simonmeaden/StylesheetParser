@@ -124,10 +124,11 @@ QWidget* MainWindow::initGui()
   text =
     "\n\n"
     "color red;\n"                        // BAD missing property marker        - WORKING
-    " bordr: green slid 1px; \n"          // BAD property name, missing property end char - WORKING
-    " shitwidget:active {}\n"             // BAD widget name                    - WORKING
+    " bordr: green slid 1px; \n\n"          // BAD property name, missing property end char - WORKING
+    " shitwidget:active {}\n\n"             // BAD widget name                    - WORKING
     " background-color: blue;\n\n"        // GOOD property.                     - WORKING
-    "color red; border: green solid 1px;" // missing first end property marker.
+    "color red; \n"
+    "border: green solid 1px;\n" // missing first end property marker.
     "QTabWidget:actve {}\n\n"             // BAD widget and pseudostate         - WORKING
     "QTaWidget:active {}\n\n"             // BAD widget and GOOD pseudostate    - WORKING
     "QTabWidget::branh {}\n\n"            // BAD subcontrol                     - WORKING

@@ -98,7 +98,7 @@ public:
   bool isValidPropertyValueForProperty(const QString& propertyname, const QString& value);
   //  QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
   AttributeType propertyValueAttribute(const QString& value);
-  QMap<int, QString> propertyValueAttributes(const QString &name, const QString& value);
+//  QMap<int, QString> propertyValueAttributes(const QString &name, const QString& value);
 
   //! Returns the names of all widgets for which this sub-control is valid.
   QStringList possibleSubControlWidgets(const QString& name) const;
@@ -111,7 +111,6 @@ public:
 
 private:
   QStringList m_widgets;
-//  char* m_fuzzyWidgets;
   QStringList m_colors;
   QStringList m_attributeNames;
   QStringList m_properties;
@@ -119,7 +118,8 @@ private:
   QStringList m_possibleWidgets;
   QStringList m_StylesheetProperties;
   QStringList m_alignmentValues;
-  QStringList m_paletteRoles;
+  QStringList m_paletteRoles, m_gradient, m_attachment,m_borderStyle,m_borderImage,
+    m_fontStyle, m_fontWeight, m_icon, m_origin, m_outlineStyle;
 
   QMap<QString, QStringList> m_subControls;
   QMap<QString, AttributeType> m_attributes;
@@ -180,6 +180,8 @@ private:
   QStringList addControls(int count, ...);
 
   QMap<int, QString> fuzzySearch(const QString &name, QStringList list);
+//  QMap<int, QString> fuzzyTestColorNames(const QString &value);
+  QMap<int, QString> fuzzyTestBrush(const QString &value);
 };
 
 

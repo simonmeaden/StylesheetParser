@@ -1,35 +1,37 @@
 /*
    Copyright 2020 Simon Meaden
 
-   Permission is hereby granted, free of charge, to any person obtaining a copy of this
-   software and associated documentation files (the "Software"), to deal in the Software
-   without restriction, including without limitation the rights to use, copy, modify, merge,
-   publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-                                                                         persons to whom the Software is furnished to do so, subject to the following conditions:
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
 
-   The above copyright notice and this permission notice shall be included in all copies or
-   substantial portions of the Software.
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
 
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
 */
 #ifndef STYLESHEETEDIT_H
 #define STYLESHEETEDIT_H
 
-#include <QPlainTextEdit>
-#include <QPainter>
-#include <QToolTip>
-#include <QMenu>
-#include <QKeySequence>
-#include <QMessageBox>
-#include <QInputDialog>
 #include <QHeaderView>
+#include <QInputDialog>
+#include <QKeySequence>
+#include <QMenu>
+#include <QMessageBox>
+#include <QPainter>
+#include <QPlainTextEdit>
 #include <QTextBlock>
 #include <QTextCursor>
+#include <QToolTip>
 
 class LineNumberArea;
 class StylesheetEditPrivate;
@@ -39,10 +41,10 @@ class Node;
 
 class StylesheetEdit : public QPlainTextEdit
 {
-  Q_OBJECT Q_DECLARE_PRIVATE(StylesheetEdit)
-public:
+  Q_OBJECT Q_DECLARE_PRIVATE(StylesheetEdit) public
+    :
 
-  explicit StylesheetEdit(QWidget* parent = nullptr);
+    explicit StylesheetEdit(QWidget* parent = nullptr);
 
   //! Reimplemented from QPlainText::setPlainText()
   void setPlainText(const QString& text);
@@ -55,33 +57,65 @@ public:
   //! Reimplemented from QPlainText::setStylesheet()
   void setStyleSheet(const QString& stylesheet);
 
-  //! Sets a new foreground/background/fontweight for the highlighter value format
-  void setValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter widget format
-  void setWidgetFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter pseudo-state format
-  void setPseudoStateFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter pseude-state marker (::) format
-  void setPseudoStateMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter subcontrol format
-  void setSubControlFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter subcontrol marker (:) format
-  void setSubControlMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter property name format
-  void setPropertyFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter property marker (:) format
-  void setPropertyMarkerFormat(QColor color, QColor back, QFont::Weight weight = QFont::Normal);
-  //! Sets a new foreground/background/fontweight for the highlighter line numbers format
-  void setLineNumberFormat(QColor foreground, QColor back, QFont::Weight weight = QFont::Light);
-//  //! Sets a new foreground/background/fontweight for the highlighter bad value format
-//  void setBadValueFormat(QColor color, QColor back, QFont::Weight weight = QFont::Light, bool underline = true,
-//                         QTextCharFormat::UnderlineStyle underlineStyle = QTextCharFormat::WaveUnderline,
-//                         QColor underlineColor = QColor("red"));
-  //! Sets a new foreground/background/fontweight for the highlighter start curly brace ({) format
+  //! Sets a new foreground/background/fontweight for the highlighter value
+  //! format
+  void setValueFormat(QColor color,
+                      QColor back,
+                      QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter widget
+  //! format
+  void setWidgetFormat(QColor color,
+                       QColor back,
+                       QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter
+  //! pseudo-state format
+  void setPseudoStateFormat(QColor color,
+                            QColor back,
+                            QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter
+  //! pseude-state marker (::) format
+  void setPseudoStateMarkerFormat(QColor color,
+                                  QColor back,
+                                  QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter subcontrol
+  //! format
+  void setSubControlFormat(QColor color,
+                           QColor back,
+                           QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter subcontrol
+  //! marker (:) format
+  void setSubControlMarkerFormat(QColor color,
+                                 QColor back,
+                                 QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter property
+  //! name format
+  void setPropertyFormat(QColor color,
+                         QColor back,
+                         QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter property
+  //! marker (:) format
+  void setPropertyMarkerFormat(QColor color,
+                               QColor back,
+                               QFont::Weight weight = QFont::Normal);
+  //! Sets a new foreground/background/fontweight for the highlighter line
+  //! numbers format
+  void setLineNumberFormat(QColor foreground,
+                           QColor back,
+                           QFont::Weight weight = QFont::Light);
+  //  //! Sets a new foreground/background/fontweight for the highlighter bad
+  //  value format void setBadValueFormat(QColor color, QColor back,
+  //  QFont::Weight weight = QFont::Light, bool underline = true,
+  //                         QTextCharFormat::UnderlineStyle underlineStyle =
+  //                         QTextCharFormat::WaveUnderline, QColor
+  //                         underlineColor = QColor("red"));
+  //! Sets a new foreground/background/fontweight for the highlighter start
+  //! curly brace ({) format
   void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
-  //! Sets a new foreground/background/fontweight for the highlighter end curly brace (}) format
+  //! Sets a new foreground/background/fontweight for the highlighter end curly
+  //! brace (}) format
   void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
-  //! Sets a new foreground/background/fontweight for the highlighter brace match format
+  //! Sets a new foreground/background/fontweight for the highlighter brace
+  //! match format
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
 
   //! Returns the list of nodes.
@@ -90,11 +124,11 @@ public:
   //! Returns the bookmarks with associated text, if any.
   //!
   //! The bookmarks are stored in the key list of a map.
-  QMap<int, BookmarkData *> *bookmarks();
+  QMap<int, BookmarkData*>* bookmarks();
   //! Sets the bookmarks with associated text, if any.
-  void setBookmarks(QMap<int, BookmarkData *> *bookmarks);
-  //! Inserts a new bookmark, with an optional text component. The current text is stored
-  //! until the text is replaced again.
+  void setBookmarks(QMap<int, BookmarkData*>* bookmarks);
+  //! Inserts a new bookmark, with an optional text component. The current text
+  //! is stored until the text is replaced again.
   void insertBookmark(int bookmark, const QString& text = QString());
   //! Toggles the bookmark.
   //!
@@ -106,13 +140,16 @@ public:
   void removeBookmark(int bookmark);
   //! Remove ALL bookmarks.
   void clearBookmarks();
-  //! Returns true if the supplied line number has an existing bookmark, otherwise false.
+  //! Returns true if the supplied line number has an existing bookmark,
+  //! otherwise false.
   bool hasBookmark(int linenumber);
-  //! Returns true if the supplied line number has any text associated with it, otherwise false.
+  //! Returns true if the supplied line number has any text associated with it,
+  //! otherwise false.
   //!
   //! Note that it also returns false if the bookmark does not exist.
   bool hasBookmarkText(int bookmark);
-  //! Returns the text for the supplied bookmark, or an empty string if no text exists.
+  //! Returns the text for the supplied bookmark, or an empty string if no text
+  //! exists.
   QString bookmarkText(int bookmark);
   //! Returns the number of bookmarks stored.
   int bookmarkCount();
@@ -134,7 +171,8 @@ public:
   //! or QOverload<bool> in order to access it properly.
   //! \code
   //!   QAction* act = new QAction(upIcon, tr("&Up"), this);
-  //!   connect(act, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::up));
+  //!   connect(act, &QAction::triggered, m_editor,
+  //!   qOverload<bool>(&StylesheetEdit::up));
   //! \endcode
 
   void up(bool);
@@ -149,7 +187,8 @@ public:
   //! or QOverload<bool> in order to access it properly.
   //! \code
   //!   QAction* act = new QAction(upIcon, tr("&Down"), this);
-  //!   connect(act, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::down));
+  //!   connect(act, &QAction::triggered, m_editor,
+  //!   qOverload<bool>(&StylesheetEdit::down));
   //! \endcode
   void down(bool);
   //! Moves n lines down
@@ -163,7 +202,8 @@ public:
   //! or QOverload<bool> in order to access it properly.
   //! \code
   //!   QAction* act = new QAction(icon, tr("&Left"), this);
-  //!   connect(act, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::left));
+  //!   connect(act, &QAction::triggered, m_editor,
+  //!   qOverload<bool>(&StylesheetEdit::left));
   //! \endcode
   void left(bool);
   //! Moves n characters left.
@@ -177,7 +217,8 @@ public:
   //! or QOverload<bool> in order to access it properly.
   //! \code
   //!   QAction* act = new QAction(icon, tr("&Right"), this);
-  //!   connect(act, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::right));
+  //!   connect(act, &QAction::triggered, m_editor,
+  //!   qOverload<bool>(&StylesheetEdit::right));
   //! \endcode
   void right(bool);
   //! Moves n characters right.
@@ -197,26 +238,23 @@ public:
   int bookmarkAreaWidth();
   int calculateLineNumber(QTextCursor textCursor);
   void contextBookmarkMenuEvent(QContextMenuEvent* event);
-//  void drawHoverWidget(QPoint pos, QString text);
+  //  void drawHoverWidget(QPoint pos, QString text);
 
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
-
   /// \cond DO_NOT_DOCUMENT
   // These should not be documented as they are only removing protected status.
-  QTextBlock firstVisibleBlock() {
-    return QPlainTextEdit::firstVisibleBlock();
-  }
-  QRectF blockBoundingGeometry(QTextBlock block) {
+  QTextBlock firstVisibleBlock() { return QPlainTextEdit::firstVisibleBlock(); }
+  QRectF blockBoundingGeometry(QTextBlock block)
+  {
     return QPlainTextEdit::blockBoundingGeometry(block);
   }
-  QRectF blockBoundingRect(QTextBlock block) {
+  QRectF blockBoundingRect(QTextBlock block)
+  {
     return QPlainTextEdit::blockBoundingRect(block);
   }
-  QPointF contentOffset() {
-    return QPlainTextEdit::contentOffset();
-  }
+  QPointF contentOffset() { return QPlainTextEdit::contentOffset(); }
   /// \endcond DO_NOT_DOCUMENT
 
 signals:
@@ -232,11 +270,10 @@ protected:
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event);
   void mouseDoubleClickEvent(QMouseEvent* event);
-  void leaveEvent(QEvent *event) override;
+  void leaveEvent(QEvent* event) override;
 
   void setLineNumber(int lineNumber);
   void suggestion(bool);
-
 
 private:
   StylesheetEditPrivate* d_ptr;
@@ -244,6 +281,7 @@ private:
 
   void initActions();
   void initMenus();
+  void handleParseComplete();
   void handleAddBookmark(bool);
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
@@ -256,11 +294,10 @@ private:
   void updateLeftArea(const QRect& rect, int dy);
   void updateLeftAreaWidth(int);
 
-  
 public:
   static const QChar m_arrow;
 
+  friend class Parser;
 };
-
 
 #endif // STYLESHEETEDIT_H

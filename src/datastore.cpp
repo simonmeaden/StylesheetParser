@@ -22,6 +22,7 @@
 #include "datastore.h"
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
+#include "parser.h"
 
 DataStore::DataStore(QObject* parent)
   : QObject(parent)
@@ -56,6 +57,64 @@ DataStore::DataStore(QObject* parent)
                  << "text"
                  << "window"
                  << "window-text";
+  m_gradient << "qlineargradient"
+             << "qradialgradient"
+             << "qconicalgradient";
+  m_attachment << "scroll"
+               << "fixed";
+  m_borderStyle << "dashed"
+                << "dot-dash"
+                << "dot-dot-dash"
+                << "dotted"
+                << "double"
+                << "groove"
+                << "inset"
+                << "outset"
+                << "ridge"
+                << "solid"
+                << "none";
+  m_borderImage << "stretch"
+                << "repeat";
+  m_fontStyle << "normal"
+              << "italic"
+              << "oblique";
+  m_fontWeight << "normal"
+               << "bold"
+               << "bolder"
+               << "lighter"
+               << "100"
+               << "200"
+               << "300"
+               << "400"
+               << "500"
+               << "600"
+               << "700"
+               << "800"
+               << "900";
+  m_icon << "disabled"
+         << "active"
+         << "normal"
+         << "selected"
+         << "on"
+         << "off";
+  m_origin << "dotted"
+           << "solid"
+           << "double"
+           << "groove"
+           << "ridge"
+           << "inset"
+           << "outset"
+           << "none"
+           << "hidden";
+  m_outlineStyle << "dotted"
+                 << "solid"
+                 << "double"
+                 << "groove"
+                 << "ridge"
+                 << "inset"
+                 << "outset"
+                 << "none"
+                 << "hidden";
 }
 
 DataStore::~DataStore() {}
@@ -123,9 +182,129 @@ DataStore::fuzzySearchProperty(const QString& name)
 QMap<int, QString>
 DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 {
-  auto attributes = propertyValueAttributes(name, value);
+  QMap<int, QString> data, dataIn;
+  QStringList list;
+  auto attribute = propertyValueAttribute(name);
 
-}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum,"
+  switch (attribute) {
+    case Alignment:
+      return fuzzySearch(value, m_alignmentValues);
+
+    case Attachment:
+      return fuzzySearch(value, m_attachment);
+
+    case Background: {
+      data.insert(fuzzyTestBrush(value));
+
+      return data;
+    }
+
+    case Border:
+      list << m_borderStyle << m_borderImage << m_colors << m_paletteRoles
+           << m_gradient;
+      return fuzzySearch(value, list);
+
+    case BorderImage:
+      return fuzzySearch(value, m_borderImage);
+
+    case BorderStyle:
+      return fuzzySearch(value, m_borderStyle);
+
+    case BoxColors:
+    case Color:
+      return fuzzySearch(value, m_colors);
+
+    case Brush:
+      list << m_colors << m_paletteRoles << m_gradient;
+      return fuzzySearch(value, list);
+
+    case Font:
+      list << m_fontStyle << m_fontWeight;
+      return fuzzySearch(value, list);
+
+    case FontStyle:
+      return fuzzySearch(value, m_fontStyle);
+
+    case FontWeight:
+      return fuzzySearch(value, m_fontWeight);
+
+    case Gradient:
+      return fuzzySearch(value, m_gradient);
+
+    case Icon:
+      return fuzzySearch(value, m_icon);
+
+    case Origin:
+      return fuzzySearch(value, m_origin);
+
+    case Outline:
+      list << m_outlineStyle << m_colors << "invert"
+           << "thin"
+           << "medium"
+           << "thick";
+      return fuzzySearch(value, list);
+
+    case OutlineStyle:
+      return fuzzySearch(value, m_outlineStyle);
+
+    case PaletteRole:
+      return fuzzySearch(value, m_paletteRoles);
+
+    case Position:
+      list << "relative"
+           << "absolute";
+      return fuzzySearch(value, list);
+
+    case Repeat:
+      list << "repeat-x"
+           << "repeat-y"
+           << "repeat"
+           << "no-repeat";
+      return fuzzySearch(value, list);
+
+    case TextDecoration:
+      list << "none"
+           << "underline"
+           << "overline"
+           << "line-through";
+      return fuzzySearch(value, list);
+
+    case StylesheetEditGood:
+      list << m_colors << "thin"
+           << "extralight"
+           << "light"
+           << "normal"
+           << "medium"
+           << "demibold"
+           << "bold"
+           << "extrabold"
+           << "black";
+      return fuzzySearch(value, list);
+
+    case StylesheetEditBad:
+      list << m_colors << "thin"
+           << "extralight"
+           << "light"
+           << "normal"
+           << "medium"
+           << "demibold"
+           << "bold"
+           << "extrabold"
+           << "black"
+           << "none"
+           << "single"
+           << "dash"
+           << "dot"
+           << "dashdot"
+           << "dashdotdot"
+           << "wave"
+           << "spellcheck";
+      return fuzzySearch(value, list);
+  }
+#pragma clang diagnostic pop
+  return QMap<int, QString>();}
 
 bool
 DataStore::containsStylesheetProperty(const QString& name)
@@ -160,21 +339,13 @@ DataStore::fuzzySearchSubControl(const QString& name)
 bool
 DataStore::checkAlignment(const QString& value)
 {
-  if (m_alignmentValues.contains(value)) {
-    return true;
-  }
-
-  return false;
+  return m_alignmentValues.contains(value);
 }
 
 bool
 DataStore::checkAttachment(const QString& value)
 {
-  if (value == "scroll" | value == "fixed") {
-    return true;
-  }
-
-  return false;
+  return m_attachment.contains(value);
 }
 
 bool
@@ -202,7 +373,7 @@ DataStore::checkBackground(const QString& value)
 bool
 DataStore::checkBool(const QString& value)
 {
-  if (value == "true" or value == "false") {
+  if (value == "true" || value == "false") {
     return true;
   }
 
@@ -212,7 +383,7 @@ DataStore::checkBool(const QString& value)
 bool
 DataStore::checkBoolean(const QString& value)
 {
-  if (value == "0" or value == "1") {
+  if (value == "0" || value == "1") {
     return true;
   }
 
@@ -248,24 +419,13 @@ DataStore::checkBorderImage(const QString& value)
     return true;
   }
 
-  if (value == "stretch" || value == "repeat") {
-    return true;
-  }
-
-  return false;
+  return m_borderImage.contains(value);
 }
 
 bool
 DataStore::checkBorderStyle(const QString& value)
 {
-  if (value == "dashed" | value == "dot-dash" || value == "dot-dot-dash" ||
-      value == "dotted" || value == "double" || value == "groove" ||
-      value == "inset" || value == "outset" || value == "ridge" ||
-      value == "solid" || value == "none") {
-    return true;
-  }
-
-  return false;
+  return m_borderStyle.contains(value);
 }
 
 bool
@@ -486,11 +646,7 @@ DataStore::checkColor(const QString& value)
 bool
 DataStore::checkFontStyle(const QString& value)
 {
-  if (value == "normal" | value == "italic" || value == "oblique") {
-    return true;
-  }
-
-  return false;
+  return m_fontStyle.contains(value);
 }
 
 bool
@@ -521,25 +677,13 @@ DataStore::checkFontSize(const QString& value)
 bool
 DataStore::checkFontWeight(const QString& value)
 {
-  if (value == "normal" || value == "bold" || value == "bolder" ||
-      value == "lighter" || value == "100" || value == "200" ||
-      value == "300" || value == "400" || value == "500" || value == "600" ||
-      value == "700" || value == "800" || value == "900") {
-    return true;
-  }
-
-  return false;
+  return m_fontWeight.contains(value);
 }
 
 bool
 DataStore::checkGradient(const QString& value)
 {
-  if (value == "qlineargradient" | value == "qradialgradient" ||
-      value == "qconicalgradient") {
-    return true;
-  }
-
-  return false;
+  return m_gradient.contains(value);
 }
 
 bool
@@ -549,12 +693,7 @@ DataStore::checkIcon(const QString& value)
     return true;
   }
 
-  if (value == "disabled" | value == "active" || value == "normal" ||
-      value == "selected" || value == "on" || value == "off") {
-    return true;
-  }
-
-  return false;
+  return m_icon.contains(value);
 }
 
 bool
@@ -612,24 +751,13 @@ DataStore::checkOutline(const QString& value)
 bool
 DataStore::checkOrigin(const QString& value)
 {
-  if (value == "margin" | value == "border" || value == "padding" ||
-      value == "content") {
-    return true;
-  }
-
-  return false;
+  return m_origin.contains(value);
 }
 
 bool
 DataStore::checkOutlineStyle(const QString& value)
 {
-  if (value == "dotted" | value == "solid" || value == "double" ||
-      value == "groove" || value == "ridge" || value == "inset" ||
-      value == "outset" || value == "none" || value == "hidden") {
-    return true;
-  }
-
-  return false;
+  return m_outlineStyle.contains(value);
 }
 
 bool
@@ -645,7 +773,7 @@ DataStore::checkOutlineColor(const QString& value)
 bool
 DataStore::checkOutlineWidth(const QString& value)
 {
-  if (value == "thin" || value == "medium" or value == "thick") {
+  if (value == "thin" || value == "medium" || value == "thick") {
     return true;
   }
 
@@ -684,7 +812,7 @@ DataStore::checkRadius(const QString& value)
 bool
 DataStore::checkRepeat(const QString& value)
 {
-  if (value == "repeat-x" | value == "repeat-y" || value == "repeat" ||
+  if (value == "repeat-x" || value == "repeat-y" || value == "repeat" ||
       value == "no-repeat") {
     return true;
   }
@@ -1180,130 +1308,20 @@ DataStore::propertyValueAttribute(const QString& value)
 }
 
 QMap<int, QString>
-DataStore::propertyValueAttributes(const QString& name, const QString& value)
+DataStore::fuzzyTestBrush(const QString& value)
 {
-  auto attribute = propertyValueAttribute(name);
-
-  switch (attribute) {
-    case Alignment:
-      return fuzzySearch(value, m_alignmentValues);
-
-    case Attachment:
-      QStringList list;
-      list << "scroll"
-           << "fixed";
-      return fuzzySearch(value, list);
-
-    case Background:{
-      QMap<int, QString> data, dataIn;
-      dataIn = fuzzySearch(value, m_colors);
-      data.insert(dataIn);
-      dataIn = fuzzySearch(value, m_paletteRoles);
-      QStringList list;
-      list << "qlineargradient" << "qradialgradient" << "qconicalgradient";
-      dataIn = fuzzySearch(value, list);
-      data.insert(dataIn);
-
-      return data;
-    }
-
-    case Bool:
-      return checkBool(valuename);
-
-    case Boolean:
-      return checkBoolean(valuename);
-
-    case Border:
-      return checkBorder(valuename);
-
-    case BorderImage:
-      return checkBorderImage(valuename);
-
-    case BorderStyle:
-      return checkBorderStyle(valuename);
-
-    case BoxColors:
-      return checkBoxColors(valuename);
-
-    case BoxLengths:
-      return checkBoxLengths(valuename);
-
-    case Brush:
-      return checkBrush(valuename);
-
-    case Color:
-      return checkColor(valuename);
-
-    case Font:
-      return checkFont(valuename);
-
-    case FontSize:
-      return checkFontSize(valuename);
-
-    case FontStyle:
-      return checkFontStyle(valuename);
-
-    case FontWeight:
-      return checkFontWeight(valuename);
-
-    case Gradient:
-      return checkGradient(valuename);
-
-    case Icon:
-      return checkIcon(valuename);
-
-    case Length:
-      return checkLength(valuename);
-
-    case Number: // TODO not supported.
-      return checkNumber(valuename);
-
-    case Origin:
-      return checkOrigin(valuename);
-
-    case Outline:
-      return checkOutline(valuename);
-
-    case OutlineRadius:
-      return checkOutlineRadius(valuename);
-
-    case OutlineStyle:
-      return checkOutlineStyle(valuename);
-
-    case PaletteRole:
-      return checkPaletteRole(valuename);
-
-    case Position:
-      return checkPosition(valuename);
-
-    case Radius:
-      return checkRadius(valuename);
-
-    case Repeat:
-      return checkRepeat(valuename);
-
-    case TextDecoration:
-      return checkTextDecoration(valuename);
-
-    case Url:
-      return checkUrl(valuename);
-
-    case String:
-      // value IS a string.
-      // might need to check the string contents here.
-      return true;
-
-    case List:
-      // This should never reach here.
-      break;
-
-    case StylesheetEditGood:
-      return checkStylesheetEdit(valuename, data);
-
-    case StylesheetEditBad:
-      return checkStylesheetEditBad(valuename, data);
-  }
+  QMap<int, QString> data;
+  data.insert(fuzzySearch(value, m_colors));
+  data.insert(fuzzySearch(value, m_paletteRoles));
+  data.insert(fuzzySearch(value, m_gradient));
+  return data;
 }
+
+//QMap<int, QString>
+//DataStore::propertyValueAttributes(const QString& name, const QString& value)
+//{
+
+//}
 
 QMap<QString, QStringList>
 DataStore::initialiseSubControlMap()

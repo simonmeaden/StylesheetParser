@@ -46,6 +46,8 @@ target_sources(tst_parser
 
    PRIVATE
       src/main.cpp
+      src/parser.h
+      src/parser.cpp
       src/parserstate.h
       src/parserstate.cpp
       src/node.cpp

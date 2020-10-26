@@ -31,6 +31,7 @@
 
 #include "parserstate.h"
 #include "datastore.h"
+#include "common.h"
 
 class Node : public QObject
 {
@@ -87,12 +88,6 @@ protected:
 class NameNode
 {
 public:
-  enum SectionType
-  {
-    None,
-    Name,
-    Value, // only valid for propety nodes.
-  };
   explicit NameNode(const QString& name);
 
   QString name() const;
@@ -245,6 +240,7 @@ public:
 
   int propertyMarkerOffset() const;
   void setPropertyMarkerOffset(int propertymarkerOffset);
+  void incrementOffsets(int n=1);
 
   QPair<SectionType, int> isIn(QPoint pos) override;
   QPair<bool, QString> isProperty(int offset);
@@ -255,7 +251,7 @@ private:
   QList<int> m_offsets;
   QList<DataStore::AttributeType> m_attributeTypes;
   bool m_propertyMarkerExists;
-  int m_propertymarkerOffset;
+  int m_propertyMarkerOffset;
   bool m_validProperty;
 };
 

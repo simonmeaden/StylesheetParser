@@ -832,7 +832,7 @@ Parser::updateContextMenu(QMap<int, QString> matches, NamedNode* nNode)
   m_suggestionsMenu->addAction(act);
   m_suggestionsMenu->addSeparator();
 
-  updateMenu(act, matches, nNode);
+  updateMenu(matches, nNode);
 }
 
 void
@@ -840,18 +840,23 @@ Parser::updatePropertyContextMenu(QMap<int, QString> matches,
                                   PropertyNode* property)
 {
   QString typeName;
+  QAction* act;
   m_suggestionsMenu->clear();
 
-  QAction* act = new QAction(m_editor->tr("%1 is not a valid property name")
-                               .arg(property->name())
-                               .arg(typeName));
-  m_suggestionsMenu->addAction(act);
-  m_suggestionsMenu->addSeparator();
-
   if (property->hasPropertyMarker()) {
-    updateMenu(act, matches, property);
+    act = new QAction(m_editor->tr("%1 is not a valid property name")
+                                 .arg(property->name())
+                                 .arg(typeName));
+    m_suggestionsMenu->addAction(act);
+    m_suggestionsMenu->addSeparator();
+    updateMenu(matches, property);
 
   } else {
+    act = new QAction(m_editor->tr("%1 is missing a property marker")
+                                 .arg(property->name())
+                                 .arg(typeName));
+    m_suggestionsMenu->addAction(act);
+    m_suggestionsMenu->addSeparator();
     m_addPropertyMarkerAct =
       new QAction(m_editor->tr("Add property marker (:)"));
     m_suggestionsMenu->addAction(m_addPropertyMarkerAct);
@@ -877,12 +882,19 @@ Parser::updatePropertyValueContextMenu(QMap<int, QString> matches,
   m_suggestionsMenu->addAction(act);
   m_suggestionsMenu->addSeparator();
 
-  updateMenu(act, matches, nNode);
+  updateMenu(matches, nNode);
 }
 
 void
-Parser::updateMenu(QAction* act, QMap<int, QString> matches, NamedNode* nNode)
+Parser::updateMenu(QMap<int, QString> matches, NamedNode* nNode)
 {
+  QAction* act;
+  if (matches.size()==0) {
+    act = new QAction(m_editor->tr("No suggestions are available!"));
+    m_suggestionsMenu->addAction(act);
+    return;
+  }
+
   auto reversed = reverseLastNValues(matches);
 
   for (auto key : reversed) {
@@ -1237,156 +1249,148 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
         }
       } // end for
 
-    } else {
-      NamedNode* nNode = qobject_cast<NamedNode*>(node);
-
-      if (nNode) {
-        switch (nNode->type()) {
-
-          case Node::WidgetType: {
-            auto widget = qobject_cast<WidgetNode*>(nNode);
-
-            if (!widget->isWidgetValid()) {
-              // not a valid node
-              if (widget != m_currentWidget) {
-                auto matches = m_datastore->fuzzySearchWidgets(nNode->name());
-                //                auto contextMenu = createContextMenu();
-                updateContextMenu(matches, nNode);
-                //                m_contextMenu = contextMenu;
-              }
-            }
-
-            break;
-          } // end WidgetType
-
-          case Node::PseudoStateType: {
-            auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
-
-            if (!pseudostate->isStateValid()) {
-              // not a valid node
-              if (pseudostate != m_currentWidget) {
-                auto matches =
-                  m_datastore->fuzzySearchPseudoStates(nNode->name());
-                //                auto contextMenu = createContextMenu();
-                updateContextMenu(matches, nNode);
-                //                m_contextMenu = contextMenu;
-              }
-            }
-
-            break;
-          } // end PseudoStateType
-
-          case Node::SubControlType: {
-            auto subcontrol = qobject_cast<SubControlNode*>(nNode);
-
-            if (!subcontrol->isStateValid()) {
-              // not a valid node
-              if (subcontrol != m_currentWidget) {
-                auto matches =
-                  m_datastore->fuzzySearchSubControl(nNode->name());
-                //                auto contextMenu = createContextMenu();
-                updateContextMenu(matches, nNode);
-                //                m_contextMenu = contextMenu;
-              }
-            }
-
-            break;
-          } // end SubControlType
-
-          case Node::PropertyType: {
-            auto property = qobject_cast<PropertyNode*>(nNode);
-
-            if (property != m_currentWidget) {
-              auto offset = textCursor.anchor() - property->cursor().anchor();
-              auto isProperty = property->isProperty(offset);
-
-              if (isProperty.first) {
-                auto matches =
-                  m_datastore->fuzzySearchProperty(isProperty.second);
-                //                auto contextMenu = createContextMenu();
-                updatePropertyContextMenu(matches, property);
-                //                m_contextMenu = contextMenu;
-
-              } else {
-                if (!isProperty.second.isEmpty()) {
-                  if (property->isValidProperty()) {
-                    // must have a valid property to check value types.
-                    auto matches = m_datastore->fuzzySearchPropertyValue(
-                      property->name(), isProperty.second);
-//                    auto contextMenu = createContextMenu();
-                    updatePropertyValueContextMenu(matches, property);
-                    //                    m_contextMenu = contextMenu;
-
-                  } else {
-                    m_contextMenu = createContextMenu();
-                  }
-                }
-              }
-            }
-
-            break;
-          } // end
-
-          case Node::BadNodeType: {
-            //          auto badNode = qobject_cast<BadBlockNode*>(nNode);
-
-            //          //      if (badNode) {
-            //          //        ParserState::Errors errors =
-            //          badNode->errors();
-
-            //          //        if
-            //          (errors.testFlag(ParserState::InvalidWidget)) {
-            //          //          m_hoverWidget->show(pos, m_editor->tr("This
-            //          is not a valid
-            //          //          Widget"));
-
-            //          //        } else if
-            //          (errors.testFlag(ParserState::InvalidSubControl)) {
-            //            //          m_hoverWidget->show(pos,
-            //            m_editor->tr("This is not a valid
-            //            //          Sub-Control"));
-
-            //            //        } else if
-            //            (errors.testFlag(ParserState::InvalidPseudoState)) {
-            //              //          m_hoverWidget->show(pos,
-            //              m_editor->tr("This is not a valid
-            //              //          Pseudo-State"));
-
-            //              //        } else if
-            //              (errors.testFlag(ParserState::AnomalousMarkerType))
-            //              //        {
-            //              //          m_hoverWidget->show(
-            //              //            pos,
-            //              //            m_editor->tr(
-            //              //              "This could be either a Pseudo-State
-            //              marker or a
-            //              //              Sub-Control marker."));
-
-            //              //        } else if
-            //              (errors.testFlag(ParserState::AnomalousType)) {
-            //              //          m_hoverWidget->show(pos,
-            //              m_editor->tr("The type of this is
-            //              //          anomalous."));
-
-            //              //        } else {
-            //              //          hideHover();
-            //              //        }
-
-            //              //      }
-
-            //              break;
-          } // end case Node::BadNodeType
-
-          default:
-            //            m_hoverWidget->hideHover();
-            break;
-        }
-      }
     } // end end brace type
   }   // end if node
 
   if (modified) {
     emit rehighlight();
+  }
+}
+
+void
+Parser::handleMouseClicked(QPoint pos)
+{
+  NamedNode* nNode = nullptr;
+  nodeForPoint(pos, &nNode);
+
+  if (nNode) {
+    switch (nNode->type()) {
+
+      case Node::WidgetType: {
+        auto widget = qobject_cast<WidgetNode*>(nNode);
+
+        if (!widget->isWidgetValid()) {
+          // not a valid node
+          if (widget != m_currentWidget) {
+            auto matches = m_datastore->fuzzySearchWidgets(nNode->name());
+            updateContextMenu(matches, nNode);
+          }
+        }
+
+        break;
+      } // end WidgetType
+
+      case Node::PseudoStateType: {
+        auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
+
+        if (!pseudostate->isStateValid()) {
+          // not a valid node
+          if (pseudostate != m_currentWidget) {
+            auto matches = m_datastore->fuzzySearchPseudoStates(nNode->name());
+            updateContextMenu(matches, nNode);
+          }
+        }
+
+        break;
+      } // end PseudoStateType
+
+      case Node::SubControlType: {
+        auto subcontrol = qobject_cast<SubControlNode*>(nNode);
+
+        if (!subcontrol->isStateValid()) {
+          // not a valid node
+          if (subcontrol != m_currentWidget) {
+            auto matches = m_datastore->fuzzySearchSubControl(nNode->name());
+            updateContextMenu(matches, nNode);
+          }
+        }
+
+        break;
+      } // end SubControlType
+
+      case Node::PropertyType: {
+        auto property = qobject_cast<PropertyNode*>(nNode);
+
+        if (property != m_currentWidget) {
+          auto offset = m_editor->cursorForPosition(pos).anchor() -
+                        property->cursor().anchor();
+          auto isProperty = property->isProperty(offset);
+
+          if (isProperty.first) {
+            auto matches = m_datastore->fuzzySearchProperty(isProperty.second);
+            updatePropertyContextMenu(matches, property);
+
+          } else {
+            if (!isProperty.second.isEmpty()) {
+              if (property->isValidProperty()) {
+                // must have a valid property to check value types.
+                auto matches = m_datastore->fuzzySearchPropertyValue(
+                  property->name(), isProperty.second);
+                updatePropertyValueContextMenu(matches, property);
+              } /* else {
+                 m_contextMenu = createContextMenu();
+               }*/
+            }
+          }
+        }
+
+        break;
+      } // end
+
+      case Node::BadNodeType: {
+        //          auto badNode = qobject_cast<BadBlockNode*>(nNode);
+
+        //          //      if (badNode) {
+        //          //        ParserState::Errors errors =
+        //          badNode->errors();
+
+        //          //        if
+        //          (errors.testFlag(ParserState::InvalidWidget)) {
+        //          //          m_hoverWidget->show(pos, m_editor->tr("This
+        //          is not a valid
+        //          //          Widget"));
+
+        //          //        } else if
+        //          (errors.testFlag(ParserState::InvalidSubControl)) {
+        //            //          m_hoverWidget->show(pos,
+        //            m_editor->tr("This is not a valid
+        //            //          Sub-Control"));
+
+        //            //        } else if
+        //            (errors.testFlag(ParserState::InvalidPseudoState)) {
+        //              //          m_hoverWidget->show(pos,
+        //              m_editor->tr("This is not a valid
+        //              //          Pseudo-State"));
+
+        //              //        } else if
+        //              (errors.testFlag(ParserState::AnomalousMarkerType))
+        //              //        {
+        //              //          m_hoverWidget->show(
+        //              //            pos,
+        //              //            m_editor->tr(
+        //              //              "This could be either a Pseudo-State
+        //              marker or a
+        //              //              Sub-Control marker."));
+
+        //              //        } else if
+        //              (errors.testFlag(ParserState::AnomalousType)) {
+        //              //          m_hoverWidget->show(pos,
+        //              m_editor->tr("The type of this is
+        //              //          anomalous."));
+
+        //              //        } else {
+        //              //          hideHover();
+        //              //        }
+
+        //              //      }
+
+        //              break;
+      } // end case Node::BadNodeType
+
+      default:
+        //            m_hoverWidget->hideHover();
+        break;
+    }
   }
 }
 
@@ -1426,7 +1430,8 @@ Parser::contextMenu() const
   return m_contextMenu;
 }
 
-void Parser::handleSuggestion(QAction *act)
+void
+Parser::handleSuggestion(QAction* act)
 {
   QVariant v = act->data();
   NamedNode* nNode = v.value<NamedNode*>();
@@ -1438,9 +1443,10 @@ void Parser::handleSuggestion(QAction *act)
       auto originalCursor = property->cursor().anchor();
       property->setPropertyMarkerExists(true);
       property->setPropertyMarkerOffset(property->length());
-      property->incrementOffsets();// by default increments by one.
+      property->incrementOffsets(); // by default increments by one.
       auto cursor(property->cursor());
-      cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, property->length());
+      cursor.movePosition(
+        QTextCursor::Right, QTextCursor::MoveAnchor, property->length());
       cursor.insertText(":");
       property->setStart(originalCursor);
     }
@@ -1448,20 +1454,21 @@ void Parser::handleSuggestion(QAction *act)
   } else {
 
     if (nNode) {
-      nNode->setName(act->text());
       auto originalCursor = nNode->cursor().anchor();
-      //      nNode->cursor().movePosition(
-      //        QTextCursor::Right, QTextCursor::KeepAnchor, nNode->length());
-      //      nNode->cursor().removeSelectedText();
-      //      nNode->cursor().insertText(act->text());
 
       switch (nNode->type()) {
         case Node::WidgetType: {
           auto widget = qobject_cast<WidgetNode*>(nNode);
 
           if (widget) {
-            //          widget->setWidgetValid(true);
-            //          widget->setStart(originalCursor);
+            auto cursor(widget->cursor());
+            widget->setWidgetValid(true);
+            cursor.movePosition(
+              QTextCursor::Right, QTextCursor::KeepAnchor, widget->length());
+            cursor.removeSelectedText();
+            cursor.insertText(act->text());
+            widget->setName(act->text());
+            widget->setStart(originalCursor);
           }
 
           break;
@@ -1473,9 +1480,12 @@ void Parser::handleSuggestion(QAction *act)
           if (pseudostate) {
             auto cursor(pseudostate->cursor());
             pseudostate->setStateValid(true);
-            cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, pseudostate->length());
+            cursor.movePosition(QTextCursor::Right,
+                                QTextCursor::KeepAnchor,
+                                pseudostate->length());
             cursor.removeSelectedText();
             cursor.insertText(act->text());
+            pseudostate->setName(act->text());
             pseudostate->setStart(originalCursor);
           }
 
@@ -1483,14 +1493,17 @@ void Parser::handleSuggestion(QAction *act)
         }
 
         case Node::SubControlType: {
-          auto subcontrol = qobject_cast<PseudoStateNode*>(nNode);
+          auto subcontrol = qobject_cast<SubControlNode*>(nNode);
 
           if (subcontrol) {
             auto cursor(subcontrol->cursor());
             subcontrol->setStateValid(true);
-            cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor, subcontrol->length());
+            cursor.movePosition(QTextCursor::Right,
+                                QTextCursor::KeepAnchor,
+                                subcontrol->length());
             cursor.removeSelectedText();
             cursor.insertText(act->text());
+            subcontrol->setName(act->text());
             subcontrol->setStart(originalCursor);
           }
 

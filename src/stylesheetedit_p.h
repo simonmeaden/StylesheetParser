@@ -237,7 +237,9 @@ struct StylesheetEditPrivate
   //  bool event(QEvent* event);
 //  void drawHoverWidget(QPoint pos, QString text);
 //  void hideHoverWidget();
-  void handleMouseMove(QPoint pos);
+  void handleMousePress(const QPoint &pos);
+//  void handleMouseMove(const QPoint &pos);
+//  void handleMouseRelease(const QPoint &pos);
   void handleLeaveEvent();
   void displayBookmark(BookmarkData*data, QPoint pos);
 //  void displayError(QString text, QPoint pos);

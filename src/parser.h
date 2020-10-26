@@ -49,6 +49,7 @@ public:
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
+  void handleMouseClicked(QPoint pos);
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
 
@@ -61,6 +62,8 @@ public:
   QMenu *contextMenu() const;
 
   void handleSuggestion(QAction *act);
+
+  QPair<SectionType, int> nodeForPoint(const QPoint& pos, NamedNode** nNode);
 
 signals:
   void rehighlight();
@@ -92,7 +95,6 @@ private:
   void skipBlanks(const QString& text, int& pos);
 
   QTextCursor getCursorForNode(int position);
-  QPair<SectionType, int> nodeForPoint(const QPoint& pos, NamedNode** nNode);
   CursorData getNodeAtCursor(QTextCursor cursor);
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
@@ -124,7 +126,7 @@ private:
   void updateContextMenu(QMap<int, QString> matches, NamedNode *nNode);
   void updatePropertyContextMenu(QMap<int, QString> matches, PropertyNode *property);
   void updatePropertyValueContextMenu(QMap<int, QString> matches, PropertyNode *nNode);
-  void updateMenu(QAction *act, QMap<int, QString> matches, NamedNode *nNode);
+  void updateMenu(QMap<int, QString> matches, NamedNode *nNode);
   QList<int> reverseLastNValues(QMap<int, QString> matches);
 
 };

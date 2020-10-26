@@ -266,10 +266,10 @@ protected:
   void contextMenuEvent(QContextMenuEvent* event);
 
   void resizeEvent(QResizeEvent* event) override;
-  void mousePressEvent(QMouseEvent* event);
+  void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
-  void mouseReleaseEvent(QMouseEvent* event);
-  void mouseDoubleClickEvent(QMouseEvent* event);
+  void mouseReleaseEvent(QMouseEvent* event) override;
+  void mouseDoubleClickEvent(QMouseEvent* event) override;
   void leaveEvent(QEvent* event) override;
 
   void setLineNumber(int lineNumber);
@@ -278,6 +278,7 @@ protected:
 private:
   StylesheetEditPrivate* d_ptr;
   Node* m_hoverNode;
+  bool m_mousePressed;
 
   void initActions();
   void initMenus();

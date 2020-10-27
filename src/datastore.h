@@ -1,29 +1,31 @@
 /*
   Copyright 2020 Simon Meaden
 
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this
-  software and associated documentation files (the "Software"), to deal in the Software
-  without restriction, including without limitation the rights to use, copy, modify, merge,
-  publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-                                                                         persons to whom the Software is furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in all copies or
-  substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 */
 #ifndef DATASTORE_H
 #define DATASTORE_H
 
-#include <QObject>
+#include <QFile>
 #include <QList>
 #include <QMap>
-#include <QFile>
+#include <QObject>
 
 #define FTS_FUZZY_MATCH_IMPLEMENTATION
 #include "fts_fuzzy_match.h"
@@ -41,7 +43,7 @@ public:
     Alignment,
     Attachment,
     Background,
-    Bool, //!< This is true/false value
+    Bool,    //!< This is true/false value
     Boolean, //!< This is 0/1 value
     Border,
     BorderImage,
@@ -83,22 +85,27 @@ public:
   void addWidget(const QString& widget);
   void removeWidget(const QString& widget);
   bool containsWidget(const QString& name);
-  QMap<int, QString> fuzzySearchWidgets(const QString& name);
+  QMultiMap<int, QString> fuzzySearchWidgets(const QString& name);
   bool containsProperty(const QString& name);
-  QMap<int, QString> fuzzySearchProperty(const QString& name);
-  QMap<int, QString> fuzzySearchPropertyValue(const QString& name, const QString &value);
+  QMultiMap<int, QString> fuzzySearchProperty(const QString& name);
+  QMultiMap<int, QString> fuzzySearchPropertyValue(const QString& name,
+                                              const QString& value);
   bool containsStylesheetProperty(const QString& name);
   bool containsPseudoState(const QString& name);
-  QMap<int, QString> fuzzySearchPseudoStates(const QString& name);
+  QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
   bool containsSubControl(const QString& name);
-  QMap<int, QString> fuzzySearchSubControl(const QString& name);
+  QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
 
-  bool getIfValidStylesheetValue(const QString& propertyname, const QString& valuename,
+  bool getIfValidStylesheetValue(const QString& propertyname,
+                                 const QString& valuename,
                                  StylesheetData* data);
-  bool isValidPropertyValueForProperty(const QString& propertyname, const QString& value);
-  //  QList<bool> isValidPropertyValues(const QString& name, const QStringList& values);
+  bool isValidPropertyValueForProperty(const QString& propertyname,
+                                       const QString& value);
+  //  QList<bool> isValidPropertyValues(const QString& name, const QStringList&
+  //  values);
   AttributeType propertyValueAttribute(const QString& value);
-//  QMap<int, QString> propertyValueAttributes(const QString &name, const QString& value);
+  //  QMap<int, QString> propertyValueAttributes(const QString &name, const
+  //  QString& value);
 
   //! Returns the names of all widgets for which this sub-control is valid.
   QStringList possibleSubControlWidgets(const QString& name) const;
@@ -118,8 +125,10 @@ private:
   QStringList m_possibleWidgets;
   QStringList m_StylesheetProperties;
   QStringList m_alignmentValues;
-  QStringList m_paletteRoles, m_gradient, m_attachment,m_borderStyle,m_borderImage,
-    m_fontStyle, m_fontWeight, m_icon, m_origin, m_outlineStyle;
+  QStringList m_paletteRoles, m_gradient, m_attachment, m_borderStyle,
+    m_borderImage, m_fontStyle, m_fontWeight, m_icon, m_origin, m_outlineStyle
+    , m_outlineWidth,m_position,m_repeat,m_textDecoration;
+  QString m_outlineColor;
 
   QMap<QString, QStringList> m_subControls;
   QMap<QString, AttributeType> m_attributes;
@@ -179,11 +188,9 @@ private:
 
   QStringList addControls(int count, ...);
 
-  QMap<int, QString> fuzzySearch(const QString &name, QStringList list);
-//  QMap<int, QString> fuzzyTestColorNames(const QString &value);
-  QMap<int, QString> fuzzyTestBrush(const QString &value);
+  QMultiMap<int, QString> fuzzySearch(const QString& name, QStringList list);
+  //  QMap<int, QString> fuzzyTestColorNames(const QString &value);
+  QMap<int, QString> fuzzyTestBrush(const QString& value);
 };
-
-
 
 #endif // DATASTORE_H

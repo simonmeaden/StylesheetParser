@@ -20,9 +20,9 @@
   SOFTWARE.
 */
 #include "datastore.h"
+#include "parser.h"
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
-#include "parser.h"
 
 DataStore::DataStore(QObject* parent)
   : QObject(parent)
@@ -115,6 +115,20 @@ DataStore::DataStore(QObject* parent)
                  << "outset"
                  << "none"
                  << "hidden";
+  m_outlineColor = "invert";
+  m_outlineWidth << "thin"
+                 << "medium"
+                 << "thick";
+  m_position << "relative"
+             << "absolute";
+  m_repeat<< "repeat-x"
+           << "repeat-y"
+           << "repeat"
+           << "no-repeat";
+  m_textDecoration<< "none"
+                   << "underline"
+                   << "overline"
+                   << "line-through";
 }
 
 DataStore::~DataStore() {}
@@ -140,10 +154,10 @@ DataStore::containsWidget(const QString& name)
   return m_widgets.contains(name);
 }
 
-QMap<int, QString>
+QMultiMap<int, QString>
 DataStore::fuzzySearch(const QString& name, QStringList list)
 {
-  QMap<int, QString> matches;
+  QMultiMap<int, QString> matches;
   char* pattern = new char[name.size() + 1];
   strcpy(pattern, name.toStdString().c_str());
 
@@ -161,7 +175,7 @@ DataStore::fuzzySearch(const QString& name, QStringList list)
   return matches;
 }
 
-QMap<int, QString>
+QMultiMap<int, QString>
 DataStore::fuzzySearchWidgets(const QString& name)
 {
   return fuzzySearch(name, m_widgets);
@@ -173,18 +187,28 @@ DataStore::containsProperty(const QString& name)
   return m_properties.contains(name.toLower());
 }
 
-QMap<int, QString>
+QMultiMap<int, QString>
 DataStore::fuzzySearchProperty(const QString& name)
 {
   return fuzzySearch(name, m_properties);
 }
 
-QMap<int, QString>
+QMultiMap<int, QString>
 DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 {
   QMap<int, QString> data, dataIn;
   QStringList list;
-  auto attribute = propertyValueAttribute(name);
+
+//  if (name.isEmpty()) {
+//    list << m_alignmentValues << m_attachment << m_colors << m_paletteRoles
+//         << m_gradient << m_borderStyle << m_borderImage << m_fontStyle
+//         << m_fontWeight << m_icon << m_origin << m_outlineStyle
+//         << m_outlineColor << m_outlineWidth<<m_position<<m_repeat;
+
+//    return fuzzySearch(value, list);
+//  }
+
+  auto attribute = m_attributes.value(name);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wswitch-enum,"
@@ -240,10 +264,7 @@ DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
       return fuzzySearch(value, m_origin);
 
     case Outline:
-      list << m_outlineStyle << m_colors << "invert"
-           << "thin"
-           << "medium"
-           << "thick";
+      list << m_outlineStyle << m_colors << m_outlineColor << m_outlineWidth;
       return fuzzySearch(value, list);
 
     case OutlineStyle:
@@ -253,23 +274,13 @@ DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
       return fuzzySearch(value, m_paletteRoles);
 
     case Position:
-      list << "relative"
-           << "absolute";
-      return fuzzySearch(value, list);
+      return fuzzySearch(value, m_position);
 
     case Repeat:
-      list << "repeat-x"
-           << "repeat-y"
-           << "repeat"
-           << "no-repeat";
-      return fuzzySearch(value, list);
+      return fuzzySearch(value, m_repeat);
 
     case TextDecoration:
-      list << "none"
-           << "underline"
-           << "overline"
-           << "line-through";
-      return fuzzySearch(value, list);
+      return fuzzySearch(value, m_textDecoration);
 
     case StylesheetEditGood:
       list << m_colors << "thin"
@@ -304,7 +315,8 @@ DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
       return fuzzySearch(value, list);
   }
 #pragma clang diagnostic pop
-  return QMap<int, QString>();}
+  return QMap<int, QString>();
+}
 
 bool
 DataStore::containsStylesheetProperty(const QString& name)
@@ -318,7 +330,7 @@ DataStore::containsPseudoState(const QString& name)
   return m_pseudoStates.contains(name.toLower());
 }
 
-QMap<int, QString>
+QMultiMap<int, QString>
 DataStore::fuzzySearchPseudoStates(const QString& name)
 {
   return fuzzySearch(name, m_pseudoStates);
@@ -330,8 +342,7 @@ DataStore::containsSubControl(const QString& name)
   return m_subControls.contains(name.toLower());
 }
 
-QMap<int, QString>
-DataStore::fuzzySearchSubControl(const QString& name)
+QMultiMap<int, QString> DataStore::fuzzySearchSubControl(const QString& name)
 {
   return fuzzySearch(name, m_subControls.keys());
 }
@@ -763,7 +774,7 @@ DataStore::checkOutlineStyle(const QString& value)
 bool
 DataStore::checkOutlineColor(const QString& value)
 {
-  if (value == "invert") {
+  if (value == m_outlineColor) {
     return true;
   }
 
@@ -773,7 +784,7 @@ DataStore::checkOutlineColor(const QString& value)
 bool
 DataStore::checkOutlineWidth(const QString& value)
 {
-  if (value == "thin" || value == "medium" || value == "thick") {
+  if (m_outlineWidth.contains(value)) {
     return true;
   }
 
@@ -812,12 +823,7 @@ DataStore::checkRadius(const QString& value)
 bool
 DataStore::checkRepeat(const QString& value)
 {
-  if (value == "repeat-x" || value == "repeat-y" || value == "repeat" ||
-      value == "no-repeat") {
-    return true;
-  }
-
-  return false;
+  return m_repeat.contains(value);
 }
 
 bool
@@ -840,22 +846,13 @@ DataStore::checkUrl(const QString& value)
 bool
 DataStore::checkPosition(const QString& value)
 {
-  if (value == "relative" || value == "absolute") {
-    return true;
-  }
-
-  return false;
+  return m_position.contains(value);
 }
 
 bool
 DataStore::checkTextDecoration(const QString& value)
 {
-  if (value == "none" || value == "underline" || value == "overline" ||
-      value == "line-through") {
-    return true;
-  }
-
-  return false;
+  return m_textDecoration.contains(value);
 }
 
 bool
@@ -1317,8 +1314,8 @@ DataStore::fuzzyTestBrush(const QString& value)
   return data;
 }
 
-//QMap<int, QString>
-//DataStore::propertyValueAttributes(const QString& name, const QString& value)
+// QMap<int, QString>
+// DataStore::propertyValueAttributes(const QString& name, const QString& value)
 //{
 
 //}

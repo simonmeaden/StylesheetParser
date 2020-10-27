@@ -72,15 +72,7 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   : q_ptr(parent)
   , m_bookmarkArea(new BookmarkArea(q_ptr))
   , m_lineNumberArea(new LineNumberArea(q_ptr))
-  //  , m_datastore(new DataStore(q_ptr))
   , m_highlighter(new StylesheetHighlighter(q_ptr))
-  //  , m_nodes(new QMap<QTextCursor, Node*>())
-  //  , m_braceCount(0)
-  , m_bracesMatched(true)
-//  , m_startComment(false)
-//  , m_hoverWidget(nullptr)
-//  , m_manualMove(false)
-//  , m_maxSuggestionCount(30)
 {
   QThread* thread = new QThread;
   m_parser = new Parser(q_ptr);
@@ -92,9 +84,9 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
                  &Parser::rehighlight,
                  q_ptr,
                  &StylesheetEdit::handleParseComplete);
-  q_ptr->connect(m_parser, SIGNAL(finished()), thread, SLOT(quit()));
-  q_ptr->connect(m_parser, SIGNAL(finished()), m_parser, SLOT(deleteLater()));
-  q_ptr->connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+  q_ptr->connect(m_parser, &Parser::finished, thread, &QThread::quit);
+  q_ptr->connect(m_parser, &Parser::finished, m_parser, &Parser::deleteLater);
+  q_ptr->connect(thread, &QThread::finished, thread, &QThread::deleteLater);
   thread->start();
 
   m_hoverWidget = new HoverWidget(q_ptr);
@@ -107,13 +99,6 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
 void
 StylesheetEditPrivate::initActions()
 {
-  //  m_suggestionsAct = new QAction(q_ptr->tr("Suggestions"), q_ptr);
-  //  m_suggestionsAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S));
-  //  m_suggestionsAct->setStatusTip(q_ptr->tr("Suggestions for this option"));
-  //  q_ptr->connect(
-  //    m_suggestionsAct, &QAction::triggered, q_ptr,
-  //    &StylesheetEdit::suggestion);
-
   m_addBookmarkAct = new QAction(q_ptr->tr("Add Bookmark"), q_ptr);
   q_ptr->connect(m_addBookmarkAct,
                  &QAction::triggered,
@@ -382,41 +367,6 @@ StylesheetEditPrivate::setStyleSheet(const QString& stylesheet)
   m_highlighter->rehighlight();
 }
 
-// StylesheetData* StylesheetEditPrivate::getStylesheetProperty(const QString&
-// sheet, int& pos)
-//{
-//  QString property, sep, value;
-//  StylesheetData* data = nullptr;
-
-//  property = findNext(sheet, pos);
-
-//  if (m_datastore->containsStylesheetProperty(property)) {
-//    data = new StylesheetData();
-//    data->name = property;
-
-//    if (pos < sheet.length()) {
-//      sep = findNext(sheet, pos);
-
-//      if (sep == ":") {
-//        while (true) {
-//          value = findNext(sheet, pos);
-
-//          if (value == ";" || value == "}") {
-//            break;
-//          }
-
-//          m_datastore->getIfValidStylesheetValue(property, value, data);
-//        }
-
-//      } else {
-//        // TODO show stylesheet error - no property seperator.
-//      }
-//    }
-//  }
-
-//  return data;
-//}
-
 void
 StylesheetEdit::setValueFormat(QColor color, QColor back, QFont::Weight weight)
 {
@@ -565,30 +515,6 @@ StylesheetEditPrivate::setLineNumberFormat(QColor color,
   m_lineNumberArea->setBack(back);
   m_lineNumberArea->setWeight(weight);
 }
-
-// void StylesheetEdit::setBadValueFormat(
-//  QColor color,
-//  QColor back,
-//  QFont::Weight weight,
-//  bool underline,
-//  QTextCharFormat::UnderlineStyle underlineStyle,
-//  QColor underlineColor)
-//{
-//  d_ptr->setBadValueFormat(
-//    color, back, weight, underline, underlineStyle, underlineColor);
-//}
-
-// void StylesheetEditPrivate::setBadValueFormat(
-//  QColor color,
-//  QColor back,
-//  QFont::Weight weight,
-//  bool underline,
-//  QTextCharFormat::UnderlineStyle underlineStyle,
-//  QColor underlineColor)
-//{
-//  m_highlighter->setBadValueFormat(
-//    color, back, weight, underline, underlineStyle, underlineColor);
-//}
 
 void
 StylesheetEdit::setStartBraceFormat(QColor color,
@@ -783,12 +709,12 @@ StylesheetEditPrivate::createHover()
 
 void
 StylesheetEditPrivate::hoverWidgetType(NamedNode* nNode,
-                                       QPair<SectionType, int> isin,
+                                       QPair<NodeSectionType, int> isin,
                                        QPoint pos)
 {
   auto widget = qobject_cast<WidgetNode*>(nNode);
 
-  if (isin.first == SectionType::Name) {
+  if (isin.first == NodeSectionType::Name) {
     if (!widget->isWidgetValid()) {
       // not a valid node
       if (widget == m_currentHover) {
@@ -808,12 +734,12 @@ StylesheetEditPrivate::hoverWidgetType(NamedNode* nNode,
 
 void
 StylesheetEditPrivate::hoverPseudoStateType(NamedNode* nNode,
-                                            QPair<SectionType, int> isin,
+                                            QPair<NodeSectionType, int> isin,
                                             QPoint pos)
 {
   auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
 
-  if (isin.first == SectionType::Name) {
+  if (isin.first == NodeSectionType::Name) {
     if (!pseudostate->isStateValid()) {
       // not a valid node
       if (pseudostate == m_currentHover) {
@@ -833,12 +759,12 @@ StylesheetEditPrivate::hoverPseudoStateType(NamedNode* nNode,
 
 void
 StylesheetEditPrivate::hoverSubControlType(NamedNode* nNode,
-                                           QPair<SectionType, int> isin,
+                                           QPair<NodeSectionType, int> isin,
                                            QPoint pos)
 {
   auto subcontrol = qobject_cast<SubControlNode*>(nNode);
 
-  if (isin.first == SectionType::Name) {
+  if (isin.first == NodeSectionType::Name) {
     if (!subcontrol->isStateValid()) {
       // not a valid node
       if (subcontrol == m_currentHover) {
@@ -858,17 +784,17 @@ StylesheetEditPrivate::hoverSubControlType(NamedNode* nNode,
 
 void
 StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
-                                         QPair<SectionType, int> isin,
+                                         QPair<NodeSectionType, int> isin,
                                          QPoint pos)
 {
   auto property = qobject_cast<PropertyNode*>(nNode);
 
   switch (isin.first) {
-    case SectionType::None:
+    case NodeSectionType::None:
       m_hoverWidget->hideHover();
       break;
 
-    case SectionType::Name: {
+    case NodeSectionType::Name: {
       auto propertyName = property->name();
 
       if (property->checks().contains(PropertyNode::MissingPropertyEnd) &&
@@ -898,7 +824,7 @@ StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
       break;
     }
 
-    case SectionType::Value: {
+    case NodeSectionType::Value: {
       /*if (property->checks().at(isin.second) ==
           PropertyNode::ValidPropertyType) {
         // This is a valid property but the property name is wrong.

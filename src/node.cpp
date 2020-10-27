@@ -165,7 +165,7 @@ NamedNode::NamedNode(const QString& name,
   , NameNode(name)
 {}
 
-QPair<SectionType, int>
+QPair<NodeSectionType, int>
 NamedNode::isIn(QPoint pos)
 {
   auto x = pos.x();
@@ -180,10 +180,10 @@ NamedNode::isIn(QPoint pos)
   auto bottom = top + height;
 
   if (x >= left && x <= right && y >= top && y <= bottom) {
-    return qMakePair<SectionType, int>(SectionType::Name, 0);
+    return qMakePair<NodeSectionType, int>(NodeSectionType::Name, 0);
   }
 
-  return qMakePair<SectionType, int>(SectionType::None, -1);
+  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
 }
 
 int
@@ -324,6 +324,13 @@ PropertyNode::addValue(
   m_attributeTypes.append(attType);
 }
 
+void
+PropertyNode::correctValue(int index, const QString& value)
+{
+  m_values.replace(index, value);
+  m_checks.replace(index, GoodValue);
+}
+
 bool
 PropertyNode::setBadCheck(Check check, int index)
 {
@@ -402,14 +409,15 @@ PropertyNode::setPropertyMarkerOffset(int propertymarkerOffset)
   m_propertyMarkerOffset = propertymarkerOffset;
 }
 
-void PropertyNode::incrementOffsets(int n)
+void
+PropertyNode::incrementOffsets(int startIndex, int increment)
 {
-  for (int i = 0; i < m_offsets.length(); i++) {
-    m_offsets[i] = m_offsets.at(i) + n;
+  for (int i = startIndex; i < m_offsets.length(); i++) {
+    m_offsets[i] = m_offsets.at(i) + increment;
   }
 }
 
-QPair<SectionType, int>
+QPair<NodeSectionType, int>
 PropertyNode::isIn(QPoint pos)
 {
   auto x = pos.x();
@@ -434,7 +442,7 @@ PropertyNode::isIn(QPoint pos)
   if (y >= top && y <= bottom && x >= propLeft && x <= propRight) {
     // Property name.
     if (x >= left && x <= right) {
-      return qMakePair<SectionType, int>(SectionType::Name, 0);
+      return qMakePair<NodeSectionType, int>(NodeSectionType::Name, 0);
     }
 
     // Property values.
@@ -452,34 +460,36 @@ PropertyNode::isIn(QPoint pos)
 
       if (x >= oldRight && x <= left) {
         // between values or name and first value.
-        return qMakePair<SectionType, int>(SectionType::None, -1);
+        return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
       }
 
       if (x >= left && x <= right) {
         // inside a value.
-        return qMakePair<SectionType, int>(SectionType::Value, i);
+        return qMakePair<NodeSectionType, int>(NodeSectionType::Value, i);
       }
     }
   } // else return not inside.
 
-  return qMakePair<SectionType, int>(SectionType::None, -1);
+  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
 }
 
-QPair<bool, QString>
-PropertyNode::isProperty(int pos)
+PropertyStatus
+PropertyNode::isProperty(int pos) const
 {
   if (pos < m_name.length()) {
-    return qMakePair<bool, QString>(true, m_name);
+    return PropertyStatus(true, m_name);
   } else {
     for (int i = 0; i < m_values.size(); i++) {
       auto value = m_values.at(i);
       auto offset = m_offsets.at(i);
+
       if (pos >= offset && pos < offset + value.length()) {
-        return qMakePair<bool, QString>(false, value);
+        return PropertyStatus(false, value, offset);
       }
     }
   }
-  return qMakePair<bool, QString>(false, QString());
+
+  return PropertyStatus();
 }
 
 void
@@ -563,11 +573,11 @@ CommentNode::end() const
   return m_cursor.anchor() + m_name.length();
 }
 
-QPair<SectionType, int>
+QPair<NodeSectionType, int>
 CommentNode::isIn(QPoint pos)
 {
   // TODO isIn for comments.
-  return qMakePair<SectionType, int>(SectionType::None, -1);
+  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
 }
 
 ColonNode::ColonNode(QTextCursor start, StylesheetEdit* parent, Type type)

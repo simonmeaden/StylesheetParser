@@ -63,6 +63,8 @@ target_sources(tst_parser
       src/mainwindow.cpp
       src/datastore.h
       src/datastore.cpp
+      src/common.h
+      src/common.cpp
       src/x11colors.cpp
       src/abstractlabelledwidget.cpp
       src/labelledlineedit.cpp

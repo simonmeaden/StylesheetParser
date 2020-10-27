@@ -21,10 +21,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <QMenu>
 #include <QObject>
 #include <QPoint>
 #include <QTextCursor>
-#include <QMenu>
 
 #include "common.h"
 #include "parserstate.h"
@@ -42,6 +42,7 @@ class Parser : public QObject
   Q_OBJECT
 public:
   explicit Parser(StylesheetEdit* parent = nullptr);
+  ~Parser();
 
   void parseInitialText(const QString& text, int pos = 0);
 
@@ -49,7 +50,7 @@ public:
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
-  void handleMouseClicked(QPoint pos);
+  void handleMouseClicked(const QPoint& pos);
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
 
@@ -59,13 +60,15 @@ public:
   bool manualMove() const;
   void setManualMove(bool manualMove);
 
-  QMenu *contextMenu() const;
+  QMenu* contextMenu() const;
 
-  void handleSuggestion(QAction *act);
+  void handleSuggestion(QAction* act);
 
-  QPair<SectionType, int> nodeForPoint(const QPoint& pos, NamedNode** nNode);
+  QPair<NodeSectionType, int> nodeForPoint(const QPoint& pos,
+                                           NamedNode** nNode);
 
 signals:
+  void finished();
   void rehighlight();
 
 private:
@@ -122,13 +125,30 @@ private:
                             int charsRemoved,
                             const QString& newValue);
 
-  QMenu *createContextMenu();
-  void updateContextMenu(QMap<int, QString> matches, NamedNode *nNode);
-  void updatePropertyContextMenu(QMap<int, QString> matches, PropertyNode *property);
-  void updatePropertyValueContextMenu(QMap<int, QString> matches, PropertyNode *nNode);
-  void updateMenu(QMap<int, QString> matches, NamedNode *nNode);
-  QList<int> reverseLastNValues(QMap<int, QString> matches);
-
+  QMenu* createContextMenu();
+  void updateContextMenu(QMap<int, QString> matches,
+                         NamedNode* nNode,
+                         const QPoint& pos);
+  void updatePropertyContextMenu(QMap<int, QString> matches,
+                                 PropertyNode* property,
+                                 const QPoint& pos);
+  void updatePropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                      PropertyNode* nNode,
+                                      const QString& valueName,
+                                      const QPoint& pos);
+  void updatePropertyValueContextMenu(
+    QMultiMap<int, QPair<QString, QString>> matches,
+    PropertyNode* nNode,
+    const QString& valueName,
+    const QPoint& pos);
+  void updateMenu(QMap<int, QString> matches,
+                  NamedNode* nNode,
+                  const QPoint& pos);
+  QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
+  QList<QPair<QString, QString>> sortLastNValues(
+    QMultiMap<int, QPair<QString, QString>> matches);
+  void actionPropertyNameChange(PropertyNode* property, const QString& name, int originalCursor);
+  void actionPropertyValueChange(PropertyNode *property, const PropertyStatus &status, const QString &name, int originalCursor);
 };
 
 #endif // PARSER_H

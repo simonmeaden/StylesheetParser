@@ -95,7 +95,7 @@ public:
   virtual int length() const;
 
   // can't be implemented here as it doesn't have enough info.
-  virtual QPair<SectionType, int> isIn(QPoint pos) = 0;
+  virtual QPair<NodeSectionType, int> isIn(QPoint pos) = 0;
 
 protected:
   QString m_name;
@@ -107,7 +107,7 @@ class NamedNode : public Node, public NameNode
 public:
   NamedNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = NodeType);
 
-  QPair<SectionType, int> isIn(QPoint pos) override;
+  QPair<NodeSectionType, int> isIn(QPoint pos) override;
   int end() const;
 };
 
@@ -218,6 +218,7 @@ public:
   void setAttributeTypes(const QList<DataStore::AttributeType>& attributeTypes);
   //! Adds a complete value/check/offset to the values.
   void addValue(const QString& value, Check check, int offset, DataStore::AttributeType attType);
+  void correctValue(int index, const QString& value);
   //! Sets the check at index as bad.
   //!
   //! If index is not set then the default is to set the last value as bad.
@@ -240,10 +241,10 @@ public:
 
   int propertyMarkerOffset() const;
   void setPropertyMarkerOffset(int propertymarkerOffset);
-  void incrementOffsets(int n=1);
+  void incrementOffsets(int startIndex = 0, int increment=1);
 
-  QPair<SectionType, int> isIn(QPoint pos) override;
-  QPair<bool, QString> isProperty(int offset);
+  QPair<NodeSectionType, int> isIn(QPoint pos) override;
+  PropertyStatus isProperty(int offset) const;
 
 private:
   QStringList m_values;
@@ -302,7 +303,7 @@ public:
   void append(QString text);
   int end() const override;
 
-  QPair<SectionType, int> isIn(QPoint pos) override;
+  QPair<NodeSectionType, int> isIn(QPoint pos) override;
 };
 
 class SemiColonNode : public NamedNode

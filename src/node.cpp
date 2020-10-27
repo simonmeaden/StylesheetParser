@@ -370,7 +370,12 @@ PropertyNode::end() const
     return start();
   }
 
-  return start() + m_offsets.back() + m_values.last().length();
+  return start() + length();
+}
+
+int PropertyNode::length() const
+{
+  return m_offsets.back() + m_values.last().length();
 }
 
 bool

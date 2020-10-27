@@ -56,10 +56,10 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
           &QTextDocument::contentsChange,
           this,
           &StylesheetEdit::handleDocumentChanged);
-  //  connect(this,
-  //          &QPlainTextEdit::textChanged,
-  //          this,
-  //          &StylesheetEdit::handleTextChanged);
+//  connect(this,
+//          &QPlainTextEdit::textChanged,
+//          this,
+//          &StylesheetEdit::handleTextChanged);
   //  updateLineNumberAreaWidth(0);
   //  setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -595,8 +595,8 @@ StylesheetEdit::mouseMoveEvent(QMouseEvent* event)
   QPlainTextEdit::mouseMoveEvent(event);
 }
 
-//void
-//StylesheetEditPrivate::handleMouseMove(const QPoint &pos)
+// void
+// StylesheetEditPrivate::handleMouseMove(const QPoint &pos)
 //{}
 
 void
@@ -605,8 +605,8 @@ StylesheetEdit::mouseReleaseEvent(QMouseEvent* event)
   QPlainTextEdit::mouseReleaseEvent(event);
 }
 
-//void
-//StylesheetEditPrivate::handleMouseRelease(const QPoint &pos)
+// void
+// StylesheetEditPrivate::handleMouseRelease(const QPoint &pos)
 //{
 //  m_parser->handleMouseClicked(pos);
 //}
@@ -1053,8 +1053,7 @@ StylesheetEdit::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 void
 StylesheetEdit::handleTextChanged()
 {
-  //  d_ptr->handleTextChanged();
-  qWarning();
+  d_ptr->handleTextChanged();
 }
 
 void
@@ -1068,6 +1067,7 @@ StylesheetEditPrivate::onDocumentChanged(int pos,
 void
 StylesheetEditPrivate::handleTextChanged()
 {
+  qWarning();
   // TODO possibly remove this.
   //  //  m_highlighter->rehighlight();
   //  QTextCursor cursor = q_ptr->textCursor();

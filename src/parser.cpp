@@ -1075,204 +1075,244 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
   Node* node = data.node;
 
   if (node) {
-    QString value, newValue;
+    QString value;
+    PropertyNode *newNode=nullptr;
 
     switch (node->type()) {
-        //    case Node::WidgetType: {
-        //      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
-        //      value = widget->value();
-        //      break;
-        //    }
-
       case Node::PropertyType: {
-        PropertyNode* property = qobject_cast<PropertyNode*>(node);
-        QTextCursor cursor = m_editor->textCursor();
-        cursor.select(QTextCursor::WordUnderCursor);
-        newValue = cursor.selectedText();
+        auto property = qobject_cast<PropertyNode*>(node);
+        auto length = property->length() + charsAdded - charsRemoved;
+        value = text.mid(node->start(), length);
+        auto pos = 0;
 
-        if (newValue == ";") {
-          Node* next;
-
-          if (property->hasPropertyMarker()) {
-            next = nextNode(property->cursor());
-            next = nextNode(next->cursor());
-
-          } else {
-            next = nextNode(property->cursor());
-          }
-
-          if (next->type() == Node::PropertyEndType) {
-            PropertyEndMarkerNode* marker =
-              new PropertyEndMarkerNode(next->cursor(), m_editor);
-            m_nodes->insert(next->cursor(), marker);
-            next->deleteLater();
-
-            if (property->count() > 0) {
-              auto checks = property->checks();
-              auto check = checks.last();
-
-              if (check == PropertyNode::MissingPropertyEnd) {
-                checks.replace(checks.size() - 1, PropertyNode::GoodValue);
-                property->setChecks(checks);
+        QString block = findNext(value, pos), name;
+        if (m_datastore->containsProperty(block)) {
+          newNode = new PropertyNode(block, property->cursor(), m_editor);
+          name = block;
+          while(!(block = findNext(value, pos)).isEmpty()) {
+            if (block == ":") {
+              if (!newNode->hasPropertyMarker()){
+                newNode->setPropertyMarkerExists(true);
+                newNode->setPropertyMarkerOffset(pos - 1);
+              } else {
+                // TODO handle error?
+                // what happens if the : is after or in the middle of a value? m_values.size() > 0?
+                // or if there are two?
+                // maybe remove it?
               }
+            } else if (m_datastore->isValidPropertyValueForProperty(name, block)) {
+              newNode->addValue(block, PropertyNode::GoodValue, pos - block.length(), m_datastore->propertyValueAttribute(block));
+            } else {
+              newNode->addValue(block, PropertyNode::BadValue, pos - block.length(), m_datastore->propertyValueAttribute(block));
             }
-          }
-
-        } else if (newValue == ":") {
-          int start = node->start();
-          int end = node->end();
-          int anchor = cursor.anchor();
-
-          if (anchor > start && anchor < end) {
-            // is in property.
-            int nameEnd = start + property->name().length();
-
-            if (!property->hasPropertyMarker() && anchor >= nameEnd) {
-              //            QTextCursor propCursor(m_editor->document());
-              //            propCursor.setPosition(pos);
-              //            PropertyMarkerNode* marker =
-              //              new PropertyMarkerNode(propCursor, m_editor);
-              //            m_nodes->insert(propCursor, marker);
-              property->setPropertyMarkerExists(true);
-              property->setPropertyMarkerOffset(pos);
-            }
-          }
-
-        } else {
-          updatePropertyValues(
-            cursor.anchor(), property, charsAdded, charsRemoved, newValue);
-        }
-
-        break;
-      }
-
-      case Node::BadNodeType: {
-        BadBlockNode* badNode = qobject_cast<BadBlockNode*>(node);
-        value = badNode->name();
-        ParserState::Errors errors = badNode->errors();
-
-        if (errors.testFlag(ParserState::AnomalousType)) {
-          QTextCursor cursor(badNode->cursor());
-          cursor.select(QTextCursor::WordUnderCursor);
-          newValue = cursor.selectedText();
-
-          if (m_datastore->containsWidget(newValue)) {
-            Node* widget =
-              new WidgetNode(newValue, badNode->cursor(), m_editor);
-            m_nodes->insert(badNode->cursor(), widget);
-            Node* next = nextNode(badNode->cursor());
-
-            if (next) {
-              if (next->type() == Node::BadSubControlMarkerType) {
-                Node* subcontrolmarker =
-                  new SubControlMarkerNode(next->cursor(), m_editor);
-                m_nodes->insert(next->cursor(), subcontrolmarker);
-                next->deleteLater();
-
-              } else if (next->type() == Node::BadPseudoStateMarkerType) {
-                Node* pseudostatemarker =
-                  new PseudoStateMarkerNode(next->cursor(), m_editor);
-                m_nodes->insert(next->cursor(), pseudostatemarker);
-                next->deleteLater();
-              }
-            }
-
-            badNode->deleteLater();
-
-          } else if (m_datastore->containsSubControl(newValue)) {
-            Node* subcontrol =
-              new SubControlNode(newValue, badNode->cursor(), m_editor);
-            m_nodes->insert(badNode->cursor(), subcontrol);
-            Node* prev = previousNode(badNode->cursor());
-
-            if (prev) {
-              if (prev->type() == Node::BadSubControlMarkerType) {
-                Node* subcontrolmarker =
-                  new SubControlMarkerNode(prev->cursor(), m_editor);
-                m_nodes->insert(prev->cursor(), subcontrolmarker);
-                prev->deleteLater();
-              }
-            }
-
-            badNode->deleteLater();
-
-          } else if (m_datastore->containsPseudoState(newValue)) {
-            Node* pseudostate =
-              new PseudoStateNode(newValue, badNode->cursor(), m_editor);
-            m_nodes->insert(badNode->cursor(), pseudostate);
-            Node* prev = previousNode(badNode->cursor());
-
-            if (prev) {
-              if (prev->type() == Node::BadPseudoStateMarkerType) {
-                Node* pseudostatemarker =
-                  new PseudoStateMarkerNode(prev->cursor(), m_editor);
-                m_nodes->insert(prev->cursor(), pseudostatemarker);
-                prev->deleteLater();
-              }
-            }
-
-            badNode->deleteLater();
-
-          } else {
-            // still bad, just update text.
-            badNode->setName(newValue);
           }
         }
-
-        if (errors.testFlag(ParserState::InvalidWidget)) {
-          QTextCursor cursor(data.cursor);
-          cursor.select(QTextCursor::WordUnderCursor);
-          newValue = cursor.selectedText();
-
-          if (m_datastore->containsWidget(newValue)) {
-            badNode->deleteLater();
-            Node* subcontrol = new WidgetNode(newValue, data.cursor, m_editor);
-            m_nodes->insert(data.cursor, subcontrol);
-
-          } else {
-            badNode->setName(newValue);
-          }
-
-        } else if (errors.testFlag(ParserState::InvalidSubControl)) {
-          QTextCursor cursor(data.cursor);
-          cursor.select(QTextCursor::WordUnderCursor);
-          newValue = cursor.selectedText();
-
-          if (m_datastore->containsSubControl(newValue)) {
-            Node* subcontrol =
-              new SubControlNode(newValue, data.cursor, m_editor);
-            m_nodes->insert(data.cursor, subcontrol);
-            badNode->deleteLater();
-
-          } else {
-            badNode->setName(newValue);
-          }
-
-        } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
-          QTextCursor cursor(data.cursor);
-          cursor.select(QTextCursor::WordUnderCursor);
-          newValue = cursor.selectedText();
-
-          if (m_datastore->containsPseudoState(newValue)) {
-            badNode->deleteLater();
-            Node* subcontrol =
-              new PseudoStateNode(newValue, data.cursor, m_editor);
-            m_nodes->insert(data.cursor, subcontrol);
-
-          } else {
-            badNode->setName(newValue);
-          }
-        }
-
-        break;
       }
     }
 
-    m_editor->document()->markContentsDirty(
-      0, m_editor->document()->toPlainText().length());
+    if (newNode) {
+      m_nodes->insert(newNode->cursor(), newNode);
+    }
+
     emit rehighlight();
   }
 }
+//    switch (node->type()) {
+//        //    case Node::WidgetType: {
+//        //      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
+//        //      value = widget->value();
+//        //      break;
+//        //    }
+
+//      case Node::PropertyType: {
+//        PropertyNode* property = qobject_cast<PropertyNode*>(node);
+//        QTextCursor cursor = m_editor->textCursor();
+//        cursor.select(QTextCursor::WordUnderCursor);
+//        newValue = cursor.selectedText();
+
+//        if (newValue == ";") {
+//          Node* next;
+
+//          if (property->hasPropertyMarker()) {
+//            next = nextNode(property->cursor());
+//            next = nextNode(next->cursor());
+
+//          } else {
+//            next = nextNode(property->cursor());
+//          }
+
+//          if (next->type() == Node::PropertyEndType) {
+//            PropertyEndMarkerNode* marker =
+//              new PropertyEndMarkerNode(next->cursor(), m_editor);
+//            m_nodes->insert(next->cursor(), marker);
+//            next->deleteLater();
+
+//            if (property->count() > 0) {
+//              auto checks = property->checks();
+//              auto check = checks.last();
+
+//              if (check == PropertyNode::MissingPropertyEnd) {
+//                checks.replace(checks.size() - 1, PropertyNode::GoodValue);
+//                property->setChecks(checks);
+//              }
+//            }
+//          }
+
+//        } else if (newValue == ":") {
+//          int start = node->start();
+//          int end = node->end();
+//          int anchor = cursor.anchor();
+
+//          if (anchor > start && anchor < end) {
+//            // is in property.
+//            int nameEnd = start + property->name().length();
+
+//            if (!property->hasPropertyMarker() && anchor >= nameEnd) {
+//              //            QTextCursor propCursor(m_editor->document());
+//              //            propCursor.setPosition(pos);
+//              //            PropertyMarkerNode* marker =
+//              //              new PropertyMarkerNode(propCursor, m_editor);
+//              //            m_nodes->insert(propCursor, marker);
+//              property->setPropertyMarkerExists(true);
+//              property->setPropertyMarkerOffset(pos);
+//            }
+//          }
+
+//        } else {
+//          updatePropertyValues(
+//            cursor.anchor(), property, charsAdded, charsRemoved, newValue);
+//        }
+
+//        break;
+//      }
+
+//      case Node::BadNodeType: {
+//        BadBlockNode* badNode = qobject_cast<BadBlockNode*>(node);
+//        value = badNode->name();
+//        ParserState::Errors errors = badNode->errors();
+
+//        if (errors.testFlag(ParserState::AnomalousType)) {
+//          QTextCursor cursor(badNode->cursor());
+//          cursor.select(QTextCursor::WordUnderCursor);
+//          newValue = cursor.selectedText();
+
+//          if (m_datastore->containsWidget(newValue)) {
+//            Node* widget =
+//              new WidgetNode(newValue, badNode->cursor(), m_editor);
+//            m_nodes->insert(badNode->cursor(), widget);
+//            Node* next = nextNode(badNode->cursor());
+
+//            if (next) {
+//              if (next->type() == Node::BadSubControlMarkerType) {
+//                Node* subcontrolmarker =
+//                  new SubControlMarkerNode(next->cursor(), m_editor);
+//                m_nodes->insert(next->cursor(), subcontrolmarker);
+//                next->deleteLater();
+
+//              } else if (next->type() == Node::BadPseudoStateMarkerType) {
+//                Node* pseudostatemarker =
+//                  new PseudoStateMarkerNode(next->cursor(), m_editor);
+//                m_nodes->insert(next->cursor(), pseudostatemarker);
+//                next->deleteLater();
+//              }
+//            }
+
+//            badNode->deleteLater();
+
+//          } else if (m_datastore->containsSubControl(newValue)) {
+//            Node* subcontrol =
+//              new SubControlNode(newValue, badNode->cursor(), m_editor);
+//            m_nodes->insert(badNode->cursor(), subcontrol);
+//            Node* prev = previousNode(badNode->cursor());
+
+//            if (prev) {
+//              if (prev->type() == Node::BadSubControlMarkerType) {
+//                Node* subcontrolmarker =
+//                  new SubControlMarkerNode(prev->cursor(), m_editor);
+//                m_nodes->insert(prev->cursor(), subcontrolmarker);
+//                prev->deleteLater();
+//              }
+//            }
+
+//            badNode->deleteLater();
+
+//          } else if (m_datastore->containsPseudoState(newValue)) {
+//            Node* pseudostate =
+//              new PseudoStateNode(newValue, badNode->cursor(), m_editor);
+//            m_nodes->insert(badNode->cursor(), pseudostate);
+//            Node* prev = previousNode(badNode->cursor());
+
+//            if (prev) {
+//              if (prev->type() == Node::BadPseudoStateMarkerType) {
+//                Node* pseudostatemarker =
+//                  new PseudoStateMarkerNode(prev->cursor(), m_editor);
+//                m_nodes->insert(prev->cursor(), pseudostatemarker);
+//                prev->deleteLater();
+//              }
+//            }
+
+//            badNode->deleteLater();
+
+//          } else {
+//            // still bad, just update text.
+//            badNode->setName(newValue);
+//          }
+//        }
+
+//        if (errors.testFlag(ParserState::InvalidWidget)) {
+//          QTextCursor cursor(data.cursor);
+//          cursor.select(QTextCursor::WordUnderCursor);
+//          newValue = cursor.selectedText();
+
+//          if (m_datastore->containsWidget(newValue)) {
+//            badNode->deleteLater();
+//            Node* subcontrol = new WidgetNode(newValue, data.cursor, m_editor);
+//            m_nodes->insert(data.cursor, subcontrol);
+
+//          } else {
+//            badNode->setName(newValue);
+//          }
+
+//        } else if (errors.testFlag(ParserState::InvalidSubControl)) {
+//          QTextCursor cursor(data.cursor);
+//          cursor.select(QTextCursor::WordUnderCursor);
+//          newValue = cursor.selectedText();
+
+//          if (m_datastore->containsSubControl(newValue)) {
+//            Node* subcontrol =
+//              new SubControlNode(newValue, data.cursor, m_editor);
+//            m_nodes->insert(data.cursor, subcontrol);
+//            badNode->deleteLater();
+
+//          } else {
+//            badNode->setName(newValue);
+//          }
+
+//        } else if (errors.testFlag(ParserState::InvalidPseudoState)) {
+//          QTextCursor cursor(data.cursor);
+//          cursor.select(QTextCursor::WordUnderCursor);
+//          newValue = cursor.selectedText();
+
+//          if (m_datastore->containsPseudoState(newValue)) {
+//            badNode->deleteLater();
+//            Node* subcontrol =
+//              new PseudoStateNode(newValue, data.cursor, m_editor);
+//            m_nodes->insert(data.cursor, subcontrol);
+
+//          } else {
+//            badNode->setName(newValue);
+//          }
+//        }
+
+//        break;
+//      }
+//    }
+
+//    m_editor->document()->markContentsDirty(
+//      0, m_editor->document()->toPlainText().length());
+//    emit rehighlight();
+//  }
+//}
 
 void
 Parser::handleCursorPositionChanged(QTextCursor textCursor)

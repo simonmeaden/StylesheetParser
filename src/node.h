@@ -264,6 +264,7 @@ public:
   // indicates whether the value at index is a valid value.
   Check isValueValid(int index);
   int end() const override;
+  int length() const override;
 
   bool hasPropertyMarker() const;
   void setPropertyMarkerExists(bool propertyMarker);
@@ -286,6 +287,8 @@ private:
   bool m_propertyMarkerExists;
   int m_propertyMarkerOffset;
   bool m_validProperty;
+
+public:
 };
 
 class BadPropertyNode

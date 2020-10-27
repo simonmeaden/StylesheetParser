@@ -1,31 +1,33 @@
 /*
    Copyright 2020 Simon Meaden
 
-   Permission is hereby granted, free of charge, to any person obtaining a copy of this
-   software and associated documentation files (the "Software"), to deal in the Software
-   without restriction, including without limitation the rights to use, copy, modify, merge,
-   publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-                                                                         persons to whom the Software is furnished to do so, subject to the following conditions:
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
 
-   The above copyright notice and this permission notice shall be included in all copies or
-   substantial portions of the Software.
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
 
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
 */
 #include "stylesheethighlighter.h"
 #include "stylesheetparser/stylesheetedit.h"
-
 
 StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   : QSyntaxHighlighter(editor->document())
   , m_editor(editor)
 {
-  m_back = QColor("white");/*editor->palette().brush(QPalette::Background)*/;
+  m_back = QColor("white"); /*editor->palette().brush(QPalette::Background)*/
+  ;
   setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
   setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
   setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
@@ -43,7 +45,8 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   setCommentFormat(QColor("limegreen"), m_back, QFont::Light);
 }
 
-int StylesheetHighlighter::setNodeEnd(int nodeEnd, int blockEnd)
+int
+StylesheetHighlighter::setNodeEnd(int nodeEnd, int blockEnd)
 {
   if (blockEnd < nodeEnd) {
     return blockEnd;
@@ -52,7 +55,8 @@ int StylesheetHighlighter::setNodeEnd(int nodeEnd, int blockEnd)
   return nodeEnd;
 }
 
-int StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
+int
+StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
 {
   if (blockStart > nodeStart) {
     nodeStart = blockStart;
@@ -61,7 +65,8 @@ int StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
   return nodeStart;
 }
 
-void StylesheetHighlighter::highlightBlock(const QString& text)
+void
+StylesheetHighlighter::highlightBlock(const QString& text)
 {
   auto nodes = m_editor->nodes();
 
@@ -108,154 +113,170 @@ void StylesheetHighlighter::highlightBlock(const QString& text)
     }
 
     switch (type) {
-    case Node::NewlineType:
-      break;
+      case Node::NewlineType:
+        break;
 
-    case Node::PseudoStateType:{
-      auto pseudostate = qobject_cast<PseudoStateNode*>(node);
+      case Node::PseudoStateType: {
+        auto pseudostate = qobject_cast<PseudoStateNode*>(node);
 
-      if (pseudostate->isStateValid()) {
-        setFormat(nodeStart, length, m_pseudoStateFormat);
+        if (pseudostate->isStateValid()) {
+          setFormat(nodeStart, length, m_pseudoStateFormat);
 
-      } else {
-        setFormat(nodeStart, length, m_badPseudoStateFormat);
-      }
-      break;
-    }
-
-    case Node::PseudoStateMarkerType:
-      setFormat(nodeStart, length, m_pseudoStateMarkerFormat);
-      break;
-
-    case Node::SubControlType:{
-      auto subcontrol = qobject_cast<SubControlNode*>(node);
-
-      if (subcontrol->isStateValid()) {
-        setFormat(nodeStart, length, m_subControlFormat);
-
-      } else {
-        setFormat(nodeStart, length, m_badSubControlFormat);
-      }
-      break;
-    }
-
-    case Node::SubControlMarkerType:
-      setFormat(nodeStart, length, m_subControlMarkerFormat);
-      break;
-
-    case Node::WidgetType:{
-      WidgetNode* widget = qobject_cast<WidgetNode*>(node);
-
-      if (widget->isWidgetValid()) {
-        setFormat(nodeStart, length, m_widgetFormat);
-
-      } else {
-        setFormat(nodeStart, length, m_badWidgetFormat);
+        } else {
+          setFormat(nodeStart, length, m_badPseudoStateFormat);
+        }
+        break;
       }
 
-      break;
-    }
+      case Node::PseudoStateMarkerType:
+        setFormat(nodeStart, length, m_pseudoStateMarkerFormat);
+        break;
 
-    case Node::BadNodeType:
-      setFormat(nodeStart, length, m_badValueFormat);
-      break;
+      case Node::SubControlType: {
+        auto subcontrol = qobject_cast<SubControlNode*>(node);
 
-    case Node::CommentStartMarkerType:
-      setFormat(nodeStart, length, m_commentFormat);
-      break;
+        if (subcontrol->isStateValid()) {
+          setFormat(nodeStart, length, m_subControlFormat);
 
-    case Node::CommentType:
-      setFormat(nodeStart, length, m_commentFormat);
-      break;
-
-    case Node::CommentEndMarkerType:
-      setFormat(nodeStart, length, m_commentFormat);
-      break;
-
-    case Node::PropertyType: {
-
-      PropertyNode* pNode = qobject_cast<PropertyNode*>(node);
-
-      if (!pNode->isValidProperty()) {
-        setFormat(nodeStart, length, m_badPropertyFormat);
-
-      } else if (pNode->hasPropertyMarker()) {
-        setFormat(nodeStart, length, m_propertyFormat);
-        setFormat(nodeStart + pNode->propertyMarkerOffset(), 1, m_propertyEndMarkerFormat);
-
-      }  else {
-        setFormat(nodeStart, length, m_badPropertyFormat);
+        } else {
+          setFormat(nodeStart, length, m_badSubControlFormat);
+        }
+        break;
       }
 
-      if (pNode) {
-        QStringList values = pNode->values();
-        QList<PropertyNode::Check> checks = pNode->checks();
-        QList<int> offsets = pNode->offsets();
-        PropertyNode::Check check;
-        QString value;
-        int offset;
-        int start;
+      case Node::SubControlMarkerType:
+        setFormat(nodeStart, length, m_subControlMarkerFormat);
+        break;
 
-        for (int i = 0; i < values.length(); i++) {
-          value = values.at(i);
-          check = checks.at(i);
-          offset = offsets.at(i);
+      case Node::WidgetType: {
+        WidgetNode* widget = qobject_cast<WidgetNode*>(node);
 
-          start = nodeStart + offset;
+        if (widget->isWidgetValid()) {
+          setFormat(nodeStart, length, m_widgetFormat);
 
-          if (check == PropertyNode::GoodValue || check == PropertyNode::ValidPropertyType) {
-            setFormat(start, value.length(), m_valueFormat);
+        } else {
+          setFormat(nodeStart, length, m_badWidgetFormat);
+        }
 
-          } else {
-            setFormat(start, value.length(), m_badValueFormat);
+        break;
+      }
+
+      case Node::BadNodeType:
+        setFormat(nodeStart, length, m_badValueFormat);
+        break;
+
+      case Node::CommentStartMarkerType:
+        setFormat(nodeStart, length, m_commentFormat);
+        break;
+
+      case Node::CommentType:
+        setFormat(nodeStart, length, m_commentFormat);
+        break;
+
+      case Node::CommentEndMarkerType:
+        setFormat(nodeStart, length, m_commentFormat);
+        break;
+
+      case Node::PropertyType: {
+
+        PropertyNode* pNode = qobject_cast<PropertyNode*>(node);
+
+        if (!pNode->isValidProperty()) {
+          setFormat(nodeStart, length, m_badPropertyFormat);
+
+        } else if (pNode->hasPropertyMarker()) {
+          setFormat(nodeStart, length, m_propertyFormat);
+          setFormat(nodeStart + pNode->propertyMarkerOffset(),
+                    1,
+                    m_propertyEndMarkerFormat);
+
+        } else {
+          setFormat(nodeStart, length, m_badPropertyFormat);
+        }
+
+        if (pNode) {
+          QStringList values = pNode->values();
+          QList<PropertyNode::Check> checks = pNode->checks();        //    case Node::PropertyMarkerType:
+          //      setFormat(nodeStart, length, m_propertyMarkerFormat);
+          //      break;
+
+
+          QList<int> offsets = pNode->offsets();
+          PropertyNode::Check check;
+          QString value;
+          int offset;
+          int start;
+
+          for (int i = 0; i < values.length(); i++) {
+            value = values.at(i);
+            check = checks.at(i);
+            offset = offsets.at(i);
+
+            start = nodeStart + offset;
+
+            if (check == PropertyNode::GoodValue ||
+                check == PropertyNode::ValidPropertyType) {
+              setFormat(start, value.length(), m_valueFormat);
+
+            } else {
+              setFormat(start, value.length(), m_badValueFormat);
+            }
           }
         }
+
+        break;
       }
 
-      break;
-    }
+      case Node::PropertyEndMarkerType:
+        setFormat(nodeStart, length, m_propertyEndMarkerFormat);
+        break;
 
-    //    case Node::PropertyMarkerType:
-    //      setFormat(nodeStart, length, m_propertyMarkerFormat);
-    //      break;
-
-    case Node::PropertyEndMarkerType:
-      setFormat(nodeStart, length, m_propertyEndMarkerFormat);
-      break;
-
-    case Node::StartBraceType: {
-      StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
-
-      if (startbrace->isBraceAtCursor()) {
-        setFormat(nodeStart, length, m_braceMatchFormat);
-
-      } else {
-        setFormat(nodeStart, length, m_startBraceFormat);
+      case Node::StartBraceType: {
+        StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
+        if (startbrace->isBraceAtCursor()) {
+          if (startbrace->hasEndBrace()) {
+            setFormat(nodeStart, length, m_braceMatchFormat);
+          } else {
+            setFormat(nodeStart, length, m_badBraceMatchFormat);
+          }
+        } else {
+          if (startbrace->hasEndBrace()) {
+            setFormat(nodeStart, length, m_startBraceFormat);
+          } else {
+            setFormat(nodeStart, length, m_badStartBraceFormat);
+          }
+        }
+        break;
       }
 
-      break;
-    }
-
-    case Node::EndBraceType: {
-      EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
-
-      if (endbrace->isBraceAtCursor()) {
-        setFormat(nodeStart, length, m_braceMatchFormat);
-
-      } else {
-        setFormat(nodeStart, length, m_endBraceFormat);
+      case Node::EndBraceType: {
+        EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
+        if (endbrace->isBraceAtCursor()) {
+          if (endbrace->hasStartBrace()) {
+            setFormat(nodeStart, length, m_braceMatchFormat);
+          } else {
+            setFormat(nodeStart, length, m_badBraceMatchFormat);
+          }
+        } else {
+          if (endbrace->hasStartBrace()) {
+            setFormat(nodeStart, length, m_endBraceFormat);
+          } else {
+            setFormat(nodeStart, length, m_badEndBraceFormat);
+          }
+        }
+        break;
       }
 
-      break;
-    }
-
-    default:
-      break;
+      default:
+        break;
     }
   }
 }
 
-void StylesheetHighlighter::setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setWidgetFormat(QBrush color,
+                                       QBrush back,
+                                       QFont::Weight weight)
 {
   m_widgetFormat.setFontWeight(weight);
   m_widgetFormat.setForeground(color);
@@ -265,7 +286,10 @@ void StylesheetHighlighter::setWidgetFormat(QBrush color, QBrush back, QFont::We
   m_badWidgetFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setPseudoStateFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setPseudoStateFormat(QBrush color,
+                                            QBrush back,
+                                            QFont::Weight weight)
 {
   m_pseudoStateFormat.setFontWeight(weight);
   m_pseudoStateFormat.setForeground(color);
@@ -275,14 +299,20 @@ void StylesheetHighlighter::setPseudoStateFormat(QBrush color, QBrush back, QFon
   m_badPseudoStateFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setPseudoStateMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setPseudoStateMarkerFormat(QBrush color,
+                                                  QBrush back,
+                                                  QFont::Weight weight)
 {
   m_pseudoStateMarkerFormat.setFontWeight(weight);
   m_pseudoStateMarkerFormat.setForeground(color);
   m_pseudoStateMarkerFormat.setBackground(back);
 }
 
-void StylesheetHighlighter::setSubControlFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setSubControlFormat(QBrush color,
+                                           QBrush back,
+                                           QFont::Weight weight)
 {
   m_subControlFormat.setFontWeight(weight);
   m_subControlFormat.setForeground(color);
@@ -292,14 +322,20 @@ void StylesheetHighlighter::setSubControlFormat(QBrush color, QBrush back, QFont
   m_badSubControlFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setSubControlMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setSubControlMarkerFormat(QBrush color,
+                                                 QBrush back,
+                                                 QFont::Weight weight)
 {
   m_subControlMarkerFormat.setFontWeight(weight);
   m_subControlMarkerFormat.setForeground(color);
   m_subControlMarkerFormat.setBackground(back);
 }
 
-void StylesheetHighlighter::setValueFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setValueFormat(QBrush color,
+                                      QBrush back,
+                                      QFont::Weight weight)
 {
   m_valueFormat.setFontWeight(weight);
   m_valueFormat.setForeground(color);
@@ -309,7 +345,10 @@ void StylesheetHighlighter::setValueFormat(QBrush color, QBrush back, QFont::Wei
   m_badValueFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setPropertyFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setPropertyFormat(QBrush color,
+                                         QBrush back,
+                                         QFont::Weight weight)
 {
   m_propertyFormat.setFontWeight(weight);
   m_propertyFormat.setForeground(color);
@@ -319,201 +358,257 @@ void StylesheetHighlighter::setPropertyFormat(QBrush color, QBrush back, QFont::
   m_badPropertyFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setPropertyMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setPropertyMarkerFormat(QBrush color,
+                                               QBrush back,
+                                               QFont::Weight weight)
 {
   m_propertyMarkerFormat.setFontWeight(weight);
   m_propertyMarkerFormat.setForeground(color);
   m_propertyMarkerFormat.setBackground(back);
 }
 
-void StylesheetHighlighter::setPropertyEndMarkerFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setPropertyEndMarkerFormat(QBrush color,
+                                                  QBrush back,
+                                                  QFont::Weight weight)
 {
   m_propertyEndMarkerFormat.setFontWeight(weight);
   m_propertyEndMarkerFormat.setForeground(color);
   m_propertyEndMarkerFormat.setBackground(back);
 }
 
-void StylesheetHighlighter::setStartBraceFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setStartBraceFormat(QBrush color,
+                                           QBrush back,
+                                           QFont::Weight weight)
 {
   m_startBraceFormat.setFontWeight(weight);
   m_startBraceFormat.setForeground(color);
   m_startBraceFormat.setBackground(back);
+  m_badStartBraceFormat = QTextCharFormat(m_startBraceFormat);
+  m_badStartBraceFormat.setUnderlineColor(QColor(Qt::red));
+  m_badStartBraceFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setEndBraceFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setEndBraceFormat(QBrush color,
+                                         QBrush back,
+                                         QFont::Weight weight)
 {
   m_endBraceFormat.setFontWeight(weight);
   m_endBraceFormat.setForeground(color);
   m_endBraceFormat.setBackground(back);
+  m_badEndBraceFormat = QTextCharFormat(m_endBraceFormat);
+  m_badEndBraceFormat.setUnderlineColor(QColor(Qt::red));
+  m_badEndBraceFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setBraceMatchFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setBraceMatchFormat(QBrush color,
+                                           QBrush back,
+                                           QFont::Weight weight)
 {
   m_braceMatchFormat.setFontWeight(weight);
   m_braceMatchFormat.setForeground(color);
   m_braceMatchFormat.setBackground(back);
+  m_badBraceMatchFormat = QTextCharFormat(m_braceMatchFormat);
+  m_badBraceMatchFormat.setUnderlineColor(QColor(Qt::red));
+  m_badBraceMatchFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
-void StylesheetHighlighter::setCommentFormat(QBrush color, QBrush back, QFont::Weight weight)
+void
+StylesheetHighlighter::setCommentFormat(QBrush color,
+                                        QBrush back,
+                                        QFont::Weight weight)
 {
   m_commentFormat.setFontWeight(weight);
   m_commentFormat.setForeground(color);
   m_commentFormat.setBackground(back);
 }
 
-QBrush StylesheetHighlighter::widget() const
+QBrush
+StylesheetHighlighter::widget() const
 {
   return m_widgetFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::pseudostate() const
+QBrush
+StylesheetHighlighter::pseudostate() const
 {
   return m_pseudoStateFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::pseudostatemarker() const
+QBrush
+StylesheetHighlighter::pseudostatemarker() const
 {
   return m_pseudoStateMarkerFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::subcontrol() const
+QBrush
+StylesheetHighlighter::subcontrol() const
 {
   return m_subControlFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::subcontrolmarker() const
+QBrush
+StylesheetHighlighter::subcontrolmarker() const
 {
   return m_subControlMarkerFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::value() const
+QBrush
+StylesheetHighlighter::value() const
 {
   return m_valueFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::badvalue() const
+QBrush
+StylesheetHighlighter::badvalue() const
 {
   return m_badValueFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::property() const
+QBrush
+StylesheetHighlighter::property() const
 {
   return m_propertyFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::propertymarker() const
+QBrush
+StylesheetHighlighter::propertymarker() const
 {
   return m_propertyMarkerFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::startbrace() const
+QBrush
+StylesheetHighlighter::startbrace() const
 {
   return m_startBraceFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::endbrace() const
+QBrush
+StylesheetHighlighter::endbrace() const
 {
   return m_endBraceFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::bracematch() const
+QBrush
+StylesheetHighlighter::bracematch() const
 {
   return m_braceMatchFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::bracematchBack() const
+QBrush
+StylesheetHighlighter::bracematchBack() const
 {
   return m_braceMatchFormat.background();
 }
 
-QBrush StylesheetHighlighter::comment() const
+QBrush
+StylesheetHighlighter::comment() const
 {
   return m_commentFormat.foreground();
 }
 
-QBrush StylesheetHighlighter::back() const
+QBrush
+StylesheetHighlighter::back() const
 {
   return m_back;
 }
 
-QBrush StylesheetHighlighter::underlineColor() const
+QBrush
+StylesheetHighlighter::underlineColor() const
 {
   return m_badValueFormat.underlineColor();
 }
 
-int StylesheetHighlighter::widgetWeight() const
+int
+StylesheetHighlighter::widgetWeight() const
 {
   return m_widgetFormat.fontWeight();
 }
 
-int StylesheetHighlighter::pseudostateWeight() const
+int
+StylesheetHighlighter::pseudostateWeight() const
 {
   return m_pseudoStateFormat.fontWeight();
 }
 
-int StylesheetHighlighter::pseudostatemarkerWeight() const
+int
+StylesheetHighlighter::pseudostatemarkerWeight() const
 {
   return m_pseudoStateMarkerFormat.fontWeight();
 }
 
-int StylesheetHighlighter::subcontrolWeight() const
+int
+StylesheetHighlighter::subcontrolWeight() const
 {
   return m_subControlFormat.fontWeight();
 }
 
-int StylesheetHighlighter::subcontrolmarkerWeight() const
+int
+StylesheetHighlighter::subcontrolmarkerWeight() const
 {
   return m_subControlMarkerFormat.fontWeight();
 }
 
-int StylesheetHighlighter::valueWeight() const
+int
+StylesheetHighlighter::valueWeight() const
 {
   return m_valueFormat.fontWeight();
 }
 
-int StylesheetHighlighter::commentWeight() const
+int
+StylesheetHighlighter::commentWeight() const
 {
   return m_commentFormat.fontWeight();
 }
 
-int StylesheetHighlighter::bracematchWeight() const
+int
+StylesheetHighlighter::bracematchWeight() const
 {
   return m_braceMatchFormat.fontWeight();
 }
 
-int StylesheetHighlighter::endbraceWeight() const
+int
+StylesheetHighlighter::endbraceWeight() const
 {
   return m_endBraceFormat.fontWeight();
 }
 
-int StylesheetHighlighter::startbraceWeight() const
+int
+StylesheetHighlighter::startbraceWeight() const
 {
   return m_startBraceFormat.fontWeight();
 }
 
-int StylesheetHighlighter::propertymarkerWeight() const
+int
+StylesheetHighlighter::propertymarkerWeight() const
 {
   return m_propertyMarkerFormat.fontWeight();
 }
 
-int StylesheetHighlighter::propertyWeight() const
+int
+StylesheetHighlighter::propertyWeight() const
 {
   return m_propertyFormat.fontWeight();
 }
 
-int StylesheetHighlighter::badvalueWeight() const
+int
+StylesheetHighlighter::badvalueWeight() const
 {
   return m_badValueFormat.fontWeight();
-
 }
 
-bool StylesheetHighlighter::badUnderline() const
+bool
+StylesheetHighlighter::badUnderline() const
 {
   return m_badUnderline;
 }
 
-QTextCharFormat::UnderlineStyle StylesheetHighlighter::underlinestyle() const
+QTextCharFormat::UnderlineStyle
+StylesheetHighlighter::underlinestyle() const
 {
   return m_badValueFormat.underlineStyle();
 }
-

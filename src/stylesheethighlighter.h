@@ -105,8 +105,11 @@ private:
   QTextCharFormat m_propertyMarkerFormat;
   QTextCharFormat m_propertyEndMarkerFormat;
   QTextCharFormat m_startBraceFormat;
+  QTextCharFormat m_badStartBraceFormat;
   QTextCharFormat m_endBraceFormat;
+  QTextCharFormat m_badEndBraceFormat;
   QTextCharFormat m_braceMatchFormat;
+  QTextCharFormat m_badBraceMatchFormat;
   QTextCharFormat m_commentFormat;
   bool m_badUnderline = true;
   QBrush m_back;

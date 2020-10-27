@@ -125,7 +125,6 @@ Parser::parseInitialText(const QString& text, int pos)
 
         } else if (block == "}") { // end of widget block
           stashEndBrace(pos - block.length());
-          break;
 
         } else if (m_datastore->containsProperty(block)) {
           Node* endnode = nullptr;
@@ -266,7 +265,7 @@ Parser::parseInitialText(const QString& text, int pos)
           if (m_datastore->containsSubControl(nextBlock)) {
             stashWidget(start, block, false);
             stashSubControlMarker(oldPos);
-            stashSubControl(pos - nextBlock.length(), block);
+            stashSubControl(pos - nextBlock.length(), nextBlock);
             continue;
           }
         }
@@ -367,24 +366,20 @@ Parser::parsePropertyWithValues(QTextCursor cursor,
         property->setPropertyMarkerExists(true);
         property->setPropertyMarkerOffset(pos);
       }
-
     } else if (block == "/*") { // comment start
       parseComment(text, pos);
-
     } else if (block == ";") {
       stashPropertyEndMarkerNode(property->end(), endnode);
       break;
-
     } else if (block == "}") {
       if (!(*endnode)) { // already a property end node (;)
         stashPropertyEndNode(property->end(), endnode);
       }
-
       stashEndBrace(cursor.anchor());
+      break;
 
       pos--; // step back from endbrace
       break;
-
     } else {
       bool validForProperty =
         m_datastore->isValidPropertyValueForProperty(propertyName, block);
@@ -397,9 +392,7 @@ Parser::parsePropertyWithValues(QTextCursor cursor,
                            PropertyNode::GoodValue,
                            (pos - block.length()) - start,
                            attributeType);
-
       } else {
-
         if (attributeType == DataStore::NoAttributeValue) {
           // not a valid value for any property
           if (m_datastore->containsProperty(block)) {
@@ -412,17 +405,14 @@ Parser::parsePropertyWithValues(QTextCursor cursor,
               property->setBadCheck(PropertyNode::MissingPropertyEnd);
               stashPropertyEndNode(property->end(), endnode);
             }
-
             pos -= block.length(); // skip back before block.
             return property->end();
-
           } else {
             property->addValue(block,
                                PropertyNode::BadValue,
                                (pos - block.length()) - start,
                                attributeType);
           }
-
         } else {
           // invalid property name but this is a valid property attribute
           // anyway.
@@ -697,24 +687,34 @@ Parser::stashSubControl(int position, const QString& block, bool valid)
   m_nodes->insert(cursor, subcontrol);
 }
 
-void
+EndBraceNode*
 Parser::stashEndBrace(int position)
 {
   m_braceCount--;
   auto cursor = getCursorForNode(position);
-  auto brace = new EndBraceNode(cursor, m_editor);
-  m_nodes->insert(cursor, brace);
-  m_endbraces.append(brace);
+  auto endbrace = new EndBraceNode(cursor, m_editor);
+  m_nodes->insert(cursor, endbrace);
+  if (!m_braceStack.isEmpty()) {
+    auto startbrace = m_braceStack.pop();
+    endbrace->setStartNode(startbrace);
+    startbrace->setEndBrace(endbrace);
+  }/* else {
+    qWarning();
+  }*/
+  m_endbraces.append(endbrace);
+  return endbrace;
 }
 
-void
+StartBraceNode*
 Parser::stashStartBrace(int position)
 {
   m_braceCount++;
   auto cursor = getCursorForNode(position);
-  auto brace = new StartBraceNode(cursor, m_editor);
-  m_nodes->insert(cursor, brace);
-  m_startbraces.append(brace);
+  auto startbrace = new StartBraceNode(cursor, m_editor);
+  m_nodes->insert(cursor, startbrace);
+  m_braceStack.push(startbrace);
+  m_startbraces.append(startbrace);
+  return startbrace;
 }
 
 void
@@ -1286,29 +1286,21 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
   Node* node;
   CursorData data;
   data.cursor = textCursor;
-
-  nodeAtCursorPosition(&data, data.cursor.anchor());
+  nodeAtCursorPosition(&data, textCursor.anchor());
   node = data.node;
-
   if (!node) {
     return;
   }
 
-  auto keys = m_nodes->keys();
-  auto index = keys.indexOf(data.cursor);
-  auto modified = false;
-
   for (auto startbrace : m_startbraces) {
     if (startbrace->isBraceAtCursor()) {
       startbrace->setBraceAtCursor(false);
-      modified = true;
     }
   }
 
   for (auto endbrace : m_endbraces) {
     if (endbrace->isBraceAtCursor()) {
       endbrace->setBraceAtCursor(false);
-      modified = true;
     }
   }
 
@@ -1318,39 +1310,21 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
     if (type == Node::StartBraceType) {
       StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
       startbrace->setBraceAtCursor(true);
-
-      for (auto i = index + 1; i < keys.size(); i++) {
-        auto n = m_nodes->value(keys.at(i));
-
-        if (n->type() == Node::EndBraceType) {
-          EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(n);
-          endbrace->setBraceAtCursor(true);
-          modified = true;
-          break;
-        }
-      } // end for
-
+      if (startbrace->hasEndBrace()) {
+        EndBraceNode* endbrace = startbrace->endBrace();
+        endbrace->setBraceAtCursor(true);
+      }
     } else if (type == Node::EndBraceType) {
       EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
       endbrace->setBraceAtCursor(true);
-
-      for (auto i = index - 1; i >= 0; i--) {
-        auto n = m_nodes->value(keys.at(i));
-
-        if (n->type() == Node::StartBraceType) {
-          StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(n);
-          startbrace->setBraceAtCursor(true);
-          modified = true;
-          break;
-        }
-      } // end for
-
+      if (endbrace->hasStartBrace()) {
+        StartBraceNode* startbrace = endbrace->startBrace();
+        startbrace->setBraceAtCursor(true);
+      }
     } // end end brace type
   }   // end if node
 
-  if (modified) {
-    emit rehighlight();
-  }
+  emit rehighlight();
 }
 
 void
@@ -1680,10 +1654,12 @@ Parser::handleSuggestion(QAction* act)
                 auto vName = splits[1].trimmed();
 
                 actionPropertyNameChange(property, pName, originalCursor);
-                actionPropertyValueChange(property, status, vName, originalCursor);
+                actionPropertyValueChange(
+                  property, status, vName, originalCursor);
 
               } else {
-                actionPropertyValueChange(property, status, name, originalCursor);
+                actionPropertyValueChange(
+                  property, status, name, originalCursor);
               }
             }
           }

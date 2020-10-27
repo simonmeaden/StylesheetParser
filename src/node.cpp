@@ -611,6 +611,7 @@ StartBraceNode::StartBraceNode(QTextCursor start,
                                Type type)
   : NamedNode("{", start, parent, type)
   , m_isBraceAtCursor(false)
+  , m_endBrace(nullptr)
 {}
 
 bool
@@ -625,9 +626,28 @@ StartBraceNode::setBraceAtCursor(bool isFlagBrace)
   m_isBraceAtCursor = isFlagBrace;
 }
 
+void
+StartBraceNode::setEndBrace(EndBraceNode* endBrace)
+{
+  m_endBrace = endBrace;
+}
+
+bool
+StartBraceNode::hasEndBrace()
+{
+  return (m_endBrace != nullptr);
+}
+
+EndBraceNode*
+StartBraceNode::endBrace() const
+{
+  return m_endBrace;
+}
+
 EndBraceNode::EndBraceNode(QTextCursor start, StylesheetEdit* parent, Type type)
   : NamedNode("}", start, parent, type)
   , m_isBraceAtCursor(false)
+  , m_startBrace(nullptr)
 {}
 
 bool
@@ -640,6 +660,24 @@ void
 EndBraceNode::setBraceAtCursor(bool isFlagBrace)
 {
   m_isBraceAtCursor = isFlagBrace;
+}
+
+void
+EndBraceNode::setStartNode(StartBraceNode* startNode)
+{
+  m_startBrace = startNode;
+}
+
+bool
+EndBraceNode::hasStartBrace()
+{
+  return (m_startBrace != nullptr);
+}
+
+StartBraceNode*
+EndBraceNode::startBrace() const
+{
+  return m_startBrace;
 }
 
 StartCommentNode::StartCommentNode(QTextCursor start,

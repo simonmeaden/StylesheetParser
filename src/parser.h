@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QObject>
 #include <QPoint>
 #include <QTextCursor>
+#include <QStack>
 
 #include "common.h"
 #include "parserstate.h"
@@ -84,6 +85,7 @@ private:
   QMenu *m_contextMenu, *m_suggestionsMenu;
   int m_maxSuggestionCount;
   QAction *m_addPropertyMarkerAct, *m_formatAct;
+  QStack<StartBraceNode*> m_braceStack;
 
   int parsePropertyWithValues(QTextCursor cursor,
                               PropertyNode* property,
@@ -112,8 +114,8 @@ private:
   void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
   void stashPseudoState(int position, const QString& block, bool valid = true);
   void stashSubControl(int position, const QString& block, bool valid = true);
-  void stashEndBrace(int position);
-  void stashStartBrace(int position);
+  EndBraceNode *stashEndBrace(int position);
+  StartBraceNode *stashStartBrace(int position);
   void stashPseudoStateMarker(int position);
   void stashSubControlMarker(int position);
   void stashPropertyEndNode(int position, Node** endnode);

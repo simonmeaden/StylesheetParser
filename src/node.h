@@ -29,9 +29,9 @@
 #include <QWidget>
 //#include <cstdarg>
 
-#include "parserstate.h"
-#include "datastore.h"
 #include "common.h"
+#include "datastore.h"
+#include "parserstate.h"
 
 class Node : public QObject
 {
@@ -67,7 +67,9 @@ public:
   Node* previous;
   Node* next;
 
-  explicit Node(QTextCursor start, StylesheetEdit* parent, Type type = NodeType);
+  explicit Node(QTextCursor start,
+                StylesheetEdit* parent,
+                Type type = NodeType);
 
   virtual int start() const;
   void setStart(int position);
@@ -82,7 +84,6 @@ protected:
   QTextCursor m_cursor;
   Type m_type;
   StylesheetEdit* m_parent;
-
 };
 
 class NameNode
@@ -101,11 +102,16 @@ protected:
   QString m_name;
 };
 
-class NamedNode : public Node, public NameNode
+class NamedNode
+  : public Node
+  , public NameNode
 {
   Q_OBJECT
 public:
-  NamedNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = NodeType);
+  NamedNode(const QString& name,
+            QTextCursor start,
+            StylesheetEdit* parent,
+            Type type = NodeType);
 
   QPair<NodeSectionType, int> isIn(QPoint pos) override;
   int end() const;
@@ -121,14 +127,18 @@ public:
 
 private:
   ParserState::Errors m_errors;
-
 };
 
-class BadBlockNode: public NamedNode, public BadNode
+class BadBlockNode
+  : public NamedNode
+  , public BadNode
 {
   Q_OBJECT
 public:
-  explicit BadBlockNode(const QString& name, QTextCursor start, ParserState::Errors errors, StylesheetEdit* parent,
+  explicit BadBlockNode(const QString& name,
+                        QTextCursor start,
+                        ParserState::Errors errors,
+                        StylesheetEdit* parent,
                         Node::Type type = Node::BadNodeType);
 
   int end() const override;
@@ -138,7 +148,9 @@ class SubControlMarkerNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit SubControlMarkerNode(QTextCursor start, StylesheetEdit* parent, Type type = SubControlMarkerType);
+  explicit SubControlMarkerNode(QTextCursor start,
+                                StylesheetEdit* parent,
+                                Type type = SubControlMarkerType);
 
   int end() const override;
 };
@@ -147,14 +159,20 @@ class ColonNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit ColonNode(QTextCursor start, StylesheetEdit* parent, Type type = ColonNodeType);
+  explicit ColonNode(QTextCursor start,
+                     StylesheetEdit* parent,
+                     Type type = ColonNodeType);
 };
 
-class BadSubControlMarkerNode : public SubControlMarkerNode, public BadNode
+class BadSubControlMarkerNode
+  : public SubControlMarkerNode
+  , public BadNode
 {
   Q_OBJECT
 public:
-  BadSubControlMarkerNode(QTextCursor start, ParserState::Errors errors, StylesheetEdit* parent,
+  BadSubControlMarkerNode(QTextCursor start,
+                          ParserState::Errors errors,
+                          StylesheetEdit* parent,
                           Type type = BadSubControlMarkerType);
 };
 
@@ -162,14 +180,20 @@ class PseudoStateMarkerNode : public ColonNode
 {
   Q_OBJECT
 public:
-  explicit PseudoStateMarkerNode(QTextCursor start, StylesheetEdit* parent, Type type = PseudoStateMarkerType);
+  explicit PseudoStateMarkerNode(QTextCursor start,
+                                 StylesheetEdit* parent,
+                                 Type type = PseudoStateMarkerType);
 };
 
-class BadPseudoStateMarkerNode : public PseudoStateMarkerNode, public BadNode
+class BadPseudoStateMarkerNode
+  : public PseudoStateMarkerNode
+  , public BadNode
 {
   Q_OBJECT
 public:
-  BadPseudoStateMarkerNode(QTextCursor start, ParserState::Errors errors, StylesheetEdit* parent,
+  BadPseudoStateMarkerNode(QTextCursor start,
+                           ParserState::Errors errors,
+                           StylesheetEdit* parent,
                            Type type = BadPseudoStateMarkerType);
 };
 
@@ -177,14 +201,16 @@ class WidgetNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit WidgetNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = WidgetType);
+  explicit WidgetNode(const QString& name,
+                      QTextCursor start,
+                      StylesheetEdit* parent,
+                      Type type = WidgetType);
 
   bool isWidgetValid() const;
   void setWidgetValid(bool widgetValid);
 
 private:
   bool m_widgetValid;
-
 };
 
 class PropertyNode : public NamedNode
@@ -198,7 +224,10 @@ public:
     BadValue,
     MissingPropertyEnd,
   };
-  explicit PropertyNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = PropertyType);
+  explicit PropertyNode(const QString& name,
+                        QTextCursor start,
+                        StylesheetEdit* parent,
+                        Type type = PropertyType);
 
   //! Returns the values as a list.
   QStringList values() const;
@@ -217,7 +246,10 @@ public:
   //! Sets the attribute types as a list.
   void setAttributeTypes(const QList<DataStore::AttributeType>& attributeTypes);
   //! Adds a complete value/check/offset to the values.
-  void addValue(const QString& value, Check check, int offset, DataStore::AttributeType attType);
+  void addValue(const QString& value,
+                Check check,
+                int offset,
+                DataStore::AttributeType attType);
   void correctValue(int index, const QString& value);
   //! Sets the check at index as bad.
   //!
@@ -241,7 +273,7 @@ public:
 
   int propertyMarkerOffset() const;
   void setPropertyMarkerOffset(int propertymarkerOffset);
-  void incrementOffsets(int startIndex = 0, int increment=1);
+  void incrementOffsets(int startIndex = 0, int increment = 1);
 
   QPair<NodeSectionType, int> isIn(QPoint pos) override;
   PropertyStatus isProperty(int offset) const;
@@ -256,18 +288,22 @@ private:
   bool m_validProperty;
 };
 
-class BadPropertyNode : public PropertyNode, public BadNode
+class BadPropertyNode
+  : public PropertyNode
+  , public BadNode
 {
   Q_OBJECT
 public:
-
 };
 
 class SubControlNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit SubControlNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = SubControlType);
+  explicit SubControlNode(const QString& name,
+                          QTextCursor start,
+                          StylesheetEdit* parent,
+                          Type type = SubControlType);
 
   int end() const override;
   bool isStateValid() const;
@@ -275,14 +311,16 @@ public:
 
 private:
   bool m_stateValid;
-
 };
 
 class PseudoStateNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit PseudoStateNode(const QString& name, QTextCursor start, StylesheetEdit* parent, Type type = PseudoStateType);
+  explicit PseudoStateNode(const QString& name,
+                           QTextCursor start,
+                           StylesheetEdit* parent,
+                           Type type = PseudoStateType);
 
   int end() const override;
   bool isStateValid() const;
@@ -290,14 +328,15 @@ public:
 
 private:
   bool m_stateValid;
-
 };
 
 class CommentNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit CommentNode(QTextCursor start, StylesheetEdit* parent, Type type = CommentType);
+  explicit CommentNode(QTextCursor start,
+                       StylesheetEdit* parent,
+                       Type type = CommentType);
 
   void append(QChar c);
   void append(QString text);
@@ -310,61 +349,86 @@ class SemiColonNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit SemiColonNode(QTextCursor start, StylesheetEdit* parent, Type type = SemiColonType);
+  explicit SemiColonNode(QTextCursor start,
+                         StylesheetEdit* parent,
+                         Type type = SemiColonType);
 };
 
 class PropertyEndMarkerNode : public SemiColonNode
 {
   Q_OBJECT
 public:
-  explicit PropertyEndMarkerNode(QTextCursor start, StylesheetEdit* parent, Type type = PropertyEndMarkerType);
+  explicit PropertyEndMarkerNode(QTextCursor start,
+                                 StylesheetEdit* parent,
+                                 Type type = PropertyEndMarkerType);
 };
 
 class PropertyEndNode : public Node
 {
   Q_OBJECT
 public:
-  explicit PropertyEndNode(QTextCursor start, StylesheetEdit* parent, Type type = PropertyEndType);
+  explicit PropertyEndNode(QTextCursor start,
+                           StylesheetEdit* parent,
+                           Type type = PropertyEndType);
 };
 
 class NewlineNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit NewlineNode(QTextCursor start, StylesheetEdit* parent, Type type = NewlineType);
+  explicit NewlineNode(QTextCursor start,
+                       StylesheetEdit* parent,
+                       Type type = NewlineType);
 };
 
+class EndBraceNode;
 class StartBraceNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit StartBraceNode(QTextCursor start, StylesheetEdit* parent, Type type = StartBraceType);
+  explicit StartBraceNode(QTextCursor start,
+                          StylesheetEdit* parent,
+                          Type type = StartBraceType);
 
   bool isBraceAtCursor() const;
   void setBraceAtCursor(bool isFlagBrace);
 
+  EndBraceNode *endBrace() const;
+  void setEndBrace(EndBraceNode* endBrace);
+  bool hasEndBrace();
+
 private:
   bool m_isBraceAtCursor;
+  EndBraceNode* m_endBrace;
 };
 
 class EndBraceNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit EndBraceNode(QTextCursor start, StylesheetEdit* parent, Type type = EndBraceType);
+  explicit EndBraceNode(QTextCursor start,
+                        StylesheetEdit* parent,
+                        Type type = EndBraceType);
 
   bool isBraceAtCursor() const;
   void setBraceAtCursor(bool isFlagBrace);
 
+  StartBraceNode *startBrace() const;
+  void setStartNode(StartBraceNode* startNode);
+  bool hasStartBrace();
+
 private:
   bool m_isBraceAtCursor;
+  StartBraceNode* m_startBrace;
 };
 
 class StartCommentNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit StartCommentNode(QTextCursor start, StylesheetEdit* parent, Type type = CommentStartMarkerType);
+  explicit StartCommentNode(QTextCursor start,
+                            StylesheetEdit* parent,
+                            Type type = CommentStartMarkerType);
 
   int end() const override;
 };
@@ -373,7 +437,9 @@ class EndCommentNode : public NamedNode
 {
   Q_OBJECT
 public:
-  explicit EndCommentNode(QTextCursor start, StylesheetEdit* parent, Type type = CommentEndMarkerType);
+  explicit EndCommentNode(QTextCursor start,
+                          StylesheetEdit* parent,
+                          Type type = CommentEndMarkerType);
 
   int end() const override;
 };

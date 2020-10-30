@@ -40,21 +40,22 @@ class EndBraceNode;
 
 struct ParserData
 {
-  QMap<QTextCursor, Node*> m_nodes;
-  QList<StartBraceNode*> m_startbraces;
-  QList<EndBraceNode*> m_endbraces;
-  int m_braceCount;
-  bool m_startComment, m_manualMove;
-  QTextCursor m_currentCursor;
-  NamedNode* m_currentWidget;
-  int m_maxSuggestionCount;
-  QStack<StartBraceNode*> m_braceStack;
+  QMap<QTextCursor, Node*> nodes;
+  QList<StartBraceNode*> startbraces;
+  QList<EndBraceNode*> endbraces;
+  int braceCount;
+  bool startComment, manualMove, suggestion;
+  QTextCursor currentCursor;
+  NamedNode* currentWidget;
+  int maxSuggestionCount;
+  QStack<StartBraceNode*> braceStack;
 
   ParserData()
-    : m_braceCount(0)
-    , m_startComment(false)
-    , m_manualMove(false)
-    , m_maxSuggestionCount(30)
+    : braceCount(0)
+    , startComment(false)
+    , manualMove(false)
+    , maxSuggestionCount(30)
+    , suggestion(false)
   {}
 };
 
@@ -63,15 +64,15 @@ class Parser : public QObject
   Q_OBJECT
 public:
   explicit Parser(StylesheetEdit* parent = nullptr);
-  Parser( const Parser& other );
+  Parser(const Parser& other);
 
   ~Parser();
 
-  Parser& operator=( const Parser& other );
+  Parser& operator=(const Parser& other);
 
   void parseInitialText(const QString& text, int pos = 0);
 
-  QMap<QTextCursor, Node *> nodes() const;
+  QMap<QTextCursor, Node*> nodes() const;
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
@@ -166,12 +167,10 @@ private:
   QList<QPair<QString, QString>> sortLastNValues(
     QMultiMap<int, QPair<QString, QString>> matches);
   void actionPropertyNameChange(PropertyNode* property,
-                                const QString& name,
-                                int originalCursor);
+                                const QString& name);
   void actionPropertyValueChange(PropertyNode* property,
                                  const PropertyStatus& status,
-                                 const QString& name,
-                                 int originalCursor);
+                                 const QString& name);
 };
 
 #endif // PARSER_H

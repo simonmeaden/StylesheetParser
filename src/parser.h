@@ -24,8 +24,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QMenu>
 #include <QObject>
 #include <QPoint>
-#include <QTextCursor>
 #include <QStack>
+#include <QTextCursor>
 
 #include "common.h"
 #include "parserstate.h"
@@ -38,16 +38,40 @@ class PropertyNode;
 class StartBraceNode;
 class EndBraceNode;
 
+struct ParserData
+{
+  QMap<QTextCursor, Node*> m_nodes;
+  QList<StartBraceNode*> m_startbraces;
+  QList<EndBraceNode*> m_endbraces;
+  int m_braceCount;
+  bool m_startComment, m_manualMove;
+  QTextCursor m_currentCursor;
+  NamedNode* m_currentWidget;
+  int m_maxSuggestionCount;
+  QStack<StartBraceNode*> m_braceStack;
+
+  ParserData()
+    : m_braceCount(0)
+    , m_startComment(false)
+    , m_manualMove(false)
+    , m_maxSuggestionCount(30)
+  {}
+};
+
 class Parser : public QObject
 {
   Q_OBJECT
 public:
   explicit Parser(StylesheetEdit* parent = nullptr);
+  Parser( const Parser& other );
+
   ~Parser();
+
+  Parser& operator=( const Parser& other );
 
   void parseInitialText(const QString& text, int pos = 0);
 
-  QMap<QTextCursor, Node*>* nodes() const;
+  QMap<QTextCursor, Node *> nodes() const;
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
@@ -74,18 +98,10 @@ signals:
 
 private:
   StylesheetEdit* m_editor;
+  ParserData* d_ptr;
   DataStore* m_datastore;
-  int m_braceCount;
-  QMap<QTextCursor, Node*>* m_nodes;
-  QList<StartBraceNode*> m_startbraces;
-  QList<EndBraceNode*> m_endbraces;
-  bool m_startComment, m_manualMove;
-  QTextCursor m_currentCursor;
-  NamedNode* m_currentWidget;
   QMenu *m_contextMenu, *m_suggestionsMenu;
-  int m_maxSuggestionCount;
   QAction *m_addPropertyMarkerAct, *m_formatAct;
-  QStack<StartBraceNode*> m_braceStack;
 
   int parsePropertyWithValues(QTextCursor cursor,
                               PropertyNode* property,
@@ -114,8 +130,8 @@ private:
   void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
   void stashPseudoState(int position, const QString& block, bool valid = true);
   void stashSubControl(int position, const QString& block, bool valid = true);
-  EndBraceNode *stashEndBrace(int position);
-  StartBraceNode *stashStartBrace(int position);
+  EndBraceNode* stashEndBrace(int position);
+  StartBraceNode* stashStartBrace(int position);
   void stashPseudoStateMarker(int position);
   void stashSubControlMarker(int position);
   void stashPropertyEndNode(int position, Node** endnode);
@@ -149,8 +165,13 @@ private:
   QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
   QList<QPair<QString, QString>> sortLastNValues(
     QMultiMap<int, QPair<QString, QString>> matches);
-  void actionPropertyNameChange(PropertyNode* property, const QString& name, int originalCursor);
-  void actionPropertyValueChange(PropertyNode *property, const PropertyStatus &status, const QString &name, int originalCursor);
+  void actionPropertyNameChange(PropertyNode* property,
+                                const QString& name,
+                                int originalCursor);
+  void actionPropertyValueChange(PropertyNode* property,
+                                 const PropertyStatus& status,
+                                 const QString& name,
+                                 int originalCursor);
 };
 
 #endif // PARSER_H

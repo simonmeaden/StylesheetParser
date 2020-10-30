@@ -46,6 +46,42 @@ enum NodeSectionType
   Value, // only valid for propety nodes.
 };
 
+enum NodeType
+{
+  NodeType,
+  BaseNodeType,
+  CharNodeType,
+  ColonNodeType,
+  NameType,
+  WidgetType,
+  SubControlType,
+  SubControlMarkerType,
+  PseudoStateType,
+  PseudoStateMarkerType,
+  SemiColonType,
+  StartBraceType,
+  EndBraceType,
+  NewlineType,
+  PropertyType,
+  //    PropertyMarkerType,
+  PropertyEndType,
+  PropertyEndMarkerType,
+  BadNodeType,
+  BadSubControlMarkerType,
+  BadPseudoStateMarkerType,
+  CommentType,
+  CommentStartMarkerType,
+  CommentEndMarkerType,
+  };
+
+  enum PropertyCheck
+{
+  GoodValue,
+  ValidPropertyType,
+  BadValue,
+  MissingPropertyEnd,
+  };
+
 struct CursorData
 {
   QTextCursor cursor;

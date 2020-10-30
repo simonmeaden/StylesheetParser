@@ -176,13 +176,13 @@ StylesheetEditPrivate::handleParseComplete()
   m_highlighter->rehighlight();
 }
 
-QMap<QTextCursor, Node*>*
+QMap<QTextCursor, Node*>
 StylesheetEdit::nodes()
 {
   return d_ptr->nodes();
 }
 
-QMap<QTextCursor, Node*>*
+QMap<QTextCursor, Node*>
 StylesheetEditPrivate::nodes()
 {
   return m_parser->nodes();
@@ -797,7 +797,7 @@ StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
     case NodeSectionType::Name: {
       auto propertyName = property->name();
 
-      if (property->checks().contains(PropertyNode::MissingPropertyEnd) &&
+      if (property->checks().contains(PropertyCheck::MissingPropertyEnd) &&
           !property->hasPropertyMarker()) {
         m_hoverWidget->setHoverText(
           q_ptr
@@ -807,7 +807,7 @@ StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
         m_hoverWidget->setPosition(pos);
 
       } else if (property->checks().contains(
-                   PropertyNode::MissingPropertyEnd)) {
+                   PropertyCheck::MissingPropertyEnd)) {
         m_hoverWidget->setHoverText(
           q_ptr->tr("%1 is not a valid property name!").arg(propertyName));
         m_hoverWidget->setPosition(pos);
@@ -835,7 +835,7 @@ StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
         m_hoverWidget->setPosition(pos);
 
         } else*/
-      if (property->checks().at(isin.second) == PropertyNode::BadValue) {
+      if (property->checks().at(isin.second) == PropertyCheck::BadValue) {
         m_hoverWidget->setHoverText(q_ptr->tr("%1 is a bad property value.")
                                       .arg(property->values().at(isin.second)));
         m_hoverWidget->setPosition(pos);
@@ -907,33 +907,33 @@ StylesheetEditPrivate::getOldNodeValue(CursorData* data)
   QString oldValue;
 
   switch (data->node->type()) {
-    case Node::WidgetType:
-    case Node::PropertyType:
+    case NodeType::WidgetType:
+    case NodeType::PropertyType:
       oldValue = qobject_cast<PropertyNode*>(data->node)->name();
       break;
 
-    case Node::SubControlType:
-    case Node::PseudoStateType:
+    case NodeType::SubControlType:
+    case NodeType::PseudoStateType:
       oldValue = qobject_cast<PseudoStateNode*>(data->node)->name();
       break;
 
-    case Node::SubControlMarkerType:
+    case NodeType::SubControlMarkerType:
       oldValue = "::";
       break;
 
-    case Node::PseudoStateMarkerType:
+    case NodeType::PseudoStateMarkerType:
       oldValue = ":";
       break;
 
-    case Node::StartBraceType:
+    case NodeType::StartBraceType:
       oldValue = "{";
       break;
 
-    case Node::EndBraceType:
+    case NodeType::EndBraceType:
       oldValue = "}";
       break;
 
-    case Node::SemiColonType:
+    case NodeType::SemiColonType:
       oldValue = ";";
       break;
 

@@ -119,7 +119,7 @@ class StylesheetEdit : public QPlainTextEdit
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
 
   //! Returns the list of nodes.
-  QMap<QTextCursor, Node*>* nodes();
+  QMap<QTextCursor, Node *> nodes();
 
   //! Returns the bookmarks with associated text, if any.
   //!

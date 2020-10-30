@@ -114,7 +114,7 @@ struct StylesheetEditPrivate
   void setPlainText(const QString& text);
   void handleParseComplete();
 
-  QMap<QTextCursor, Node*>* nodes();
+  QMap<QTextCursor, Node *> nodes();
 
   void showNewlineMarkers(bool show);
 

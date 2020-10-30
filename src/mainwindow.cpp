@@ -123,7 +123,7 @@ QWidget* MainWindow::initGui()
   // Errors
   text =
     "\n\n"
-    "color red;\n"                        // BAD missing property marker        - WORKING
+    "color blu;\n"                        // BAD missing property marker        - WORKING
     " bordr: green slid 1px; \n\n"          // BAD property name, missing property end char - WORKING
     " shitwidget:active {}\n\n"             // BAD widget name                    - WORKING
     " background-color: blue;\n\n"        // GOOD property.                     - WORKING

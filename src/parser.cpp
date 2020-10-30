@@ -31,12 +31,8 @@ Parser::Parser(StylesheetEdit* parent)
   : QObject(parent)
   , m_editor(parent)
   , m_datastore(new DataStore(parent))
-  , m_braceCount(0)
-  , m_nodes(new QMap<QTextCursor, Node*>())
-  , m_startComment(false)
-  , m_manualMove(false)
-  , m_maxSuggestionCount(30)
 {
+  d_ptr = new ParserData;
   m_formatAct = new QAction(m_editor->tr("&Format"), m_editor);
   m_formatAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
   m_formatAct->setStatusTip(m_editor->tr("Prettyfy the stylesheet"));
@@ -46,15 +42,28 @@ Parser::Parser(StylesheetEdit* parent)
   m_contextMenu = createContextMenu();
 }
 
+Parser::Parser(const Parser& other)
+{
+  d_ptr = new ParserData(*other.d_ptr);
+}
+
 Parser::~Parser()
 {
+  delete d_ptr;
   emit finished();
+}
+
+Parser&
+Parser::operator=(const Parser& other)
+{
+  *d_ptr = *other.d_ptr;
+  return *this;
 }
 
 void
 Parser::parseInitialText(const QString& text, int pos)
 {
-  m_braceCount = 0;
+  d_ptr->m_braceCount = 0;
   QString block;
   int start;
 
@@ -76,7 +85,7 @@ Parser::parseInitialText(const QString& text, int pos)
           parseComment(text, start);
 
         } else if (block == "::") { // subcontrol
-          if (m_braceCount == 0) {
+          if (d_ptr->m_braceCount == 0) {
             stashSubControlMarker(start);
 
             if (!(block = findNext(text, pos)).isEmpty()) {
@@ -91,7 +100,7 @@ Parser::parseInitialText(const QString& text, int pos)
           }
 
         } else if (block == ":") { // pseudostate or property
-          if (m_braceCount == 0) {
+          if (d_ptr->m_braceCount == 0) {
             stashPseudoStateMarker(start);
 
             if (!(block = findNext(text, pos)).isEmpty()) {
@@ -108,7 +117,7 @@ Parser::parseInitialText(const QString& text, int pos)
             Node* endnode = nullptr;
             cursor = getCursorForNode(start);
             PropertyNode* property = new PropertyNode(block, cursor, m_editor);
-            m_nodes->insert(cursor, property);
+            d_ptr->m_nodes.insert(cursor, property);
             int end = parsePropertyWithValues(
               cursor, property, text, start, pos, block, &endnode);
 
@@ -116,7 +125,7 @@ Parser::parseInitialText(const QString& text, int pos)
             if (!endnode) {
               QTextCursor cursor = getCursorForNode(end);
               endnode = new PropertyEndNode(cursor, m_editor);
-              m_nodes->insert(cursor, endnode);
+              d_ptr->m_nodes.insert(cursor, endnode);
             }
           }
 
@@ -130,12 +139,12 @@ Parser::parseInitialText(const QString& text, int pos)
           Node* endnode = nullptr;
           cursor = getCursorForNode(start);
           PropertyNode* property = new PropertyNode(block, cursor, m_editor);
-          m_nodes->insert(cursor, property);
+          d_ptr->m_nodes.insert(cursor, property);
           parsePropertyWithValues(
             cursor, property, text, start, pos, block, &endnode);
 
         } else {
-          if (m_braceCount == 1) {
+          if (d_ptr->m_braceCount == 1) {
             int oldPos = pos;
             QString oldBlock = block;
 
@@ -148,7 +157,7 @@ Parser::parseInitialText(const QString& text, int pos)
                   new PropertyNode(oldBlock, cursor, m_editor);
                 property->setPropertyMarkerExists(true);
                 property->setPropertyMarkerOffset(pos);
-                m_nodes->insert(cursor, property);
+                d_ptr->m_nodes.insert(cursor, property);
                 int end = parsePropertyWithValues(
                   cursor, property, text, start, pos, block, &endnode);
 
@@ -156,7 +165,7 @@ Parser::parseInitialText(const QString& text, int pos)
                 if (!endnode) {
                   QTextCursor cursor = getCursorForNode(end);
                   endnode = new PropertyEndNode(cursor, m_editor);
-                  m_nodes->insert(cursor, endnode);
+                  d_ptr->m_nodes.insert(cursor, endnode);
                 }
               }
 
@@ -210,7 +219,7 @@ Parser::parseInitialText(const QString& text, int pos)
       Node* endnode = nullptr;
       cursor = getCursorForNode(start);
       PropertyNode* property = new PropertyNode(block, cursor, m_editor);
-      m_nodes->insert(cursor, property);
+      d_ptr->m_nodes.insert(cursor, property);
       int end = parsePropertyWithValues(
         cursor, property, text, start, pos, block, &endnode);
 
@@ -218,17 +227,18 @@ Parser::parseInitialText(const QString& text, int pos)
       if (!endnode) {
         cursor = getCursorForNode(end);
         endnode = new PropertyEndNode(cursor, m_editor);
-        m_nodes->insert(cursor, endnode);
+        d_ptr->m_nodes.insert(cursor, endnode);
       }
 
     } else {
       QString nextBlock;
 
-      if (!m_nodes->isEmpty()) {
-        int oldPos = pos;
+      if (!d_ptr->m_nodes.isEmpty()) {
+        auto oldPos = pos;
         nextBlock = findNext(text, pos);
 
         if (nextBlock == ":") {
+          auto colonPos = pos;
           nextBlock = findNext(text, pos);
 
           if (m_datastore->containsPseudoState(nextBlock)) {
@@ -243,8 +253,9 @@ Parser::parseInitialText(const QString& text, int pos)
             cursor = getCursorForNode(start);
             PropertyNode* property = new PropertyNode(block, cursor, m_editor);
             property->setPropertyMarkerExists(true);
+            property->setPropertyMarkerOffset(colonPos);
             property->setValidProperty(false);
-            m_nodes->insert(cursor, property);
+            d_ptr->m_nodes.insert(cursor, property);
             pos -= block.length(); // step back
             int end = parsePropertyWithValues(
               cursor, property, text, start, pos, block, &endnode);
@@ -253,7 +264,7 @@ Parser::parseInitialText(const QString& text, int pos)
             if (!endnode) {
               cursor = getCursorForNode(end);
               endnode = new PropertyEndNode(cursor, m_editor);
-              m_nodes->insert(cursor, endnode);
+              d_ptr->m_nodes.insert(cursor, endnode);
             }
 
             continue;
@@ -272,10 +283,10 @@ Parser::parseInitialText(const QString& text, int pos)
 
         // step back
         pos = oldPos;
-        Node* lastnode = m_nodes->last();
-        Node::Type lasttype = lastnode->type();
+        Node* lastnode = d_ptr->m_nodes.last();
+        enum NodeType lasttype = lastnode->type();
 
-        if (lasttype == Node::BadSubControlMarkerType) {
+        if (lasttype == NodeType::BadSubControlMarkerType) {
           if (m_datastore->containsSubControl(block)) {
             stashSubControlMarker(lastnode->start());
             stashSubControl(start, block);
@@ -309,7 +320,7 @@ Parser::parseInitialText(const QString& text, int pos)
             PropertyNode* property = new PropertyNode(block, cursor, m_editor);
             property->setPropertyMarkerExists(true);
             property->setValidProperty(false);
-            m_nodes->insert(cursor, property);
+            d_ptr->m_nodes.insert(cursor, property);
             pos -= block.length(); // step back
             int end = parsePropertyWithValues(
               cursor, property, text, start, pos, block, &endnode);
@@ -318,7 +329,7 @@ Parser::parseInitialText(const QString& text, int pos)
             if (!endnode) {
               cursor = getCursorForNode(end);
               endnode = new PropertyEndNode(cursor, m_editor);
-              m_nodes->insert(cursor, endnode);
+              d_ptr->m_nodes.insert(cursor, endnode);
             }
 
             continue;
@@ -343,10 +354,10 @@ Parser::parseInitialText(const QString& text, int pos)
   emit rehighlight();
 }
 
-QMap<QTextCursor, Node*>*
+QMap<QTextCursor, Node*>
 Parser::nodes() const
 {
-  return m_nodes;
+  return d_ptr->m_nodes;
 }
 
 int
@@ -389,27 +400,27 @@ Parser::parsePropertyWithValues(QTextCursor cursor,
       if (validForProperty) {
         // valid property and valid value.
         property->addValue(block,
-                           PropertyNode::GoodValue,
+                           PropertyCheck::GoodValue,
                            (pos - block.length()) - start,
                            attributeType);
       } else {
         if (attributeType == DataStore::NoAttributeValue) {
           // not a valid value for any property
           if (m_datastore->containsProperty(block)) {
-            Node* lastnode = m_nodes->last();
+            Node* lastnode = d_ptr->m_nodes.last();
 
-            if (!(lastnode->type() == Node::PropertyEndType ||
-                  lastnode->type() == Node::PropertyEndMarkerType)) {
+            if (!(lastnode->type() == NodeType::PropertyEndType ||
+                  lastnode->type() == NodeType::PropertyEndMarkerType)) {
               // the block is actually another property. Probably a missing ';'.
               // set the last check value to missing property end.
-              property->setBadCheck(PropertyNode::MissingPropertyEnd);
+              property->setBadCheck(PropertyCheck::MissingPropertyEnd);
               stashPropertyEndNode(property->end(), endnode);
             }
             pos -= block.length(); // skip back before block.
             return property->end();
           } else {
             property->addValue(block,
-                               PropertyNode::BadValue,
+                               PropertyCheck::BadValue,
                                (pos - block.length()) - start,
                                attributeType);
           }
@@ -417,7 +428,7 @@ Parser::parsePropertyWithValues(QTextCursor cursor,
           // invalid property name but this is a valid property attribute
           // anyway.
           property->addValue(block,
-                             PropertyNode::ValidPropertyType,
+                             PropertyCheck::ValidPropertyType,
                              (pos - block.length()) - start,
                              attributeType);
         }
@@ -431,15 +442,15 @@ Parser::parsePropertyWithValues(QTextCursor cursor,
 void
 Parser::parseComment(const QString& text, int& pos)
 {
-  m_startComment = true;
+  d_ptr->m_startComment = true;
   QTextCursor cursor = getCursorForNode(pos);
   Node* marker = new StartCommentNode(cursor, m_editor);
-  m_nodes->insert(cursor, marker);
+  d_ptr->m_nodes.insert(cursor, marker);
   pos += 2;
 
   QChar c;
   CommentNode* comment = new CommentNode(getCursorForNode(pos), m_editor);
-  m_nodes->insert(cursor, comment);
+  d_ptr->m_nodes.insert(cursor, comment);
 
   while (pos < text.length()) {
     c = text.at(pos++);
@@ -454,7 +465,7 @@ Parser::parseComment(const QString& text, int& pos)
         if (c == '/') {
           cursor = getCursorForNode(pos - 2);
           EndCommentNode* endcomment = new EndCommentNode(cursor, m_editor);
-          m_nodes->insert(cursor, endcomment);
+          d_ptr->m_nodes.insert(cursor, endcomment);
           break;
 
         } else {
@@ -567,7 +578,7 @@ Parser::nodeForPoint(const QPoint& pos, NamedNode** nNode)
   QPair<NodeSectionType, int> isin =
     qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
 
-  for (auto node : m_nodes->values()) {
+  for (auto node : d_ptr->m_nodes.values()) {
     *nNode = qobject_cast<NamedNode*>(node);
 
     if (*nNode) {
@@ -609,8 +620,8 @@ Parser::nodeAtCursorPosition(CursorData* data, int position)
 {
   Node* previous;
 
-  for (auto key : m_nodes->keys()) {
-    Node* node = m_nodes->value(key);
+  for (auto key : d_ptr->m_nodes.keys()) {
+    Node* node = d_ptr->m_nodes.value(key);
 
     if (!node) {
       return;
@@ -640,7 +651,7 @@ Parser::stashWidget(int position, const QString& block, bool valid)
   auto cursor = getCursorForNode(position);
   auto widgetnode = new WidgetNode(block, cursor, m_editor);
   widgetnode->setWidgetValid(valid);
-  m_nodes->insert(cursor, widgetnode);
+  d_ptr->m_nodes.insert(cursor, widgetnode);
 }
 
 void
@@ -650,7 +661,7 @@ Parser::stashBadNode(int position,
 {
   auto cursor = getCursorForNode(position);
   auto badblock = new BadBlockNode(block, cursor, error, m_editor);
-  m_nodes->insert(cursor, badblock);
+  d_ptr->m_nodes.insert(cursor, badblock);
 }
 
 void
@@ -658,7 +669,7 @@ Parser::stashBadSubControlMarkerNode(int position, ParserState::Error error)
 {
   auto cursor = getCursorForNode(position);
   auto badblock = new BadSubControlMarkerNode(cursor, error, m_editor);
-  m_nodes->insert(cursor, badblock);
+  d_ptr->m_nodes.insert(cursor, badblock);
 }
 
 void
@@ -666,7 +677,7 @@ Parser::stashBadPseudoStateMarkerNode(int position, ParserState::Error error)
 {
   auto cursor = getCursorForNode(position);
   auto badblock = new BadPseudoStateMarkerNode(cursor, error, m_editor);
-  m_nodes->insert(cursor, badblock);
+  d_ptr->m_nodes.insert(cursor, badblock);
 }
 
 void
@@ -675,7 +686,7 @@ Parser::stashPseudoState(int position, const QString& block, bool valid)
   auto cursor = getCursorForNode(position);
   auto pseudostate = new PseudoStateNode(block, cursor, m_editor);
   pseudostate->setStateValid(valid);
-  m_nodes->insert(cursor, pseudostate);
+  d_ptr->m_nodes.insert(cursor, pseudostate);
 }
 
 void
@@ -684,36 +695,36 @@ Parser::stashSubControl(int position, const QString& block, bool valid)
   auto cursor = getCursorForNode(position);
   auto subcontrol = new SubControlNode(block, cursor, m_editor);
   subcontrol->setStateValid(valid);
-  m_nodes->insert(cursor, subcontrol);
+  d_ptr->m_nodes.insert(cursor, subcontrol);
 }
 
 EndBraceNode*
 Parser::stashEndBrace(int position)
 {
-  m_braceCount--;
+  d_ptr->m_braceCount--;
   auto cursor = getCursorForNode(position);
   auto endbrace = new EndBraceNode(cursor, m_editor);
-  m_nodes->insert(cursor, endbrace);
-  if (!m_braceStack.isEmpty()) {
-    auto startbrace = m_braceStack.pop();
+  d_ptr->m_nodes.insert(cursor, endbrace);
+  if (!d_ptr->m_braceStack.isEmpty()) {
+    auto startbrace = d_ptr->m_braceStack.pop();
     endbrace->setStartNode(startbrace);
     startbrace->setEndBrace(endbrace);
-  }/* else {
-    qWarning();
-  }*/
-  m_endbraces.append(endbrace);
+  } /* else {
+     qWarning();
+   }*/
+  d_ptr->m_endbraces.append(endbrace);
   return endbrace;
 }
 
 StartBraceNode*
 Parser::stashStartBrace(int position)
 {
-  m_braceCount++;
+  d_ptr->m_braceCount++;
   auto cursor = getCursorForNode(position);
   auto startbrace = new StartBraceNode(cursor, m_editor);
-  m_nodes->insert(cursor, startbrace);
-  m_braceStack.push(startbrace);
-  m_startbraces.append(startbrace);
+  d_ptr->m_nodes.insert(cursor, startbrace);
+  d_ptr->m_braceStack.push(startbrace);
+  d_ptr->m_startbraces.append(startbrace);
   return startbrace;
 }
 
@@ -722,7 +733,7 @@ Parser::stashPseudoStateMarker(int position)
 {
   auto cursor = getCursorForNode(position);
   auto marker = new PseudoStateMarkerNode(cursor, m_editor);
-  m_nodes->insert(cursor, marker);
+  d_ptr->m_nodes.insert(cursor, marker);
 }
 
 void
@@ -730,7 +741,7 @@ Parser::stashSubControlMarker(int position)
 {
   auto cursor = getCursorForNode(position);
   auto marker = new SubControlMarkerNode(cursor, m_editor);
-  m_nodes->insert(cursor, marker);
+  d_ptr->m_nodes.insert(cursor, marker);
 }
 
 void
@@ -738,7 +749,7 @@ Parser::stashPropertyEndNode(int position, Node** endnode)
 {
   QTextCursor cursor = getCursorForNode(position);
   *endnode = new PropertyEndNode(cursor, m_editor);
-  m_nodes->insert(cursor, *endnode);
+  d_ptr->m_nodes.insert(cursor, *endnode);
 }
 
 void
@@ -746,7 +757,7 @@ Parser::stashPropertyEndMarkerNode(int position, Node** endnode)
 {
   QTextCursor cursor = getCursorForNode(position);
   *endnode = new PropertyEndMarkerNode(cursor, m_editor);
-  m_nodes->insert(cursor, *endnode);
+  d_ptr->m_nodes.insert(cursor, *endnode);
 }
 
 void
@@ -779,7 +790,7 @@ Parser::updatePropertyValues(int pos,
 
       if (m_datastore->isValidPropertyValueForProperty(property->name(),
                                                        newValue)) {
-        checks.replace(i, PropertyNode::GoodValue);
+        checks.replace(i, PropertyCheck::GoodValue);
 
       } else {
         DataStore::AttributeType attribute = DataStore::NoAttributeValue;
@@ -823,15 +834,15 @@ Parser::updateContextMenu(QMap<int, QString> matches,
   m_suggestionsMenu->clear();
 
   switch (nNode->type()) {
-    case Node::WidgetType:
+    case NodeType::WidgetType:
       typeName = "widget";
       break;
 
-    case Node::PseudoStateType:
+    case NodeType::PseudoStateType:
       typeName = "pseudo state";
       break;
 
-    case Node::SubControlType:
+    case NodeType::SubControlType:
       typeName = "sub control";
       break;
   }
@@ -980,7 +991,7 @@ Parser::reverseLastNValues(QMultiMap<int, QString> matches)
   QList<int>::reverse_iterator i;
 
   for (i = keys.rbegin(); i != keys.rend(); ++i) {
-    if (reversed.size() > m_maxSuggestionCount) {
+    if (reversed.size() > d_ptr->m_maxSuggestionCount) {
       break;
     }
 
@@ -1005,7 +1016,7 @@ Parser::sortLastNValues(QMultiMap<int, QPair<QString, QString>> matches)
     } else {
       bool success = false;
       for (int i = 0; i < sorted.length(); i++) {
-        if (i == m_maxSuggestionCount)
+        if (i == d_ptr->m_maxSuggestionCount)
           return sorted;
         auto spair = sorted.at(i);
         if (spair.first.length() > lf) {
@@ -1060,7 +1071,8 @@ Parser::getStylesheetProperty(const QString& sheet, int& pos)
 void
 Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 {
-  if (m_nodes->isEmpty()) {
+  auto charChange = charsAdded - charsRemoved;
+  if (d_ptr->m_nodes.isEmpty()) {
     // initial text has not yet been parsed.
     return;
   }
@@ -1076,43 +1088,62 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 
   if (node) {
     QString value;
-    PropertyNode *newNode=nullptr;
+    //    PropertyNode* newNode = nullptr;
 
     switch (node->type()) {
-      case Node::PropertyType: {
+      case NodeType::PropertyType: {
         auto property = qobject_cast<PropertyNode*>(node);
-        auto length = property->length() + charsAdded - charsRemoved;
+        auto length = property->length() + charChange;
         value = text.mid(node->start(), length);
         auto pos = 0;
 
         QString block = findNext(value, pos), name;
         if (m_datastore->containsProperty(block)) {
-          newNode = new PropertyNode(block, property->cursor(), m_editor);
-          name = block;
-          while(!(block = findNext(value, pos)).isEmpty()) {
-            if (block == ":") {
-              if (!newNode->hasPropertyMarker()){
-                newNode->setPropertyMarkerExists(true);
-                newNode->setPropertyMarkerOffset(pos - 1);
+          if (!m_datastore->containsProperty(property->name())) {
+            property->setName(block);
+            property->setValidProperty(true);
+            property->incrementOffsets(charChange);
+            if (property->hasPropertyMarker()) {
+              property->setPropertyMarkerOffset(
+                property->propertyMarkerOffset() + charChange);
+            }
+          } else {
+            //            newNode = new PropertyNode(block, property->cursor(),
+            //            m_editor);
+            name = block;
+            while (!(block = findNext(value, pos)).isEmpty()) {
+              if (block == ":") {
+                if (!property->hasPropertyMarker()) {
+                  property->setPropertyMarkerExists(true);
+                  property->setPropertyMarkerOffset(pos - 1);
+                  property->incrementOffsets();
+                } else {
+                  // TODO handle error?
+                  // what happens if the : is after or in the middle of a value?
+                  // m_values.size() > 0? or if there are two? maybe remove
+                  // them?
+                }
+              } else if (m_datastore->isValidPropertyValueForProperty(name,
+                                                                      block)) {
+                property->addValue(block,
+                                   PropertyCheck::GoodValue,
+                                   pos - block.length(),
+                                   m_datastore->propertyValueAttribute(block));
               } else {
-                // TODO handle error?
-                // what happens if the : is after or in the middle of a value? m_values.size() > 0?
-                // or if there are two?
-                // maybe remove it?
+                property->addValue(block,
+                                   PropertyCheck::BadValue,
+                                   pos - block.length(),
+                                   m_datastore->propertyValueAttribute(block));
               }
-            } else if (m_datastore->isValidPropertyValueForProperty(name, block)) {
-              newNode->addValue(block, PropertyNode::GoodValue, pos - block.length(), m_datastore->propertyValueAttribute(block));
-            } else {
-              newNode->addValue(block, PropertyNode::BadValue, pos - block.length(), m_datastore->propertyValueAttribute(block));
             }
           }
         }
       }
     }
 
-    if (newNode) {
-      m_nodes->insert(newNode->cursor(), newNode);
-    }
+    //    if (newNode) {
+    //      d_ptr->m_nodes.insert(newNode->cursor(), newNode);
+    //    }
 
     emit rehighlight();
   }
@@ -1144,7 +1175,7 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //          if (next->type() == Node::PropertyEndType) {
 //            PropertyEndMarkerNode* marker =
 //              new PropertyEndMarkerNode(next->cursor(), m_editor);
-//            m_nodes->insert(next->cursor(), marker);
+//            d->m_nodes.insert(next->cursor(), marker);
 //            next->deleteLater();
 
 //            if (property->count() > 0) {
@@ -1172,7 +1203,7 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //              //            propCursor.setPosition(pos);
 //              //            PropertyMarkerNode* marker =
 //              //              new PropertyMarkerNode(propCursor, m_editor);
-//              //            m_nodes->insert(propCursor, marker);
+//              //            d->m_nodes.insert(propCursor, marker);
 //              property->setPropertyMarkerExists(true);
 //              property->setPropertyMarkerOffset(pos);
 //            }
@@ -1199,20 +1230,20 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //          if (m_datastore->containsWidget(newValue)) {
 //            Node* widget =
 //              new WidgetNode(newValue, badNode->cursor(), m_editor);
-//            m_nodes->insert(badNode->cursor(), widget);
+//            d->m_nodes.insert(badNode->cursor(), widget);
 //            Node* next = nextNode(badNode->cursor());
 
 //            if (next) {
 //              if (next->type() == Node::BadSubControlMarkerType) {
 //                Node* subcontrolmarker =
 //                  new SubControlMarkerNode(next->cursor(), m_editor);
-//                m_nodes->insert(next->cursor(), subcontrolmarker);
+//                d->m_nodes.insert(next->cursor(), subcontrolmarker);
 //                next->deleteLater();
 
 //              } else if (next->type() == Node::BadPseudoStateMarkerType) {
 //                Node* pseudostatemarker =
 //                  new PseudoStateMarkerNode(next->cursor(), m_editor);
-//                m_nodes->insert(next->cursor(), pseudostatemarker);
+//                d->m_nodes.insert(next->cursor(), pseudostatemarker);
 //                next->deleteLater();
 //              }
 //            }
@@ -1222,14 +1253,14 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //          } else if (m_datastore->containsSubControl(newValue)) {
 //            Node* subcontrol =
 //              new SubControlNode(newValue, badNode->cursor(), m_editor);
-//            m_nodes->insert(badNode->cursor(), subcontrol);
+//            d->m_nodes.insert(badNode->cursor(), subcontrol);
 //            Node* prev = previousNode(badNode->cursor());
 
 //            if (prev) {
 //              if (prev->type() == Node::BadSubControlMarkerType) {
 //                Node* subcontrolmarker =
 //                  new SubControlMarkerNode(prev->cursor(), m_editor);
-//                m_nodes->insert(prev->cursor(), subcontrolmarker);
+//                d->m_nodes.insert(prev->cursor(), subcontrolmarker);
 //                prev->deleteLater();
 //              }
 //            }
@@ -1239,14 +1270,14 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //          } else if (m_datastore->containsPseudoState(newValue)) {
 //            Node* pseudostate =
 //              new PseudoStateNode(newValue, badNode->cursor(), m_editor);
-//            m_nodes->insert(badNode->cursor(), pseudostate);
+//            d->m_nodes.insert(badNode->cursor(), pseudostate);
 //            Node* prev = previousNode(badNode->cursor());
 
 //            if (prev) {
 //              if (prev->type() == Node::BadPseudoStateMarkerType) {
 //                Node* pseudostatemarker =
 //                  new PseudoStateMarkerNode(prev->cursor(), m_editor);
-//                m_nodes->insert(prev->cursor(), pseudostatemarker);
+//                d->m_nodes.insert(prev->cursor(), pseudostatemarker);
 //                prev->deleteLater();
 //              }
 //            }
@@ -1266,8 +1297,8 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 
 //          if (m_datastore->containsWidget(newValue)) {
 //            badNode->deleteLater();
-//            Node* subcontrol = new WidgetNode(newValue, data.cursor, m_editor);
-//            m_nodes->insert(data.cursor, subcontrol);
+//            Node* subcontrol = new WidgetNode(newValue, data.cursor,
+//            m_editor); d->m_nodes.insert(data.cursor, subcontrol);
 
 //          } else {
 //            badNode->setName(newValue);
@@ -1281,7 +1312,7 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //          if (m_datastore->containsSubControl(newValue)) {
 //            Node* subcontrol =
 //              new SubControlNode(newValue, data.cursor, m_editor);
-//            m_nodes->insert(data.cursor, subcontrol);
+//            d->m_nodes.insert(data.cursor, subcontrol);
 //            badNode->deleteLater();
 
 //          } else {
@@ -1297,7 +1328,7 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 //            badNode->deleteLater();
 //            Node* subcontrol =
 //              new PseudoStateNode(newValue, data.cursor, m_editor);
-//            m_nodes->insert(data.cursor, subcontrol);
+//            d->m_nodes.insert(data.cursor, subcontrol);
 
 //          } else {
 //            badNode->setName(newValue);
@@ -1317,7 +1348,7 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
 void
 Parser::handleCursorPositionChanged(QTextCursor textCursor)
 {
-  if (m_manualMove) {
+  if (d_ptr->m_manualMove) {
     return;
   }
 
@@ -1332,13 +1363,13 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
     return;
   }
 
-  for (auto startbrace : m_startbraces) {
+  for (auto startbrace : d_ptr->m_startbraces) {
     if (startbrace->isBraceAtCursor()) {
       startbrace->setBraceAtCursor(false);
     }
   }
 
-  for (auto endbrace : m_endbraces) {
+  for (auto endbrace : d_ptr->m_endbraces) {
     if (endbrace->isBraceAtCursor()) {
       endbrace->setBraceAtCursor(false);
     }
@@ -1347,14 +1378,14 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
   if (node) {
     auto type = node->type();
 
-    if (type == Node::StartBraceType) {
+    if (type == NodeType::StartBraceType) {
       StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
       startbrace->setBraceAtCursor(true);
       if (startbrace->hasEndBrace()) {
         EndBraceNode* endbrace = startbrace->endBrace();
         endbrace->setBraceAtCursor(true);
       }
-    } else if (type == Node::EndBraceType) {
+    } else if (type == NodeType::EndBraceType) {
       EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
       endbrace->setBraceAtCursor(true);
       if (endbrace->hasStartBrace()) {
@@ -1376,12 +1407,12 @@ Parser::handleMouseClicked(const QPoint& pos)
   if (nNode) {
     switch (nNode->type()) {
 
-      case Node::WidgetType: {
+      case NodeType::WidgetType: {
         auto widget = qobject_cast<WidgetNode*>(nNode);
 
         if (!widget->isWidgetValid()) {
           // not a valid node
-          if (widget != m_currentWidget) {
+          if (widget != d_ptr->m_currentWidget) {
             auto matches = m_datastore->fuzzySearchWidgets(nNode->name());
             updateContextMenu(matches, nNode, pos);
           }
@@ -1390,12 +1421,12 @@ Parser::handleMouseClicked(const QPoint& pos)
         break;
       } // end WidgetType
 
-      case Node::PseudoStateType: {
+      case NodeType::PseudoStateType: {
         auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
 
         if (!pseudostate->isStateValid()) {
           // not a valid node
-          if (pseudostate != m_currentWidget) {
+          if (pseudostate != d_ptr->m_currentWidget) {
             auto matches = m_datastore->fuzzySearchPseudoStates(nNode->name());
             updateContextMenu(matches, nNode, pos);
           }
@@ -1404,12 +1435,12 @@ Parser::handleMouseClicked(const QPoint& pos)
         break;
       } // end PseudoStateType
 
-      case Node::SubControlType: {
+      case NodeType::SubControlType: {
         auto subcontrol = qobject_cast<SubControlNode*>(nNode);
 
         if (!subcontrol->isStateValid()) {
           // not a valid node
-          if (subcontrol != m_currentWidget) {
+          if (subcontrol != d_ptr->m_currentWidget) {
             auto matches = m_datastore->fuzzySearchSubControl(nNode->name());
             updateContextMenu(matches, nNode, pos);
           }
@@ -1418,10 +1449,10 @@ Parser::handleMouseClicked(const QPoint& pos)
         break;
       } // end SubControlType
 
-      case Node::PropertyType: {
+      case NodeType::PropertyType: {
         auto property = qobject_cast<PropertyNode*>(nNode);
 
-        if (property != m_currentWidget) {
+        if (property != d_ptr->m_currentWidget) {
           auto offset = m_editor->cursorForPosition(pos).anchor() -
                         property->cursor().anchor();
           auto status = property->isProperty(offset);
@@ -1461,7 +1492,7 @@ Parser::handleMouseClicked(const QPoint& pos)
         break;
       } // end
 
-      case Node::BadNodeType: {
+      case NodeType::BadNodeType: {
         //          auto badNode = qobject_cast<BadBlockNode*>(nNode);
 
         //          //      if (badNode) {
@@ -1521,31 +1552,31 @@ Parser::handleMouseClicked(const QPoint& pos)
 QTextCursor
 Parser::currentCursor() const
 {
-  return m_currentCursor;
+  return d_ptr->m_currentCursor;
 }
 
 void
 Parser::setCurrentCursor(const QTextCursor& currentCursor)
 {
-  m_currentCursor = currentCursor;
+  d_ptr->m_currentCursor = currentCursor;
 }
 
 void
 Parser::setMaxSuggestionCount(int maxSuggestionCount)
 {
-  m_maxSuggestionCount = maxSuggestionCount;
+  d_ptr->m_maxSuggestionCount = maxSuggestionCount;
 }
 
 bool
 Parser::manualMove() const
 {
-  return m_manualMove;
+  return d_ptr->m_manualMove;
 }
 
 void
 Parser::setManualMove(bool manualMove)
 {
-  m_manualMove = manualMove;
+  d_ptr->m_manualMove = manualMove;
 }
 
 QMenu*
@@ -1568,9 +1599,10 @@ Parser::actionPropertyNameChange(PropertyNode* property,
   property->setValidProperty(true);
   if (property->hasPropertyMarker())
     property->setPropertyMarkerOffset(newLen);
-  property->incrementOffsets(0, newLen - property->name().length());
+  property->incrementOffsets(newLen - property->name().length());
   property->setName(name);
-  property->setStart(originalCursor);
+  //  property->setStart(originalCursor);
+  d_ptr->m_nodes.insert(property->cursor(), property);
 }
 
 void
@@ -1582,15 +1614,20 @@ Parser::actionPropertyValueChange(PropertyNode* property,
   auto oldName = status.name();
   auto index = property->values().indexOf(oldName);
   auto offset = property->offsets().at(index);
-  auto cursor(property->cursor());
-  cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, offset);
+  auto anchor = property->cursor().anchor();
+
+  property->correctValue(index, name);
+  property->incrementOffsets(name.length() - oldName.length(), index + 1);
+
+  QTextCursor cursor(m_editor->document());
+  cursor.movePosition(QTextCursor::Start, QTextCursor::MoveAnchor); // to start
   cursor.movePosition(
-    QTextCursor::Right, QTextCursor::KeepAnchor, oldName.length());
+    QTextCursor::Right, QTextCursor::MoveAnchor, anchor + offset); // to node
+  cursor.movePosition(
+    QTextCursor::Right, QTextCursor::KeepAnchor, oldName.length()); // selection
   cursor.removeSelectedText();
   cursor.insertText(name);
-  property->correctValue(index, name);
-  property->incrementOffsets(index + 1, name.length() - oldName.length());
-  property->setStart(originalCursor);
+  d_ptr->m_nodes.insert(property->cursor(), property);
 }
 
 void
@@ -1608,8 +1645,8 @@ Parser::handleSuggestion(QAction* act)
       auto originalCursor = property->cursor().anchor();
       property->setPropertyMarkerExists(true);
       property->setPropertyMarkerOffset(property->length());
-      property->incrementOffsets(
-        0); // by default increments by one, starting at 0.
+      property
+        ->incrementOffsets(); // by default increments by one, starting at 0.
       auto cursor(property->cursor());
       cursor.movePosition(
         QTextCursor::Right, QTextCursor::MoveAnchor, property->length());
@@ -1624,7 +1661,7 @@ Parser::handleSuggestion(QAction* act)
       auto name = act->text();
 
       switch (nNode->type()) {
-        case Node::WidgetType: {
+        case NodeType::WidgetType: {
           auto widget = qobject_cast<WidgetNode*>(nNode);
 
           if (widget) {
@@ -1641,7 +1678,7 @@ Parser::handleSuggestion(QAction* act)
           break;
         }
 
-        case Node::PseudoStateType: {
+        case NodeType::PseudoStateType: {
           auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
 
           if (pseudostate) {
@@ -1659,7 +1696,7 @@ Parser::handleSuggestion(QAction* act)
           break;
         }
 
-        case Node::SubControlType: {
+        case NodeType::SubControlType: {
           auto subcontrol = qobject_cast<SubControlNode*>(nNode);
 
           if (subcontrol) {
@@ -1677,7 +1714,7 @@ Parser::handleSuggestion(QAction* act)
           break;
         }
 
-        case Node::PropertyType: {
+        case NodeType::PropertyType: {
           auto property = qobject_cast<PropertyNode*>(nNode);
 
           if (property) {
@@ -1716,18 +1753,18 @@ Parser::handleSuggestion(QAction* act)
 int
 Parser::maxSuggestionCount() const
 {
-  return m_maxSuggestionCount;
+  return d_ptr->m_maxSuggestionCount;
 }
 
 Node*
 Parser::nextNode(QTextCursor cursor)
 {
-  QList<QTextCursor> keys = m_nodes->keys();
+  QList<QTextCursor> keys = d_ptr->m_nodes.keys();
   int index = keys.indexOf(cursor) + 1; // next index
 
   if (index < keys.size()) {
     QTextCursor cursor = keys.value(index);
-    return m_nodes->value(cursor);
+    return d_ptr->m_nodes.value(cursor);
   }
 
   return nullptr;
@@ -1736,12 +1773,12 @@ Parser::nextNode(QTextCursor cursor)
 Node*
 Parser::previousNode(QTextCursor cursor)
 {
-  QList<QTextCursor> keys = m_nodes->keys();
+  QList<QTextCursor> keys = d_ptr->m_nodes.keys();
   int index = keys.indexOf(cursor) - 1; // previous index
 
   if (index >= 0) {
     QTextCursor cursor = keys.value(index);
-    return m_nodes->value(cursor);
+    return d_ptr->m_nodes.value(cursor);
   }
 
   return nullptr;

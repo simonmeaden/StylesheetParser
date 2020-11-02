@@ -708,145 +708,6 @@ StylesheetEditPrivate::createHover()
 }
 
 void
-StylesheetEditPrivate::hoverWidgetType(NamedNode* nNode,
-                                       QPair<NodeSectionType, int> isin,
-                                       QPoint pos)
-{
-  auto widget = qobject_cast<WidgetNode*>(nNode);
-
-  if (isin.first == NodeSectionType::Name) {
-    if (!widget->isWidgetValid()) {
-      // not a valid node
-      if (widget == m_currentHover) {
-        // already has a message just changing position
-        m_hoverWidget->setPosition(pos);
-
-      } else {
-        // new node so restart message
-        m_hoverWidget->setHoverText(
-          q_ptr->tr("%1 is not a valid widget name").arg(widget->name()));
-        m_hoverWidget->setPosition(pos);
-        m_currentHover = widget;
-      }
-    }
-  }
-}
-
-void
-StylesheetEditPrivate::hoverPseudoStateType(NamedNode* nNode,
-                                            QPair<NodeSectionType, int> isin,
-                                            QPoint pos)
-{
-  auto pseudostate = qobject_cast<PseudoStateNode*>(nNode);
-
-  if (isin.first == NodeSectionType::Name) {
-    if (!pseudostate->isStateValid()) {
-      // not a valid node
-      if (pseudostate == m_currentHover) {
-        // already has a message just changing position
-        m_hoverWidget->setPosition(pos);
-
-      } else {
-        // new node so restart message
-        m_hoverWidget->setHoverText(
-          q_ptr->tr("%1 is not a valid pseudo state").arg(pseudostate->name()));
-        m_hoverWidget->setPosition(pos);
-        m_currentHover = pseudostate;
-      }
-    }
-  }
-}
-
-void
-StylesheetEditPrivate::hoverSubControlType(NamedNode* nNode,
-                                           QPair<NodeSectionType, int> isin,
-                                           QPoint pos)
-{
-  auto subcontrol = qobject_cast<SubControlNode*>(nNode);
-
-  if (isin.first == NodeSectionType::Name) {
-    if (!subcontrol->isStateValid()) {
-      // not a valid node
-      if (subcontrol == m_currentHover) {
-        // already has a message just changing position
-        m_hoverWidget->setPosition(pos);
-
-      } else {
-        // new node so restart message
-        m_hoverWidget->setHoverText(
-          q_ptr->tr("%1 is not a valid sub-control").arg(subcontrol->name()));
-        m_hoverWidget->setPosition(pos);
-        m_currentHover = subcontrol;
-      }
-    }
-  }
-}
-
-void
-StylesheetEditPrivate::hoverPropertyType(NamedNode* nNode,
-                                         QPair<NodeSectionType, int> isin,
-                                         QPoint pos)
-{
-  auto property = qobject_cast<PropertyNode*>(nNode);
-
-  switch (isin.first) {
-    case NodeSectionType::None:
-      m_hoverWidget->hideHover();
-      break;
-
-    case NodeSectionType::Name: {
-      auto propertyName = property->name();
-
-      if (property->checks().contains(PropertyCheck::MissingPropertyEnd) &&
-          !property->hasPropertyMarker()) {
-        m_hoverWidget->setHoverText(
-          q_ptr
-            ->tr("%1 is not a valid property name!\nMissing property "
-                 "marker (:)!")
-            .arg(propertyName));
-        m_hoverWidget->setPosition(pos);
-
-      } else if (property->checks().contains(
-                   PropertyCheck::MissingPropertyEnd)) {
-        m_hoverWidget->setHoverText(
-          q_ptr->tr("%1 is not a valid property name!").arg(propertyName));
-        m_hoverWidget->setPosition(pos);
-
-      } else if (!property->hasPropertyMarker()) {
-        m_hoverWidget->setHoverText(q_ptr->tr("Missing property marker (:)!"));
-        m_hoverWidget->setPosition(pos);
-
-      } else if (!property->isValidProperty()) {
-        m_hoverWidget->setHoverText(q_ptr->tr("Invalid property name!"));
-        m_hoverWidget->setPosition(pos);
-      }
-
-      break;
-    }
-
-    case NodeSectionType::Value: {
-      /*if (property->checks().at(isin.second) ==
-          PropertyNode::ValidPropertyType) {
-        // This is a valid property but the property name is wrong.
-        // TODO handle different attribute types here?
-        m_hoverWidget->setHoverText(
-          q_ptr->tr("%1 is a good property value.\nIncorrect property name!")
-          .arg(property->values().at(isin.second)));
-        m_hoverWidget->setPosition(pos);
-
-        } else*/
-      if (property->checks().at(isin.second) == PropertyCheck::BadValue) {
-        m_hoverWidget->setHoverText(q_ptr->tr("%1 is a bad property value.")
-                                      .arg(property->values().at(isin.second)));
-        m_hoverWidget->setPosition(pos);
-      }
-
-      break;
-    }
-  }
-}
-
-void
 StylesheetEditPrivate::handleLeaveEvent()
 {
   if (m_hoverWidget && m_hoverWidget->isVisible()) {
@@ -901,50 +762,33 @@ StylesheetEditPrivate::getValueAtCursor(int pos, const QString& text)
   return value;
 }
 
-QString
-StylesheetEditPrivate::getOldNodeValue(CursorData* data)
-{
-  QString oldValue;
+//QString
+//StylesheetEditPrivate::getOldNodeValue(CursorData* data)
+//{
+//  QString oldValue;
 
-  switch (data->node->type()) {
-    case NodeType::WidgetType:
-    case NodeType::PropertyType:
-      oldValue = qobject_cast<PropertyNode*>(data->node)->name();
-      break;
+//  switch (data->node->type()) {
+//    case NodeType::WidgetType:
+//    case NodeType::PropertyType:
+//      oldValue = qobject_cast<PropertyNode*>(data->node)->name();
+//      break;
 
-    case NodeType::SubControlType:
-    case NodeType::PseudoStateType:
-      oldValue = qobject_cast<PseudoStateNode*>(data->node)->name();
-      break;
+//    case NodeType::StartBraceType:
+//      oldValue = "{";
+//      break;
 
-    case NodeType::SubControlMarkerType:
-      oldValue = "::";
-      break;
+//    case NodeType::EndBraceType:
+//      oldValue = "}";
+//      break;
 
-    case NodeType::PseudoStateMarkerType:
-      oldValue = ":";
-      break;
+//      //  case Node::ValueType:
 
-    case NodeType::StartBraceType:
-      oldValue = "{";
-      break;
+//    default:
+//      break;
+//  }
 
-    case NodeType::EndBraceType:
-      oldValue = "}";
-      break;
-
-    case NodeType::SemiColonType:
-      oldValue = ";";
-      break;
-
-      //  case Node::ValueType:
-
-    default:
-      break;
-  }
-
-  return oldValue;
-}
+//  return oldValue;
+//}
 
 void
 StylesheetEdit::updateLeftAreaWidth(int)

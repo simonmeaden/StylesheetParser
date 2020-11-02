@@ -27,22 +27,24 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   , m_editor(editor)
 {
   m_back = QColor("white"); /*editor->palette().brush(QPalette::Background)*/
-  ;
-  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
+  //  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
+  setWidgetFormat(QColor("olive"), m_back, QFont::Light);
   setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
   setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
   setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setPropertyFormat(QColor("mediumblue"), m_back, QFont::Light);
-  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPropertyMarkerFormat(QColor("cyan"), m_back, QFont::Light);
+  setPropertyEndMarkerFormat(QColor("mediumseagreen"), m_back, QFont::Light);
   setValueFormat(QColor("orangered"), m_back, QFont::Light);
-  //  setBadValueFormat(QColor(Qt::black), m_back, QFont::Light, true,
-  //                    QTextCharFormat::WaveUnderline, QColor(Qt::red));
-  setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
-  setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
+  setStartBraceFormat(QColor("darkorange"), m_back, QFont::Light);
+  setEndBraceFormat(QColor("cornflowerblue"), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
-  setCommentFormat(QColor("limegreen"), m_back, QFont::Light);
+  setCommentFormat(QColor("darkmagenta"), m_back, QFont::Light);
 }
 
 int
@@ -66,185 +68,238 @@ StylesheetHighlighter::setNodeStart(int nodeStart, int blockStart)
 }
 
 void
+StylesheetHighlighter::formatProperty(PropertyNode* property)
+{
+  if (property) {
+    auto length = property->name().length();
+
+    if (property->hasPropertyMarker()) {
+      setFormat(property->start(), length, m_propertyFormat);
+      setFormat(property->start() + property->propertyMarkerOffset(),
+                1,
+                m_propertyMarkerFormat);
+
+    } else if (!property->isValidProperty()) {
+      setFormat(property->start(), length, m_badPropertyFormat);
+
+    } else {
+      setFormat(property->start(), length, m_badPropertyFormat);
+    }
+
+    QStringList values = property->values();
+    QList<PropertyCheck> checks = property->checks();
+
+    QList<int> offsets = property->offsets();
+    PropertyCheck check;
+    QString value;
+    int offset;
+    int start;
+
+    for (int i = 0; i < values.length(); i++) {
+      value = values.at(i);
+      check = checks.at(i);
+      offset = offsets.at(i);
+      length = value.length();
+      start = property->start() + offset;
+
+      if (check == PropertyCheck::GoodValue ||
+          check == PropertyCheck::ValidPropertyType) {
+        setFormat(start, length, m_valueFormat);
+
+      } else {
+        setFormat(start, length, m_badValueFormat);
+      }
+    }
+  }
+
+  if (property->hasEndMarker()) {
+    setFormat(property->start() + property->propertyEndMarkerOffset(),
+              1,
+              m_propertyEndMarkerFormat);
+  }
+}
+
+NodeIsIn
+StylesheetHighlighter::nodeInBlock(const QTextBlock& block,
+                                   Node* node,
+                                   int& nodeStart)
+{
+  auto blockStart = block.position();
+  auto blockLength = block.length();
+  auto blockEnd = blockStart + blockLength;
+  auto length = node->length();
+  nodeStart = node->start();
+  auto nodeEnd = nodeStart + length;
+
+  if (nodeEnd < blockStart) {
+    return NodeIsIn::BeforeNode;
+
+  } else if (nodeStart >= blockEnd) {
+    return NodeIsIn::AfterNode;
+  }
+
+  if (nodeStart < blockStart && nodeEnd > blockStart) {
+    nodeStart = 0;
+
+  } else {
+    nodeStart -= blockStart;
+  }
+
+  //  if (nodeEnd > blockEnd) {
+  //    nodeEnd = blockEnd - blockStart;
+
+  //  } else {
+  //    nodeEnd -= blockStart;
+  //  }
+  return NodeIsIn::InNode;
+}
+
+void
 StylesheetHighlighter::highlightBlock(const QString& text)
 {
   auto nodes = m_editor->nodes();
+  auto block = currentBlock();
 
   if (text.isEmpty() || nodes.isEmpty()) {
     return;
   }
 
-  QTextBlock block = currentBlock();
-  auto blockStart = block.position();
-  auto blockLength = block.length();
-  auto blockEnd = blockStart + blockLength;
-
   for (auto key : nodes.keys()) {
     auto node = nodes.value(key);
     auto type = node->type();
+    int nodeStart;
 
-    if (type == NodeType::PropertyEndType) {
-      continue;
-    }
-
-    auto length = dynamic_cast<NameNode*>(node)->length();
-    auto nodeStart = node->start();
-    auto nodeEnd = nodeStart + length;
-
-    if (nodeEnd < blockStart) {
-      continue;
-
-    } else if (nodeStart >= blockEnd) {
-      break;
-    }
-
-    if (nodeStart < blockStart && nodeEnd > blockStart) {
-      nodeStart = 0;
-
-    } else {
-      nodeStart -= blockStart;
-    }
-
-    if (nodeEnd > blockEnd) {
-      nodeEnd = blockEnd - blockStart;
-
-    } else {
-      nodeEnd -= blockStart;
+    auto isin = nodeInBlock(block, node, nodeStart);
+    switch (isin) {
+      case NodeIsIn::BeforeNode:
+        continue;
+      case NodeIsIn::AfterNode:
+        return;
+      default:
+        break;
     }
 
     switch (type) {
       case NodeType::NewlineType:
         break;
 
-      case NodeType::PseudoStateType: {
-        auto pseudostate = qobject_cast<PseudoStateNode*>(node);
-
-        if (pseudostate->isStateValid()) {
-          setFormat(nodeStart, length, m_pseudoStateFormat);
-
-        } else {
-          setFormat(nodeStart, length, m_badPseudoStateFormat);
-        }
-        break;
-      }
-
-      case NodeType::PseudoStateMarkerType:
-        setFormat(nodeStart, length, m_pseudoStateMarkerFormat);
-        break;
-
-      case NodeType::SubControlType: {
-        auto subcontrol = qobject_cast<SubControlNode*>(node);
-
-        if (subcontrol->isStateValid()) {
-          setFormat(nodeStart, length, m_subControlFormat);
-
-        } else {
-          setFormat(nodeStart, length, m_badSubControlFormat);
-        }
-        break;
-      }
-
-      case NodeType::SubControlMarkerType:
-        setFormat(nodeStart, length, m_subControlMarkerFormat);
-        break;
-
       case NodeType::WidgetType: {
+
         WidgetNode* widget = qobject_cast<WidgetNode*>(node);
 
         if (widget->isWidgetValid()) {
-          setFormat(nodeStart, length, m_widgetFormat);
+          setFormat(nodeStart, widget->name().length(), m_widgetFormat);
 
         } else {
-          setFormat(nodeStart, length, m_badWidgetFormat);
+          setFormat(nodeStart, widget->name().length(), m_badWidgetFormat);
+        }
+
+        if (widget->hasExtension()) {
+          auto extname = widget->extensionName();
+          if (widget->isSubControl()) {
+            if (widget->isExtensionValid()) {
+              setFormat(nodeStart + widget->markerOffset(),
+                        2,
+                        m_subControlMarkerFormat);
+              setFormat(nodeStart + widget->extensionOffset(),
+                        extname.length(),
+                        m_subControlFormat);
+            } else {
+              setFormat(nodeStart + widget->markerOffset(),
+                        2,
+                        m_subControlMarkerFormat);
+              setFormat(nodeStart + widget->extensionOffset(),
+                        extname.length(),
+                        m_badSubControlFormat);
+            }
+          } else if (widget->isPseudoState()) {
+            if (widget->isExtensionValid()) {
+              setFormat(nodeStart + widget->markerOffset(),
+                        1,
+                        m_pseudoStateMarkerFormat);
+              setFormat(nodeStart + widget->extensionOffset(),
+                        extname.length(),
+                        m_pseudoStateFormat);
+            } else {
+              setFormat(nodeStart + widget->markerOffset(),
+                        1,
+                        m_pseudoStateMarkerFormat);
+              setFormat(nodeStart + widget->extensionOffset(),
+                        extname.length(),
+                        m_badPseudoStateFormat);
+            }
+          } else {
+            // TODO error has extension but wrong type?
+          }
+        }
+
+        bool hasstart = widget->hasStartBrace();
+        bool hasend = widget->hasEndBrace();
+        if (hasstart) {
+          auto offset = widget->startBraceOffset();
+          if (hasend) {
+            setFormat(nodeStart + offset, 1, m_startBraceFormat);
+          } else {
+            setFormat(nodeStart + offset, 1, m_badStartBraceFormat);
+          }
+        }
+
+        for (int i = 0; i < widget->propertyCount(); i++) {
+          auto property = widget->property(i);
+          formatProperty(property);
+        }
+
+        if (hasend) {
+          auto offset = widget->endBraceOffset();
+          if (hasstart) {
+            setFormat(nodeStart + offset, 1, m_endBraceFormat);
+          } else {
+            setFormat(nodeStart + offset, 1, m_badEndBraceFormat);
+          }
         }
 
         break;
       }
 
       case NodeType::BadNodeType:
-        setFormat(nodeStart, length, m_badValueFormat);
+        setFormat(nodeStart, node->length(), m_badValueFormat);
         break;
 
-      case NodeType::CommentStartMarkerType:
-        setFormat(nodeStart, length, m_commentFormat);
-        break;
+//      case NodeType::CommentStartMarkerType:
+//        setFormat(nodeStart, node->length(), m_commentFormat);
+//        break;
 
       case NodeType::CommentType:
-        setFormat(nodeStart, length, m_commentFormat);
+        setFormat(nodeStart, node->length(), m_commentFormat);
         break;
 
-      case NodeType::CommentEndMarkerType:
-        setFormat(nodeStart, length, m_commentFormat);
-        break;
+//      case NodeType::CommentEndMarkerType:
+//        setFormat(nodeStart, node->length(), m_commentFormat);
+//        break;
 
       case NodeType::PropertyType: {
-
-        PropertyNode* pNode = qobject_cast<PropertyNode*>(node);
-        if (pNode) {
-          length = pNode->name().length();
-
-          if (!pNode->isValidProperty()) {
-            setFormat(nodeStart, length, m_badPropertyFormat);
-
-          } else if (pNode->hasPropertyMarker()) {
-            setFormat(nodeStart, length, m_propertyFormat);
-            setFormat(nodeStart + pNode->propertyMarkerOffset(),
-                      1,
-                      m_propertyEndMarkerFormat);
-
-          } else {
-            setFormat(nodeStart, length, m_badPropertyFormat);
-          }
-
-          QStringList values = pNode->values();
-          QList<PropertyCheck> checks =
-            pNode->checks(); //    case Node::PropertyMarkerType:
-          //      setFormat(nodeStart, length, m_propertyMarkerFormat);
-          //      break;
-
-          QList<int> offsets = pNode->offsets();
-          PropertyCheck check;
-          QString value;
-          int offset;
-          int start;
-
-          for (int i = 0; i < values.length(); i++) {
-            value = values.at(i);
-            check = checks.at(i);
-            offset = offsets.at(i);
-
-            start = nodeStart + offset;
-
-            if (check == PropertyCheck::GoodValue ||
-                check == PropertyCheck::ValidPropertyType) {
-              setFormat(start, value.length(), m_valueFormat);
-
-            } else {
-              setFormat(start, value.length(), m_badValueFormat);
-            }
-          }
-        }
-
+        PropertyNode* property = qobject_cast<PropertyNode*>(node);
+        formatProperty(property);
         break;
       }
 
-      case NodeType::PropertyEndMarkerType:
-        setFormat(nodeStart, length, m_propertyEndMarkerFormat);
-        break;
+        //      case NodeType::PropertyEndMarkerType:
+        //        setFormat(nodeStart, length, m_propertyEndMarkerFormat);
+        //        break;
 
       case NodeType::StartBraceType: {
         StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
         if (startbrace->isBraceAtCursor()) {
           if (startbrace->hasEndBrace()) {
-            setFormat(nodeStart, length, m_braceMatchFormat);
+            setFormat(nodeStart, node->length(), m_braceMatchFormat);
           } else {
-            setFormat(nodeStart, length, m_badBraceMatchFormat);
+            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
           }
         } else {
           if (startbrace->hasEndBrace()) {
-            setFormat(nodeStart, length, m_startBraceFormat);
+            setFormat(nodeStart, node->length(), m_startBraceFormat);
           } else {
-            setFormat(nodeStart, length, m_badStartBraceFormat);
+            setFormat(nodeStart, node->length(), m_badStartBraceFormat);
           }
         }
         break;
@@ -254,15 +309,15 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
         if (endbrace->isBraceAtCursor()) {
           if (endbrace->hasStartBrace()) {
-            setFormat(nodeStart, length, m_braceMatchFormat);
+            setFormat(nodeStart, node->length(), m_braceMatchFormat);
           } else {
-            setFormat(nodeStart, length, m_badBraceMatchFormat);
+            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
           }
         } else {
           if (endbrace->hasStartBrace()) {
-            setFormat(nodeStart, length, m_endBraceFormat);
+            setFormat(nodeStart, node->length(), m_endBraceFormat);
           } else {
-            setFormat(nodeStart, length, m_badEndBraceFormat);
+            setFormat(nodeStart, node->length(), m_badEndBraceFormat);
           }
         }
         break;

@@ -25,7 +25,10 @@
 
 #include "stylesheetparser/stylesheetedit.h"
 
-Node::Node(QTextCursor cursor, StylesheetEdit* parent, enum NodeType type)
+Node::Node(const QString& name,
+           QTextCursor cursor,
+           StylesheetEdit* parent,
+           enum NodeType type)
   : QObject(parent)
   , previous(nullptr)
   , next(nullptr)
@@ -34,6 +37,7 @@ Node::Node(QTextCursor cursor, StylesheetEdit* parent, enum NodeType type)
   d_ptr->cursor = cursor;
   d_ptr->type = type;
   d_ptr->parent = parent;
+  d_ptr->name = name;
 }
 
 Node::Node(const Node& other)
@@ -71,7 +75,7 @@ Node::moveStart(int count)
 int
 Node::end() const
 {
-  return d_ptr->cursor.anchor();
+  return d_ptr->cursor.anchor() + d_ptr->name.length();
 }
 
 QTextCursor
@@ -91,111 +95,67 @@ Node::toString() const
 {
   switch (d_ptr->type) {
     case NodeType:
-      return "Node";
-
-    case BaseNodeType:
-      return "Base";
-
-    case CharNodeType:
-      return "Char";
-
-    case ColonNodeType:
-      return "Colon";
-
-    case NameType:
-      return "Name";
-
+      return d_ptr->name;
     case WidgetType:
-      return "Widget";
-
-    case SubControlType:
-      return "Sub Control";
-
-    case SubControlMarkerType:
-      return "Sub Control Marker";
-
-    case PseudoStateType:
-      return "PseudoState";
-
-    case PseudoStateMarkerType:
-      return "PseudoState Marker";
-
-    case SemiColonType:
-      return "SemiColon";
-
+      return d_ptr->name;
     case StartBraceType:
-      return "Start Brace";
-
+      return "{";
     case EndBraceType:
-      return "End Brace";
-
+      return "}";
     case NewlineType:
-      return "Newline";
-
+      return "\n";
     case PropertyType:
-      return "Property";
-
-    case PropertyEndType:
-      return "Property End";
-
+      return d_ptr->name;
     case BadNodeType:
-      return "Bad";
+      return "";
   }
 
   return QString();
 }
 
-NameNode::NameNode(const QString& name)
-{
-  n_ptr = new NameNodeData;
-  n_ptr->name = name;
-}
+// NameNode::NameNode(const QString& name)
+//{
+//  d_ptr = new NameNodeData;
+//  d_ptr->name = name;
+//}
 
-NameNode::NameNode(const NameNode& other)
-{
-  n_ptr = new NameNodeData(*other.n_ptr);
-}
+// NameNode::NameNode(const NameNode& other)
+//{
+//  d_ptr = new NameNodeData(*other.d_ptr);
+//}
 
-NameNode::~NameNode()
-{
-  delete n_ptr;
-}
+// NameNode::~NameNode()
+//{
+//  delete d_ptr;
+//}
 
 QString
-NameNode::name() const
+Node::name() const
 {
-  return n_ptr->name;
+  return d_ptr->name;
 }
 
 void
-NameNode::setName(const QString& value)
+Node::setName(const QString& value)
 {
-  n_ptr->name = value;
+  d_ptr->name = value;
 }
 
 int
-NameNode::length() const
+Node::length() const
 {
-  return n_ptr->name.length();
+  return d_ptr->name.length();
 }
 
-NamedNode::NamedNode(const QString& name,
-                     QTextCursor start,
-                     StylesheetEdit* parent,
-                     enum NodeType type)
-  : Node(start, parent, type)
-  , NameNode(name)
-{}
-
 QPair<NodeSectionType, int>
-NamedNode::isIn(QPoint pos)
+Node::isIn(QPoint pos)
 {
   auto x = pos.x();
   auto y = pos.y();
   auto rect = d_ptr->parent->cursorRect(QTextCursor(d_ptr->cursor));
   auto left = rect.x();
   auto fm = d_ptr->parent->fontMetrics();
-  auto width = fm.horizontalAdvance(n_ptr->name);
+  auto width = fm.horizontalAdvance(d_ptr->name);
   auto height = fm.height();
   auto right = left + width;
   auto top = rect.y();
@@ -208,18 +168,12 @@ NamedNode::isIn(QPoint pos)
   return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
 }
 
-int
-NamedNode::end() const
-{
-  return start() + length();
-}
-
 BadBlockNode::BadBlockNode(const QString& name,
                            QTextCursor start,
                            ParserState::Errors errors,
                            StylesheetEdit* parent,
                            enum NodeType type)
-  : NamedNode(name, start, parent, type)
+  : Node(name, start, parent, type)
   , BadNode(errors)
 {}
 
@@ -245,33 +199,33 @@ BadNode::setError(const ParserState::Errors& errors)
   m_errors = errors;
 }
 
-BadSubControlMarkerNode::BadSubControlMarkerNode(QTextCursor start,
-                                                 ParserState::Errors errors,
-                                                 StylesheetEdit* parent,
-                                                 enum NodeType type)
-  : SubControlMarkerNode(start, parent, type)
-  , BadNode(errors)
-{}
+// BadSubControlMarkerNode::BadSubControlMarkerNode(QTextCursor start,
+//                                                 ParserState::Errors errors,
+//                                                 StylesheetEdit* parent,
+//                                                 enum NodeType type)
+//  : SubControlMarkerNode(start, parent, type)
+//  , BadNode(errors)
+//{}
 
-BadPseudoStateMarkerNode::BadPseudoStateMarkerNode(QTextCursor start,
-                                                   ParserState::Errors errors,
-                                                   StylesheetEdit* parent,
-                                                   enum NodeType type)
-  : PseudoStateMarkerNode(start, parent, type)
-  , BadNode(errors)
-{}
+// BadPseudoStateMarkerNode::BadPseudoStateMarkerNode(QTextCursor start,
+//                                                   ParserState::Errors errors,
+//                                                   StylesheetEdit* parent,
+//                                                   enum NodeType type)
+//  : PseudoStateMarkerNode(start, parent, type)
+//  , BadNode(errors)
+//{}
 
 WidgetNode::WidgetNode(const QString& name,
                        QTextCursor start,
                        StylesheetEdit* parent,
                        enum NodeType type)
-  : NamedNode(name, start, parent, type)
+  : Node(name, start, parent, type)
 {
   w_ptr = new WidgetNodeData;
 }
 
 WidgetNode::WidgetNode(const WidgetNode& other)
-  : NamedNode(other.name(), other.cursor(), other.d_ptr->parent, other.type())
+  : Node(other.name(), other.cursor(), other.d_ptr->parent, other.type())
 {
   w_ptr = new WidgetNodeData(*other.w_ptr);
 }
@@ -279,6 +233,22 @@ WidgetNode::WidgetNode(const WidgetNode& other)
 WidgetNode::~WidgetNode()
 {
   delete w_ptr;
+}
+
+int
+WidgetNode::length() const
+{
+  if (hasEndBrace()) {
+    return endBraceOffset();
+  } else if (w_ptr->properties.size() > 0) {
+    return w_ptr->properties.last()->length();
+  } else if (hasStartBrace()) {
+    return startBraceOffset();
+  } else if (hasExtension()) {
+    return extensionOffset() + extensionLength();
+  } else {
+    return name().length();
+  }
 }
 
 bool
@@ -293,17 +263,227 @@ WidgetNode::setWidgetValid(bool widgetValid)
   w_ptr->widgetValid = widgetValid;
 }
 
+QPair<NodeSectionType, int>
+WidgetNode::isIn(QPoint pos)
+{
+
+  // first check if it is the widget properties.
+  for (int i = 0; i < propertyCount(); i++) {
+    auto isin = w_ptr->properties.at(i)->isIn(pos);
+    if (isin.first == NodeSectionType::Name) {
+      isin.first = NodeSectionType::WidgetPropertyName;
+      return isin;
+    } else if (isin.first == NodeSectionType::Value) {
+      isin.first = NodeSectionType::WidgetPropertyValue;
+      return isin;
+    }
+  }
+
+  // then elsewhere in the widget.
+  auto x = pos.x();
+  auto y = pos.y();
+  auto cursor = QTextCursor(d_ptr->cursor);
+  auto oldPos = cursor.position();
+  auto rect = d_ptr->parent->cursorRect(cursor);
+  auto left = rect.x();
+  auto top = rect.top();
+  auto fm = d_ptr->parent->fontMetrics();
+  int right = left, bottom = top;
+
+  int end;
+  end = length();
+  while (true) {
+    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 1);
+    rect = d_ptr->parent->cursorRect(cursor);
+    right = (rect.right() > right ? rect.right() : right);
+    bottom = (rect.bottom() > bottom ? rect.bottom() : bottom);
+    if (cursor.position() == end) {
+      break;
+    }
+  }
+
+  if (x > left && x <= right && y > top && y <= bottom)
+    return qMakePair<NodeSectionType, int>(NodeSectionType::Widget, -1);
+
+  cursor.setPosition(oldPos);
+
+  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
+}
+
+void
+WidgetNode::setSubControl(int marker)
+{
+  w_ptr->extension = SubControlExtension;
+  w_ptr->markerOffset = marker;
+}
+
+void
+WidgetNode::setPseudoState(int marker)
+{
+  w_ptr->extension = PseudoStateExtension;
+  w_ptr->markerOffset = marker;
+}
+
+int
+WidgetNode::extensionOffset() const
+{
+  return w_ptr->extensionOffset;
+}
+
+void
+WidgetNode::setExtensionOffset(int offset)
+{
+  w_ptr->extensionOffset = offset;
+}
+
+int
+WidgetNode::markerOffset() const
+{
+  return w_ptr->markerOffset;
+}
+
+void
+WidgetNode::setMarkerOffset(int offset)
+{
+  w_ptr->markerOffset = offset;
+}
+
+QString
+WidgetNode::extensionName() const
+{
+  return w_ptr->extensionName;
+}
+
+void
+WidgetNode::setExtensionName(const QString& name)
+{
+  w_ptr->extensionName = name;
+}
+
+bool
+WidgetNode::isExtensionValid() const
+{
+  return w_ptr->extensionValid;
+}
+
+bool
+WidgetNode::isSubControl() const
+{
+  return (w_ptr->extension == SubControlExtension);
+}
+
+bool
+WidgetNode::isPseudoState() const
+{
+  return (w_ptr->extension == PseudoStateExtension);
+}
+
+void
+WidgetNode::setExtensionValid(bool valid)
+{
+  w_ptr->extensionValid = valid;
+}
+
+bool
+WidgetNode::hasExtension() const
+{
+  return (w_ptr->extension == SubControlExtension ||
+          w_ptr->extension == PseudoStateExtension);
+}
+
+int
+WidgetNode::extensionLength() const
+{
+  return w_ptr->extensionName.length();
+}
+
+bool
+WidgetNode::hasStartBrace() const
+{
+  return (w_ptr->startBrace);
+}
+
+void
+WidgetNode::setStartBrace(int offset)
+{
+  w_ptr->startBrace = true;
+  w_ptr->startBraceOffset = offset;
+}
+
+int
+WidgetNode::startBraceOffset() const
+{
+  return w_ptr->startBraceOffset;
+}
+
+void
+WidgetNode::removeStartBrace()
+{
+  w_ptr->startBrace = false;
+  w_ptr->startBraceOffset = 0;
+}
+
+bool
+WidgetNode::hasEndBrace() const
+{
+  return (w_ptr->endBrace);
+}
+
+void
+WidgetNode::setEndBrace(int offset)
+{
+  w_ptr->endBrace = true;
+  w_ptr->endBraceOffset = offset;
+}
+
+int
+WidgetNode::endBraceOffset() const
+{
+  return w_ptr->endBraceOffset;
+}
+
+void
+WidgetNode::removeEndBrace()
+{
+  w_ptr->endBrace = false;
+  w_ptr->endBraceOffset = 0;
+}
+
+bool
+WidgetNode::offsetsMatch() const
+{
+  return (w_ptr->startBrace && w_ptr->endBrace);
+}
+
+void
+WidgetNode::addProperty(PropertyNode* property)
+{
+  w_ptr->properties.append(property);
+}
+
+PropertyNode*
+WidgetNode::property(int index) const
+{
+  return w_ptr->properties.at(index);
+}
+
+int
+WidgetNode::propertyCount() const
+{
+  return w_ptr->properties.size();
+}
+
 PropertyNode::PropertyNode(const QString& name,
                            QTextCursor start,
                            StylesheetEdit* parent,
                            enum NodeType type)
-  : NamedNode(name, start, parent, type)
+  : Node(name, start, parent, type)
 {
   p_ptr = new PropertyNodeData;
 }
 
 PropertyNode::PropertyNode(const PropertyNode& other)
-  : NamedNode(other.name(), other.cursor(), other.d_ptr->parent, other.type())
+  : Node(other.name(), other.cursor(), other.d_ptr->parent, other.type())
 {
   p_ptr = new PropertyNodeData(*other.p_ptr);
 }
@@ -331,6 +511,14 @@ PropertyNode::offsets() const
   return p_ptr->offsets;
 }
 
+void
+PropertyNode::setOffset(int index, int offset)
+{
+  if (index >= 0 && index < p_ptr->offsets.length()) {
+    p_ptr->offsets.replace(index, offset);
+  }
+}
+
 QList<DataStore::AttributeType>
 PropertyNode::attributeTypes() const
 {
@@ -344,9 +532,25 @@ PropertyNode::setValues(const QStringList& values)
 }
 
 void
+PropertyNode::setValue(int index, const QString& value)
+{
+  if (index >= 0 && index < p_ptr->values.length()) {
+    p_ptr->values.replace(index, value);
+  }
+}
+
+void
 PropertyNode::setChecks(const QList<PropertyCheck>& checks)
 {
   p_ptr->checks = checks;
+}
+
+void
+PropertyNode::setCheck(int index, PropertyCheck check)
+{
+  if (index >= 0 && index < p_ptr->checks.length()) {
+    p_ptr->checks.replace(index, check);
+  }
 }
 
 void
@@ -366,13 +570,6 @@ PropertyNode::addValue(
   p_ptr->checks.append(check);
   p_ptr->offsets.append(offset);
   p_ptr->attributeTypes.append(attType);
-}
-
-void
-PropertyNode::correctValue(int index, const QString& value)
-{
-  p_ptr->values.replace(index, value);
-  p_ptr->checks.replace(index, GoodValue);
 }
 
 bool
@@ -420,13 +617,14 @@ PropertyNode::end() const
 int
 PropertyNode::length() const
 {
-  auto value = n_ptr->name.length();
+  auto value = d_ptr->name.length();
 
   if (p_ptr->offsets.isEmpty()) {
     if (hasPropertyMarker()) {
       value += propertyMarkerOffset() + 1;
     }
   } else {
+    value += p_ptr->offsets.last();
     value += p_ptr->values.last().length();
   }
 
@@ -440,9 +638,9 @@ PropertyNode::hasPropertyMarker() const
 }
 
 void
-PropertyNode::setPropertyMarkerExists(bool propertyMarker)
+PropertyNode::setPropertyMarkerExists(bool exists)
 {
-  p_ptr->propertyMarkerExists = propertyMarker;
+  p_ptr->propertyMarkerExists = exists;
 }
 
 bool
@@ -452,9 +650,9 @@ PropertyNode::isValidProperty() const
 }
 
 void
-PropertyNode::setValidProperty(bool validProperty)
+PropertyNode::setValidProperty(bool valid)
 {
-  p_ptr->validProperty = validProperty;
+  p_ptr->validProperty = valid;
 }
 
 int
@@ -464,9 +662,45 @@ PropertyNode::propertyMarkerOffset() const
 }
 
 void
-PropertyNode::setPropertyMarkerOffset(int propertymarkerOffset)
+PropertyNode::setPropertyMarkerOffset(int offset)
 {
-  p_ptr->propertyMarkerOffset = propertymarkerOffset;
+  p_ptr->propertyMarkerOffset = offset;
+}
+
+void
+PropertyNode::incrementPropertyMarker(int increment)
+{
+  p_ptr->propertyMarkerOffset += increment;
+}
+
+bool
+PropertyNode::hasEndMarker()
+{
+  return p_ptr->endMarkerExists;
+}
+
+void
+PropertyNode::setPropertyEndMarker(bool exists)
+{
+  p_ptr->endMarkerExists = exists;
+}
+
+int
+PropertyNode::propertyEndMarkerOffset()
+{
+  return p_ptr->endMarkerOffset;
+}
+
+void
+PropertyNode::setPropertyEndMarkerOffset(int offset)
+{
+  p_ptr->endMarkerOffset = offset;
+}
+
+void
+PropertyNode::incrementEndMarkerOffset(int increment)
+{
+  p_ptr->endMarkerOffset += increment;
 }
 
 void
@@ -487,7 +721,7 @@ PropertyNode::isIn(QPoint pos)
   auto left = rect.x();
   auto fm = d_ptr->parent->fontMetrics();
   auto width =
-    fm.horizontalAdvance(n_ptr->name); // initially just property name
+    fm.horizontalAdvance(d_ptr->name); // initially just property name
   auto height = fm.height();
   auto right = left + width;
   auto top = rect.y();
@@ -537,8 +771,8 @@ PropertyNode::isIn(QPoint pos)
 PropertyStatus
 PropertyNode::isProperty(int pos) const
 {
-  if (pos < n_ptr->name.length()) {
-    return PropertyStatus(true, n_ptr->name);
+  if (pos < d_ptr->name.length()) {
+    return PropertyStatus(true, d_ptr->name);
 
   } else {
     for (int i = 0; i < p_ptr->values.size(); i++) {
@@ -561,146 +795,133 @@ PropertyNode::setAttributeTypes(
   p_ptr->attributeTypes = attributeTypes;
 }
 
-SubControlNode::SubControlNode(const QString& name,
-                               QTextCursor start,
-                               StylesheetEdit* parent,
-                               enum NodeType type)
-  : NamedNode(name, start, parent, type)
-{
-  s_ptr = new NodeStateData;
-}
-
-SubControlNode::SubControlNode(const SubControlNode& other)
-  : NamedNode(other.name(), other.cursor(), other.d_ptr->parent, other.type())
-{
-  s_ptr = new NodeStateData(*other.s_ptr);
-}
-
-SubControlNode::~SubControlNode()
-{
-  delete s_ptr;
-}
-
-int
-SubControlNode::end() const
-{
-  return d_ptr->cursor.anchor() + n_ptr->name.length();
-}
-
-bool
-SubControlNode::isStateValid() const
-{
-  return s_ptr->stateValid;
-}
-
-void
-SubControlNode::setStateValid(bool stateValid)
-{
-  s_ptr->stateValid = stateValid;
-}
-
-PseudoStateNode::PseudoStateNode(const QString& name,
-                                 QTextCursor start,
-                                 StylesheetEdit* parent,
-                                 enum NodeType type)
-  : NamedNode(name, start, parent, type)
-{
-  s_ptr = new NodeStateData;
-}
-
-PseudoStateNode::PseudoStateNode(const PseudoStateNode& other)
-  : NamedNode(other.name(), other.cursor(), other.d_ptr->parent, other.type())
-{
-  s_ptr = new NodeStateData(*other.s_ptr);
-}
-
-PseudoStateNode::~PseudoStateNode()
-{
-  delete s_ptr;
-}
-
-int
-PseudoStateNode::end() const
-{
-  return d_ptr->cursor.anchor() + n_ptr->name.length();
-}
-
-bool
-PseudoStateNode::isStateValid() const
-{
-  return s_ptr->stateValid;
-}
-
-void
-PseudoStateNode::setStateValid(bool stateValid)
-{
-  s_ptr->stateValid = stateValid;
-}
-
 CommentNode::CommentNode(QTextCursor start,
                          StylesheetEdit* parent,
                          enum NodeType type)
-  : NamedNode(QString(), start, parent, type)
-{}
+  : Node(QString(), start, parent, type)
+{
+  c_ptr = new CommentNodeData;
+}
+
+CommentNode::CommentNode(const CommentNode& other)
+  : Node(other.name(), other.cursor(), other.d_ptr->parent, other.type())
+{
+  c_ptr = new CommentNodeData(*other.c_ptr);
+}
+
+CommentNode::~CommentNode()
+{
+  delete c_ptr;
+}
 
 void
 CommentNode::append(QChar c)
 {
-  n_ptr->name.append(c);
+  d_ptr->name.append(c);
 }
 
 void
 CommentNode::append(QString text)
 {
-  n_ptr->name.append(text);
+  d_ptr->name.append(text);
 }
 
 int
 CommentNode::end() const
 {
-  return d_ptr->cursor.anchor() + n_ptr->name.length();
+  return d_ptr->cursor.anchor() + d_ptr->name.length();
 }
-
-QPair<NodeSectionType, int> CommentNode::isIn(QPoint /*pos*/)
-{
-  // TODO isIn for comments.
-  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
-}
-
-ColonNode::ColonNode(QTextCursor start,
-                     StylesheetEdit* parent,
-                     enum NodeType type)
-  : NamedNode(":", start, parent, type)
-{}
-
-SubControlMarkerNode::SubControlMarkerNode(QTextCursor start,
-                                           StylesheetEdit* parent,
-                                           enum NodeType type)
-  : NamedNode("::", start, parent, type)
-{}
 
 int
-SubControlMarkerNode::end() const
+CommentNode::length() const
 {
-  return d_ptr->cursor.anchor() + 2;
+  if (hasEndComment()) {
+    return endCommentOffset() + 2;
+  } else if (d_ptr->name.length() > 0) {
+    return c_ptr->offset + d_ptr->name.length();
+  } else {
+    return 2; // length of start comment
+  }
 }
 
-SemiColonNode::SemiColonNode(QTextCursor start,
-                             StylesheetEdit* parent,
-                             enum NodeType type)
-  : NamedNode(";", start, parent, type)
-{}
+int
+CommentNode::offset() const
+{
+  return c_ptr->offset;
+}
+
+void
+CommentNode::setOffset(int offset)
+{
+  c_ptr->offset = offset;
+}
+
+bool
+CommentNode::hasEndComment() const
+{
+  return c_ptr->endCommentExists;
+}
+
+void
+CommentNode::setEndCommentExists(bool exists)
+{
+  c_ptr->endCommentExists = exists;
+}
+
+int
+CommentNode::endCommentOffset() const
+{
+  return c_ptr->endOffset;
+}
+
+void
+CommentNode::setEndCommentOffset(int offset)
+{
+  c_ptr->endOffset = offset;
+}
+
+QPair<NodeSectionType, int>
+CommentNode::isIn(QPoint pos)
+{
+  auto x = pos.x();
+  auto y = pos.y();
+  auto cursor = QTextCursor(d_ptr->cursor);
+  auto oldPos = cursor.position();
+  auto rect = d_ptr->parent->cursorRect(cursor);
+  auto left = rect.x();
+  auto top = rect.top();
+  auto fm = d_ptr->parent->fontMetrics();
+  int right = left, bottom = top;
+
+  int end = length();
+  while (true) {
+    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 1);
+    rect = d_ptr->parent->cursorRect(cursor);
+    right = (rect.right() > right ? rect.right() : right);
+    bottom = (rect.bottom() > bottom ? rect.bottom() : bottom);
+    if (cursor.position() == end) {
+      break;
+    }
+  }
+
+  if (x > left && x <= right && y > top && y <= bottom)
+    return qMakePair<NodeSectionType, int>(NodeSectionType::Comment, -1);
+
+  cursor.setPosition(oldPos);
+
+  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
+}
 
 NewlineNode::NewlineNode(QTextCursor start,
                          StylesheetEdit* parent,
                          enum NodeType type)
-  : NamedNode("\n", start, parent, type)
+  : Node("\n", start, parent, type)
 {}
 
 StartBraceNode::StartBraceNode(QTextCursor start,
                                StylesheetEdit* parent,
                                enum NodeType type)
-  : NamedNode("{", start, parent, type)
+  : Node("{", start, parent, type)
   , m_isBraceAtCursor(false)
   , m_endBrace(nullptr)
 {}
@@ -738,7 +959,7 @@ StartBraceNode::endBrace() const
 EndBraceNode::EndBraceNode(QTextCursor start,
                            StylesheetEdit* parent,
                            enum NodeType type)
-  : NamedNode("}", start, parent, type)
+  : Node("}", start, parent, type)
   , m_isBraceAtCursor(false)
   , m_startBrace(nullptr)
 {}
@@ -773,44 +994,48 @@ EndBraceNode::startBrace() const
   return m_startBrace;
 }
 
-StartCommentNode::StartCommentNode(QTextCursor start,
-                                   StylesheetEdit* parent,
-                                   enum NodeType type)
-  : NamedNode("/*", start, parent, type)
+BadStartCommentNode::BadStartCommentNode(QTextCursor start,
+                                         ParserState::Errors errors,
+                                         StylesheetEdit* parent,
+                                         enum NodeType type)
+  : Node("/*", start, parent, type)
+  , BadNode(errors)
 {}
 
 int
-StartCommentNode::end() const
+BadStartCommentNode::end() const
 {
   return d_ptr->cursor.anchor() + 2;
 }
 
-EndCommentNode::EndCommentNode(QTextCursor start,
-                               StylesheetEdit* parent,
-                               enum NodeType type)
-  : NamedNode("*/", start, parent, type)
+BadEndCommentNode::BadEndCommentNode(QTextCursor start,
+                                     ParserState::Errors errors,
+                                     StylesheetEdit* parent,
+                                     enum NodeType type)
+  : Node("*/", start, parent, type)
+  , BadNode(errors)
 {}
 
 int
-EndCommentNode::end() const
+BadEndCommentNode::end() const
 {
   return d_ptr->cursor.anchor() + 2;
 }
 
-PseudoStateMarkerNode::PseudoStateMarkerNode(QTextCursor start,
-                                             StylesheetEdit* parent,
-                                             enum NodeType type)
-  : ColonNode(start, parent, type)
-{}
+// PseudoStateMarkerNode::PseudoStateMarkerNode(QTextCursor start,
+//                                             StylesheetEdit* parent,
+//                                             enum NodeType type)
+//  : ColonNode(start, parent, type)
+//{}
 
-PropertyEndMarkerNode::PropertyEndMarkerNode(QTextCursor start,
-                                             StylesheetEdit* parent,
-                                             enum NodeType type)
-  : SemiColonNode(start, parent, type)
-{}
+// PropertyEndMarkerNode::PropertyEndMarkerNode(QTextCursor start,
+//                                             StylesheetEdit* parent,
+//                                             enum NodeType type)
+//  : SemiColonNode(start, parent, type)
+//{}
 
-PropertyEndNode::PropertyEndNode(QTextCursor start,
-                                 StylesheetEdit* parent,
-                                 enum NodeType type)
-  : Node(start, parent, type)
-{}
+// PropertyEndNode::PropertyEndNode(QTextCursor start,
+//                                 StylesheetEdit* parent,
+//                                 enum NodeType type)
+//  : Node(start, parent, type)
+//{}

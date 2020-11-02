@@ -33,10 +33,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 class StylesheetEdit;
 class DataStore;
 class Node;
-class NamedNode;
 class PropertyNode;
 class StartBraceNode;
 class EndBraceNode;
+class WidgetNode;
 
 struct ParserData
 {
@@ -44,15 +44,15 @@ struct ParserData
   QList<StartBraceNode*> startbraces;
   QList<EndBraceNode*> endbraces;
   int braceCount;
-  bool startComment, manualMove, suggestion;
+  bool /*startComment,*/ manualMove, suggestion;
   QTextCursor currentCursor;
-  NamedNode* currentWidget;
+  Node* currentWidget;
   int maxSuggestionCount;
   QStack<StartBraceNode*> braceStack;
 
   ParserData()
     : braceCount(0)
-    , startComment(false)
+//    , startComment(false)
     , manualMove(false)
     , maxSuggestionCount(30)
     , suggestion(false)
@@ -91,7 +91,7 @@ public:
   void handleSuggestion(QAction* act);
 
   QPair<NodeSectionType, int> nodeForPoint(const QPoint& pos,
-                                           NamedNode** nNode);
+                                           Node **nNode);
 
 signals:
   void finished();
@@ -104,13 +104,12 @@ private:
   QMenu *m_contextMenu, *m_suggestionsMenu;
   QAction *m_addPropertyMarkerAct, *m_formatAct;
 
-  int parsePropertyWithValues(QTextCursor cursor,
-                              PropertyNode* property,
+  int parsePropertyWithValues(PropertyNode* property,
                               const QString& text,
                               int start,
                               int& pos,
                               QString& block,
-                              Node** endnode);
+                              WidgetNode *widget=nullptr);
   void parseComment(const QString& text, int& pos);
 
   QString findNext(const QString& text, int& pos);
@@ -123,20 +122,20 @@ private:
   Node* nextNode(QTextCursor cursor);
   Node* previousNode(QTextCursor cursor);
 
-  void stashWidget(int position, const QString& block, bool valid = true);
+  WidgetNode *stashWidget(int position, const QString& block, bool valid = true);
   void stashBadNode(int position,
                     const QString& block,
                     ParserState::Error error);
-  void stashBadSubControlMarkerNode(int position, ParserState::Error error);
-  void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
-  void stashPseudoState(int position, const QString& block, bool valid = true);
-  void stashSubControl(int position, const QString& block, bool valid = true);
+//  void stashBadSubControlMarkerNode(int position, ParserState::Error error);
+//  void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
+//  void stashPseudoState(int position, const QString& block, bool valid = true);
+//  void stashSubControl(int position, const QString& block, bool valid = true);
   EndBraceNode* stashEndBrace(int position);
   StartBraceNode* stashStartBrace(int position);
-  void stashPseudoStateMarker(int position);
-  void stashSubControlMarker(int position);
-  void stashPropertyEndNode(int position, Node** endnode);
-  void stashPropertyEndMarkerNode(int position, Node** endnode);
+//  void stashPseudoStateMarker(int position);
+//  void stashSubControlMarker(int position);
+//  void stashPropertyEndNode(int position, Node** endnode);
+//  void stashPropertyEndMarkerNode(int position, Node** endnode);
 
   void updatePropertyValues(int pos,
                             PropertyNode* property,
@@ -146,7 +145,7 @@ private:
 
   QMenu* createContextMenu();
   void updateContextMenu(QMap<int, QString> matches,
-                         NamedNode* nNode,
+                         Node *nNode,
                          const QPoint& pos);
   void updatePropertyContextMenu(QMap<int, QString> matches,
                                  PropertyNode* property,
@@ -161,16 +160,19 @@ private:
     const QString& valueName,
     const QPoint& pos);
   void updateMenu(QMap<int, QString> matches,
-                  NamedNode* nNode,
+                  Node *nNode,
                   const QPoint& pos);
   QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
   QList<QPair<QString, QString>> sortLastNValues(
     QMultiMap<int, QPair<QString, QString>> matches);
   void actionPropertyNameChange(PropertyNode* property,
-                                const QString& name);
+                                const QString& newName);
   void actionPropertyValueChange(PropertyNode* property,
                                  const PropertyStatus& status,
-                                 const QString& name);
+                                 const QString& newName);
+  void stepBack(int &pos, const QString &block);
+  enum NodeType checkType(const QString &block);
+
 };
 
 #endif // PARSER_H

@@ -222,7 +222,7 @@ struct StylesheetEditPrivate
   void nodeAtCursorPosition(CursorData* data, int position);
 
   QString getValueAtCursor(int anchor, const QString& text);
-  QString getOldNodeValue(CursorData* data);
+//  QString getOldNodeValue(CursorData* data);
 
   bool checkStylesheetColors(StylesheetData* data,
                              QColor& color1,
@@ -239,10 +239,6 @@ public:
 private:
   void setLineData(QTextCursor cursor);
   void createHover();
-  void hoverWidgetType(NamedNode *nNode, QPair<NodeSectionType, int> isin, QPoint pos);
-  void hoverPseudoStateType(NamedNode *nNode, QPair<NodeSectionType, int> isin, QPoint pos);
-  void hoverSubControlType(NamedNode *nNode, QPair<NodeSectionType, int> isin, QPoint pos);
-  void hoverPropertyType(NamedNode *nNode, QPair<NodeSectionType, int> isin, QPoint pos);
   QList<int> reverseLastNValues(QMap<int, QString> matches);
 };
 

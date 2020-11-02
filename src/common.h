@@ -44,43 +44,54 @@ enum NodeSectionType
   None,
   Name,
   Value, // only valid for propety nodes.
+  Widget,
+  WidgetPropertyName,
+  WidgetPropertyValue,
+  Comment,
 };
 
 enum NodeType
 {
   NodeType,
-  BaseNodeType,
-  CharNodeType,
-  ColonNodeType,
-  NameType,
   WidgetType,
-  SubControlType,
-  SubControlMarkerType,
   PseudoStateType,
   PseudoStateMarkerType,
-  SemiColonType,
+  SubControlType,
+  SubControlMarkerType,
   StartBraceType,
   EndBraceType,
   NewlineType,
   PropertyType,
-  //    PropertyMarkerType,
-  PropertyEndType,
-  PropertyEndMarkerType,
   BadNodeType,
-  BadSubControlMarkerType,
-  BadPseudoStateMarkerType,
   CommentType,
   CommentStartMarkerType,
   CommentEndMarkerType,
-  };
+};
 
-  enum PropertyCheck
+struct NodeStateData
+{
+  bool stateValid;
+};
+
+enum WidgetExtension {
+  NoExtension,
+  SubControlExtension,
+  PseudoStateExtension,
+};
+
+enum PropertyCheck
 {
   GoodValue,
   ValidPropertyType,
   BadValue,
   MissingPropertyEnd,
-  };
+};
+
+enum NodeIsIn {
+  InNode,
+  BeforeNode,
+  AfterNode,
+};
 
 struct CursorData
 {
@@ -111,9 +122,3 @@ public:
 };
 
 #endif // COMMON_H
-
-
-
-
-
-

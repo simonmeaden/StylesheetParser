@@ -1,30 +1,31 @@
 /*
   Copyright 2020 Simon Meaden
 
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this
-  software and associated documentation files (the "Software"), to deal in the Software
-  without restriction, including without limitation the rights to use, copy, modify, merge,
-  publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-                                                                         persons to whom the Software is furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in all copies or
-  substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-    PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 */
 #ifndef STYLESHEETHIGHLIGHTER_H
 #define STYLESHEETHIGHLIGHTER_H
 
-#include <QSyntaxHighlighter>
 #include <QList>
+#include <QSyntaxHighlighter>
 
 #include "node.h"
-
 
 class StylesheetEdit;
 
@@ -35,18 +36,25 @@ public:
 
   void highlightBlock(const QString& text);
 
- void setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPseudoStateFormat(QBrush color, QBrush back, QFont::Weight weight);
-  void setPseudoStateMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setPseudoStateMarkerFormat(QBrush color,
+                                  QBrush back,
+                                  QFont::Weight weight);
   void setSubControlFormat(QBrush color, QBrush back, QFont::Weight weight);
-  void setSubControlMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setSubControlMarkerFormat(QBrush color,
+                                 QBrush back,
+                                 QFont::Weight weight);
   void setValueFormat(QBrush color, QBrush back, QFont::Weight weight);
-//  void setBadValueFormat(QBrush color, QBrush back, QFont::Weight weight, bool underline,
-//                         QTextCharFormat::UnderlineStyle underlineStyle,
-//                         QColor underlineColor);
+  //  void setBadValueFormat(QBrush color, QBrush back, QFont::Weight weight,
+  //  bool underline,
+  //                         QTextCharFormat::UnderlineStyle underlineStyle,
+  //                         QColor underlineColor);
   void setPropertyFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPropertyMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
-  void setPropertyEndMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setPropertyEndMarkerFormat(QBrush color,
+                                  QBrush back,
+                                  QFont::Weight weight);
   void setStartBraceFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setEndBraceFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setBraceMatchFormat(QBrush color, QBrush back, QFont::Weight weight);
@@ -116,7 +124,8 @@ private:
 
   int setNodeEnd(int nodeEnd, int blockEnd);
   int setNodeStart(int nodeStart, int blockStart);
+  void formatProperty(PropertyNode* property);
+  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int &nodeStart);
 };
-
 
 #endif // STYLESHEETHIGHLIGHTER_H

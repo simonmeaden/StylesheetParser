@@ -111,25 +111,10 @@ MainWindow::initGui()
 
   // Errors
   text = ""
-         /* WORKING */
-                  "/* comment */"
-                  " /* \n"
-                  "  comment \n"
-                  " */\n"
-         //         "QTabWidget" // GOOD widget
-         //         "\n"
-         //         "QTableWidget" // GOOD widget and pseudostate
-         //         "\n"
-         //         "QTableWidget :: branch"
-
-         /* NOT WORKING */
-         "QTableWidget ::   branch { color: red; /* comment */ \n"
-         "/*\n"
+                  "/* comment1 */ /*   comment2  */ QTableWidget ::   branch { color: red; /* comment3 */ /*"
          " A multiline comment \n"
-         "*/\n"
-         "}"
-         "\n" // GOOD widget and pseudostate
-                        //    -
+         "*/ }"
+         "\n" 
 
     //    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
     ////    pseudostate    -    WORKING

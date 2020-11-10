@@ -52,6 +52,7 @@ enum NodeSectionType
 
 enum NodeType
 {
+  NoType,
   NodeType,
   WidgetType,
   PseudoStateType,

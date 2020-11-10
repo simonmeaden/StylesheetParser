@@ -104,18 +104,18 @@ private:
   QMenu *m_contextMenu, *m_suggestionsMenu;
   QAction *m_addPropertyMarkerAct, *m_formatAct;
 
-  int parsePropertyWithValues(PropertyNode* property,
+  void parsePropertyWithValues(PropertyNode* property,
                               const QString& text,
                               int start,
                               int& pos,
                               QString& block,
                               WidgetNode *widget=nullptr);
-  void parseComment(const QString& text, int& pos);
+  void parseComment(const QString& text, int start, int& pos);
 
   QString findNext(const QString& text, int& pos);
   void skipBlanks(const QString& text, int& pos);
 
-  QTextCursor getCursorForNode(int position);
+  QTextCursor getCursorForPosition(int position);
   CursorData getNodeAtCursor(QTextCursor cursor);
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
@@ -137,11 +137,11 @@ private:
 //  void stashPropertyEndNode(int position, Node** endnode);
 //  void stashPropertyEndMarkerNode(int position, Node** endnode);
 
-  void updatePropertyValues(int pos,
-                            PropertyNode* property,
-                            int charsAdded,
-                            int charsRemoved,
-                            const QString& newValue);
+//  void updatePropertyValues(int pos,
+//                            PropertyNode* property,
+//                            int charsAdded,
+//                            int charsRemoved,
+//                            const QString& newValue);
 
   QMenu* createContextMenu();
   void updateContextMenu(QMap<int, QString> matches,

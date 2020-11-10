@@ -239,13 +239,13 @@ int
 WidgetNode::length() const
 {
   if (hasEndBrace()) {
-    return endBraceOffset();
+    return endBracePosition().anchor() - cursor().anchor();
   } else if (w_ptr->properties.size() > 0) {
     return w_ptr->properties.last()->length();
   } else if (hasStartBrace()) {
-    return startBraceOffset();
+    return startBracePosition().anchor() - cursor().anchor();
   } else if (hasExtension()) {
-    return extensionOffset() + extensionLength();
+    return extensionPosition().anchor() - cursor().anchor() + extensionLength();
   } else {
     return name().length();
   }
@@ -311,41 +311,41 @@ WidgetNode::isIn(QPoint pos)
 }
 
 void
-WidgetNode::setSubControl(int marker)
+WidgetNode::setSubControlMarkerPosition(QTextCursor position)
 {
   w_ptr->extension = SubControlExtension;
-  w_ptr->markerOffset = marker;
+  w_ptr->markerPosition = position;
 }
 
 void
-WidgetNode::setPseudoState(int marker)
+WidgetNode::setPseudoStateMarkerPosition(QTextCursor position)
 {
   w_ptr->extension = PseudoStateExtension;
-  w_ptr->markerOffset = marker;
+  w_ptr->markerPosition = position;
 }
 
-int
-WidgetNode::extensionOffset() const
+QTextCursor
+WidgetNode::extensionPosition() const
 {
-  return w_ptr->extensionOffset;
-}
-
-void
-WidgetNode::setExtensionOffset(int offset)
-{
-  w_ptr->extensionOffset = offset;
-}
-
-int
-WidgetNode::markerOffset() const
-{
-  return w_ptr->markerOffset;
+  return w_ptr->extensionPosition;
 }
 
 void
-WidgetNode::setMarkerOffset(int offset)
+WidgetNode::setExtensionPosition(QTextCursor position)
 {
-  w_ptr->markerOffset = offset;
+  w_ptr->extensionPosition = position;
+}
+
+QTextCursor
+WidgetNode::markerPosition() const
+{
+  return w_ptr->markerPosition;
+}
+
+void
+WidgetNode::setMarkerPosition(QTextCursor position)
+{
+  w_ptr->markerPosition = position;
 }
 
 QString
@@ -404,23 +404,21 @@ WidgetNode::hasStartBrace() const
 }
 
 void
-WidgetNode::setStartBrace(int offset)
+WidgetNode::setStartBracePosition(QTextCursor position)
 {
   w_ptr->startBrace = true;
-  w_ptr->startBraceOffset = offset;
+  w_ptr->startBracePosition = position;
 }
 
-int
-WidgetNode::startBraceOffset() const
+QTextCursor WidgetNode::startBracePosition() const
 {
-  return w_ptr->startBraceOffset;
+  return w_ptr->startBracePosition;
 }
 
 void
 WidgetNode::removeStartBrace()
 {
   w_ptr->startBrace = false;
-  w_ptr->startBraceOffset = 0;
 }
 
 bool
@@ -430,23 +428,23 @@ WidgetNode::hasEndBrace() const
 }
 
 void
-WidgetNode::setEndBrace(int offset)
+WidgetNode::setEndBracePosition(QTextCursor position)
 {
   w_ptr->endBrace = true;
-  w_ptr->endBraceOffset = offset;
+  w_ptr->endBracePosition = position;
 }
 
-int
-WidgetNode::endBraceOffset() const
+QTextCursor
+WidgetNode::endBracePosition() const
 {
-  return w_ptr->endBraceOffset;
+  return w_ptr->endBracePosition;
 }
 
 void
 WidgetNode::removeEndBrace()
 {
   w_ptr->endBrace = false;
-  w_ptr->endBraceOffset = 0;
+//  w_ptr->endBraceOffset = 0;
 }
 
 bool
@@ -505,17 +503,16 @@ PropertyNode::checks() const
   return p_ptr->checks;
 }
 
-QList<int>
-PropertyNode::offsets() const
+QList<QTextCursor> PropertyNode::positions() const
 {
-  return p_ptr->offsets;
+  return p_ptr->positions;
 }
 
 void
-PropertyNode::setOffset(int index, int offset)
+PropertyNode::setPosition(int index, QTextCursor position)
 {
-  if (index >= 0 && index < p_ptr->offsets.length()) {
-    p_ptr->offsets.replace(index, offset);
+  if (index >= 0 && index < p_ptr->positions.length()) {
+    p_ptr->positions.replace(index, position);
   }
 }
 
@@ -554,21 +551,21 @@ PropertyNode::setCheck(int index, PropertyCheck check)
 }
 
 void
-PropertyNode::setOffsets(const QList<int>& offsets)
+PropertyNode::setPositions(const QList<QTextCursor> &positions)
 {
-  p_ptr->offsets = offsets;
+  p_ptr->positions = positions;
 }
 
 void
 PropertyNode::addValue(
   const QString& value,
   PropertyCheck check,
-  int offset,
+  QTextCursor position,
   DataStore::AttributeType attType = DataStore::NoAttributeValue)
 {
   p_ptr->values.append(value);
   p_ptr->checks.append(check);
-  p_ptr->offsets.append(offset);
+  p_ptr->positions.append(position);
   p_ptr->attributeTypes.append(attType);
 }
 
@@ -590,7 +587,7 @@ PropertyNode::setBadCheck(PropertyCheck check, int index)
 int
 PropertyNode::count()
 {
-  return p_ptr->offsets.size();
+  return p_ptr->positions.size();
 }
 
 PropertyCheck
@@ -607,7 +604,7 @@ PropertyNode::isValueValid(int index)
 int
 PropertyNode::end() const
 {
-  if (p_ptr->offsets.isEmpty() || p_ptr->values.isEmpty()) {
+  if (p_ptr->positions.isEmpty() || p_ptr->values.isEmpty()) {
     return start();
   }
 
@@ -619,12 +616,12 @@ PropertyNode::length() const
 {
   auto value = d_ptr->name.length();
 
-  if (p_ptr->offsets.isEmpty()) {
+  if (p_ptr->positions.isEmpty()) {
     if (hasPropertyMarker()) {
-      value += propertyMarkerOffset() + 1;
+      value += propertyMarkerPosition().anchor() + 1;
     }
   } else {
-    value += p_ptr->offsets.last();
+    value += p_ptr->positions.last().anchor();
     value += p_ptr->values.last().length();
   }
 
@@ -655,23 +652,22 @@ PropertyNode::setValidProperty(bool valid)
   p_ptr->validProperty = valid;
 }
 
-int
-PropertyNode::propertyMarkerOffset() const
+QTextCursor PropertyNode::propertyMarkerPosition() const
 {
-  return p_ptr->propertyMarkerOffset;
+  return p_ptr->propertyMarkerPosition;
 }
 
 void
-PropertyNode::setPropertyMarkerOffset(int offset)
+PropertyNode::setPropertyMarkerPosition(QTextCursor position)
 {
-  p_ptr->propertyMarkerOffset = offset;
+  p_ptr->propertyMarkerPosition = position;
 }
 
-void
-PropertyNode::incrementPropertyMarker(int increment)
-{
-  p_ptr->propertyMarkerOffset += increment;
-}
+//void
+//PropertyNode::incrementPropertyMarker(int increment)
+//{
+//  p_ptr->propertyMarkerOffset += increment;
+//}
 
 bool
 PropertyNode::hasEndMarker()
@@ -685,31 +681,30 @@ PropertyNode::setPropertyEndMarker(bool exists)
   p_ptr->endMarkerExists = exists;
 }
 
-int
-PropertyNode::propertyEndMarkerOffset()
+QTextCursor PropertyNode::propertyEndMarkerPosition()
 {
-  return p_ptr->endMarkerOffset;
+  return p_ptr->endMarkerPosition;
 }
 
 void
-PropertyNode::setPropertyEndMarkerOffset(int offset)
+PropertyNode::setPropertyEndMarkerPosition(QTextCursor position)
 {
-  p_ptr->endMarkerOffset = offset;
+  p_ptr->endMarkerPosition = position;
 }
 
-void
-PropertyNode::incrementEndMarkerOffset(int increment)
-{
-  p_ptr->endMarkerOffset += increment;
-}
+//void
+//PropertyNode::incrementEndMarkerOffset(int increment)
+//{
+//  p_ptr->endMarkerOffset += increment;
+//}
 
-void
-PropertyNode::incrementOffsets(int increment, int startIndex)
-{
-  for (int i = startIndex; i < p_ptr->offsets.length(); i++) {
-    p_ptr->offsets[i] = p_ptr->offsets.at(i) + increment;
-  }
-}
+//void
+//PropertyNode::incrementOffsets(int increment, int startIndex)
+//{
+////  for (int i = startIndex; i < p_ptr->offsets.length(); i++) {
+////    p_ptr->offsets[i] = p_ptr->offsets.at(i) + increment;
+////  }
+//}
 
 QPair<NodeSectionType, int>
 PropertyNode::isIn(QPoint pos)
@@ -729,7 +724,7 @@ PropertyNode::isIn(QPoint pos)
   auto propLeft = left;
   QTextCursor propCursor(cursor);
   propCursor.movePosition(
-    QTextCursor::Right, QTextCursor::MoveAnchor, offsets().last());
+    QTextCursor::Right, QTextCursor::MoveAnchor, positions().last().anchor());
   rect = d_ptr->parent->cursorRect(propCursor);
   auto propRight = rect.x() + fm.horizontalAdvance(values().last());
 
@@ -741,9 +736,9 @@ PropertyNode::isIn(QPoint pos)
     }
 
     // Property values.
-    for (int i = 0; i < offsets().count(); i++) {
+    for (int i = 0; i < positions().count(); i++) {
       auto value = values().at(i);
-      auto offset = offsets().at(i);
+      auto offset = positions().at(i).anchor();
       auto valCursor(cursor);
       auto oldRight = right;
       valCursor.movePosition(
@@ -777,7 +772,7 @@ PropertyNode::isProperty(int pos) const
   } else {
     for (int i = 0; i < p_ptr->values.size(); i++) {
       auto value = p_ptr->values.at(i);
-      auto offset = p_ptr->offsets.at(i);
+      auto offset = p_ptr->positions.at(i).anchor();
 
       if (pos >= offset && pos < offset + value.length()) {
         return PropertyStatus(false, value, offset);
@@ -836,24 +831,24 @@ int
 CommentNode::length() const
 {
   if (hasEndComment()) {
-    return endCommentOffset() + 2;
+    return endCommentPosition() - start() + 2;
   } else if (d_ptr->name.length() > 0) {
-    return c_ptr->offset + d_ptr->name.length();
+    return c_ptr->position + d_ptr->name.length() - start();
   } else {
     return 2; // length of start comment
   }
 }
 
 int
-CommentNode::offset() const
+CommentNode::textPosition() const
 {
-  return c_ptr->offset;
+  return c_ptr->position;
 }
 
 void
-CommentNode::setOffset(int offset)
+CommentNode::setTextPosition(int position)
 {
-  c_ptr->offset = offset;
+  c_ptr->position = position;
 }
 
 bool
@@ -869,15 +864,15 @@ CommentNode::setEndCommentExists(bool exists)
 }
 
 int
-CommentNode::endCommentOffset() const
+CommentNode::endCommentPosition() const
 {
-  return c_ptr->endOffset;
+  return c_ptr->endPosition;
 }
 
 void
-CommentNode::setEndCommentOffset(int offset)
+CommentNode::setEndCommentPosition(int offset)
 {
-  c_ptr->endOffset = offset;
+  c_ptr->endPosition = offset;
 }
 
 QPair<NodeSectionType, int>

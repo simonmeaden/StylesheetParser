@@ -125,7 +125,16 @@ private:
   int setNodeEnd(int nodeEnd, int blockEnd);
   int setNodeStart(int nodeStart, int blockStart);
   void formatProperty(PropertyNode* property);
-  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int &nodeStart);
+  //  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int&
+  //  blockEnd,int &nodeStart);
+  int getPositionRelToBlock(Node* node,
+                            QTextBlock block,
+                            int offset = 0);
+  int getLengthRelToBlock(Node* node,
+                          QTextBlock block,
+                          int offset = -1,
+                          int length = -1);
+  void formatPosition(int position, int length, int blockEnd, QTextCharFormat format);
 };
 
 #endif // STYLESHEETHIGHLIGHTER_H

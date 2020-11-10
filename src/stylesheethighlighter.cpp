@@ -32,11 +32,11 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
   //  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
-//  setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
+  //  setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
   setSubControlFormat(QColor("pink"), m_back, QFont::Light);
   //  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
-  setPropertyFormat(QColor("mediumblue"), m_back, QFont::Light);
+  setPropertyFormat(QColor("darkblue"), m_back, QFont::Light);
   //  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   //  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setPropertyMarkerFormat(QColor("cyan"), m_back, QFont::Light);
@@ -44,7 +44,7 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
   setValueFormat(QColor("orangered"), m_back, QFont::Light);
   //  setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   //  setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
-  setStartBraceFormat(QColor("darkorange"), m_back, QFont::Light);
+  setStartBraceFormat(QColor("blue"), m_back, QFont::Light);
   setEndBraceFormat(QColor("cornflowerblue"), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
   setCommentFormat(QColor("darkmagenta"), m_back, QFont::Light);
@@ -78,9 +78,8 @@ StylesheetHighlighter::formatProperty(PropertyNode* property)
 
     if (property->hasPropertyMarker()) {
       setFormat(property->start(), length, m_propertyFormat);
-      setFormat(property->propertyMarkerPosition().anchor(),
-                1,
-                m_propertyMarkerFormat);
+      setFormat(
+        property->propertyMarkerPosition().anchor(), 1, m_propertyMarkerFormat);
 
     } else if (!property->isValidProperty()) {
       setFormat(property->start(), length, m_badPropertyFormat);
@@ -96,14 +95,14 @@ StylesheetHighlighter::formatProperty(PropertyNode* property)
     PropertyCheck check;
     QString value;
     QTextCursor offset;
-//    QTextCursor start;
+    //    QTextCursor start;
 
     for (int i = 0; i < values.length(); i++) {
       value = values.at(i);
       check = checks.at(i);
       offset = offsets.at(i);
       length = value.length();
-//      start = property->start() + offset;
+      //      start = property->start() + offset;
 
       if (check == PropertyCheck::GoodValue ||
           check == PropertyCheck::ValidPropertyType) {
@@ -122,65 +121,92 @@ StylesheetHighlighter::formatProperty(PropertyNode* property)
   }
 }
 
-int
-StylesheetHighlighter::getPositionRelToBlock(Node* node,
-                                             QTextBlock block,
-                                             int offset)
+// int
+// StylesheetHighlighter::getPositionRelToBlock(Node* node,
+//                                             QTextBlock block,
+//                                             int offset)
+//{
+//  int nodeStart, nodeLength, nodeEnd;
+//  auto blockStart = block.position();
+//  //  auto blockEnd = blockStart + block.text().length();
+
+//  nodeStart = node->start();
+//  nodeLength = node->length();
+//  nodeEnd = nodeStart + nodeLength;
+//  int position = nodeStart - blockStart + offset;
+
+//  position = (position < 0 ? 0 : position);
+
+//  return position;
+//}
+
+QPair<int, int>
+StylesheetHighlighter::getDataRelToBlock(int blockStart,
+                                         int blockLength,
+                                         int position,
+                                         int length)
 {
-  int nodeStart, nodeLength, nodeEnd;
-  auto blockStart = block.position();
+  int pos;
+  auto blockEnd = blockStart + blockLength;
+  auto nodeEnd = position + length;
+
+  if (position < blockStart)
+    pos = blockStart;
+  else
+    pos = position - blockStart;
+
+  auto len = length;
+  if (pos < 0) {
+    len -= pos;
+  }
+
+  if (nodeEnd >= blockStart) {
+    len = nodeEnd - pos;
+  }
+
+  return qMakePair<int, int>(pos - blockStart, len);
+}
+
+// int
+// StylesheetHighlighter::getLengthRelToBlock(Node* node,
+//                                           QTextBlock block,
+//                                           int position,
+//                                           int length)
+//{
+//  int nodeStart, nodeLength, nodeEnd;
+//  auto blockStart = block.position();
 //  auto blockEnd = blockStart + block.text().length();
 
-  nodeStart = node->start();
-  nodeLength = node->length();
-  nodeEnd = nodeStart + nodeLength;
-  int position = nodeStart - blockStart + offset;
+//  if (position == -1 || length == -1) {
+//    nodeStart = node->start();
+//    nodeLength = node->length();
+//    nodeEnd = nodeStart + nodeLength;
 
-  position = (position < 0 ? 0 : position);
+//    if (blockStart > nodeStart && blockEnd < nodeEnd) {
+//      return nodeLength - (blockStart - nodeStart) - (nodeEnd - blockEnd);
+//    } else if (nodeStart < blockStart) {
+//      return nodeLength - (blockStart - nodeStart);
+//    } else if (nodeEnd > blockEnd) {
+//      return nodeLength - (nodeEnd - blockEnd);
+//    } else {
+//      return nodeLength;
+//    }
+//  } else {
+//    nodeStart = node->start() + position;
+//    nodeLength = length;
+//    nodeEnd = nodeStart + nodeLength;
 
-  return position;
-}
-
-int
-StylesheetHighlighter::getLengthRelToBlock(Node* node,
-                                           QTextBlock block,
-                                           int offset,
-                                           int length)
-{
-  int nodeStart, nodeLength, nodeEnd;
-  auto blockStart = block.position();
-  auto blockEnd = blockStart + block.text().length();
-
-  if (offset == -1 || length == -1) {
-    nodeStart = node->start();
-    nodeLength = node->length();
-    nodeEnd = nodeStart + nodeLength;
-
-    if (blockStart > nodeStart && blockEnd < nodeEnd) {
-      return nodeLength - (blockStart - nodeStart) - (nodeEnd - blockEnd);
-    } else if (nodeStart < blockStart) {
-      return nodeLength - (blockStart - nodeStart);
-    } else if (nodeEnd > blockEnd) {
-      return nodeLength - (nodeEnd - blockEnd);
-    } else {
-      return nodeLength;
-    }
-  } else {
-    nodeStart = node->start() + offset;
-    nodeLength = length;
-    nodeEnd = nodeStart + nodeLength;
-
-    if (blockStart > nodeStart && blockEnd < nodeEnd) {
-      return nodeLength - (blockStart - nodeStart) - (nodeEnd - blockEnd);
-    } else if (nodeStart < blockStart) {
-      return nodeLength - (blockStart - nodeStart);
-    } else if (nodeEnd > blockEnd) {
-      return nodeLength - (nodeEnd - blockEnd);
-    } else {
-      return nodeLength;
-    }
-  }
-}
+//    if (blockStart > nodeStart && blockEnd < nodeEnd) {
+//      return nodeLength - (blockStart - nodeStart) - (nodeEnd - blockEnd);
+//    } else if (nodeStart < blockStart) {
+//      return nodeLength - (blockStart - nodeStart);
+//    } else if (nodeEnd > blockEnd) {
+//      return nodeLength - (nodeEnd - blockEnd);
+//    } else {
+//      return nodeLength;
+//    }
+//  }
+//}
 
 void
 StylesheetHighlighter::formatPosition(int position,
@@ -213,7 +239,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
     auto type = node->type();
     int nodeStart = node->start();
     auto length = node->length();
-    auto nodeEnd = nodeStart + length;
+    auto nodeEnd = nodeStart + length - 1;
     int position;
 
     if (nodeEnd < blockStart) {
@@ -230,69 +256,54 @@ StylesheetHighlighter::highlightBlock(const QString& text)
     //      nodeStart -= blockStart;
     //    }
 
+    QPair<int, int> data;
+
     switch (type) {
       case NodeType::NewlineType:
         break;
 
       case NodeType::WidgetType: {
-
         WidgetNode* widget = qobject_cast<WidgetNode*>(node);
-        position = getPositionRelToBlock(widget, block);
-        length = getLengthRelToBlock(node, block, 0, widget->name().length());
+        data = getDataRelToBlock(
+          blockStart, blockLength, widget->start(), widget->name().length());
 
         if (widget->isWidgetValid()) {
-          if (position < blockEnd) {
-            setFormat(position, length, m_widgetFormat);
+          if (data.first < blockEnd) {
+            setFormat(data.first, data.second, m_widgetFormat);
           }
-
         } else {
           if (position < blockEnd) {
-            setFormat(position, length, m_badWidgetFormat);
+            setFormat(data.first, data.second, m_badWidgetFormat);
           }
         }
 
         if (widget->hasExtension()) {
           auto extname = widget->extensionName();
           if (widget->isSubControl()) {
+            data = getDataRelToBlock(
+              blockStart, blockLength, widget->markerPosition().anchor(), 2);
+            formatPosition(data.first, 2, blockEnd, m_subControlMarkerFormat);
+            data = getDataRelToBlock(blockStart,
+                                     blockLength,
+                                     widget->extensionPosition().anchor(),
+                                     widget->extensionLength());
             if (widget->isExtensionValid()) {
-              position = getPositionRelToBlock(widget, block, widget->extensionPosition().anchor());
-              length = getLengthRelToBlock(node,
-                                           block,
-                                           widget->extensionPosition().anchor(),
-                                           widget->name().length());
-              formatPosition(
-                position, length, blockEnd, m_subControlMarkerFormat);
+              setFormat(data.first, data.second, m_subControlMarkerFormat);
             } else {
-              position = getPositionRelToBlock(widget, block, widget->markerPosition().anchor());
-              formatPosition(position, 2, blockEnd, m_subControlMarkerFormat);
-              position = getPositionRelToBlock(widget, block, widget->extensionPosition().anchor());
-              length = getLengthRelToBlock(node,
-                                           block,
-                                           widget->extensionPosition().anchor(),
-                                           widget->name().length());
-              formatPosition(position, length, blockEnd, m_badSubControlFormat);
+              setFormat(data.first, data.second, m_badSubControlFormat);
             }
           } else if (widget->isPseudoState()) {
+            data = getDataRelToBlock(
+              blockStart, blockLength, widget->markerPosition().anchor(), 1);
+            setFormat(data.first, 1, m_pseudoStateMarkerFormat);
+            data = getDataRelToBlock(blockStart,
+                                     blockLength,
+                                     widget->extensionPosition().anchor(),
+                                     widget->extensionLength());
             if (widget->isExtensionValid()) {
-              position = getPositionRelToBlock(widget, block, widget->markerPosition().anchor());
-              formatPosition(position, 1, blockEnd, m_pseudoStateMarkerFormat);
-
-              position = getPositionRelToBlock(widget, block, widget->extensionPosition().anchor());
-              length = getLengthRelToBlock(node,
-                                           block,
-                                           widget->extensionPosition().anchor(),
-                                           widget->name().length());
-              formatPosition(position, length, blockEnd, m_pseudoStateFormat);
+              setFormat(data.first, data.second, m_pseudoStateFormat);
             } else {
-              position = getPositionRelToBlock(widget, block, widget->markerPosition().anchor());
-              formatPosition(position, 1, blockEnd, m_pseudoStateMarkerFormat);
-              position = getPositionRelToBlock(widget, block, widget->extensionPosition().anchor());
-              length = getLengthRelToBlock(node,
-                                           block,
-                                           widget->extensionPosition().anchor(),
-                                           widget->name().length());
-              formatPosition(
-                position, length, blockEnd, m_badPseudoStateFormat);
+              setFormat(data.first, data.second, m_badPseudoStateFormat);
             }
           } else {
             // TODO error has extension but wrong type?
@@ -303,12 +314,13 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         bool hasend = widget->hasEndBrace();
 
         if (hasstart) {
-          position = getPositionRelToBlock(widget, block, widget->startBracePosition().anchor());
-          if (position >= 0 && position < blockLength) {
+          data = getDataRelToBlock(
+            blockStart, blockLength, widget->startBracePosition().anchor(), 1);
+          if (data.first >= 0 && data.first < blockLength) {
             if (hasend) {
-              setFormat(position, 1, m_startBraceFormat);
+              setFormat(data.first, 1, m_startBraceFormat);
             } else {
-              setFormat(position, 1, m_badStartBraceFormat);
+              setFormat(data.first, 1, m_badStartBraceFormat);
             }
           }
         }
@@ -319,12 +331,13 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         }
 
         if (hasend) {
-          position = getPositionRelToBlock(widget, block, widget->endBracePosition().anchor());
-          if (position >= 0 && position < blockLength) {
+          data = getDataRelToBlock(
+            blockStart, blockLength, widget->endBracePosition().anchor(), 1);
+          if (data.first >= 0 && data.first < blockLength) {
             if (hasstart) {
-              setFormat(position, 1, m_endBraceFormat);
+              setFormat(data.first, 1, m_endBraceFormat);
             } else {
-              setFormat(position, 1, m_badEndBraceFormat);
+              setFormat(data.first, 1, m_badEndBraceFormat);
             }
           }
         }
@@ -341,9 +354,9 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         //        break;
 
       case NodeType::CommentType:
-        position = getPositionRelToBlock(node, block);
-        length = getLengthRelToBlock(node, block);
-        formatPosition(position, length, blockEnd, m_commentFormat);
+        data = getDataRelToBlock(
+          blockStart, blockLength, node->cursor().anchor(), node->length());
+        setFormat(data.first, data.second, m_commentFormat);
         break;
 
         //      case NodeType::CommentEndMarkerType:

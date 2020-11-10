@@ -111,7 +111,9 @@ MainWindow::initGui()
 
   // Errors
   text = ""
-                  "/* comment1 */ /*   comment2  */ QTableWidget ::   branch { color: red; /* comment3 */ /*"
+                  "/* comment1 */ /*   comment2\n"
+                  "  */ QTableWidget ::   branch {\n"
+                  " color: red; /* comment3 */ /*"
          " A multiline comment \n"
          "*/ }"
          "\n" 

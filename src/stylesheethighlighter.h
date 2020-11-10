@@ -127,14 +127,21 @@ private:
   void formatProperty(PropertyNode* property);
   //  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int&
   //  blockEnd,int &nodeStart);
-  int getPositionRelToBlock(Node* node,
-                            QTextBlock block,
-                            int offset = 0);
-  int getLengthRelToBlock(Node* node,
-                          QTextBlock block,
-                          int offset = -1,
-                          int length = -1);
-  void formatPosition(int position, int length, int blockEnd, QTextCharFormat format);
+  //  int getPositionRelToBlock(Node* node,
+  //                            QTextBlock block,
+  //                            int offset = 0);
+  QPair<int, int> getDataRelToBlock(int blockStart,
+                                    int blockLength,
+                                    int position,
+                                    int length);
+  //  int getLengthRelToBlock(Node* node,
+  //                          QTextBlock block,
+  //                          int position = -1,
+  //                          int length = -1);
+  void formatPosition(int position,
+                      int length,
+                      int blockEnd,
+                      QTextCharFormat format);
 };
 
 #endif // STYLESHEETHIGHLIGHTER_H

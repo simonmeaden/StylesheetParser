@@ -124,16 +124,16 @@ private:
 
   int setNodeEnd(int nodeEnd, int blockEnd);
   int setNodeStart(int nodeStart, int blockStart);
-  void formatProperty(PropertyNode* property);
+//  void formatProperty(PropertyNode* property);
   //  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int&
   //  blockEnd,int &nodeStart);
   //  int getPositionRelToBlock(Node* node,
   //                            QTextBlock block,
   //                            int offset = 0);
-  QPair<int, int> getDataRelToBlock(int blockStart,
+  void formatVisiblePart(int blockStart,
                                     int blockLength,
                                     int position,
-                                    int length);
+                                    int length, QTextCharFormat format);
   //  int getLengthRelToBlock(Node* node,
   //                          QTextBlock block,
   //                          int position = -1,

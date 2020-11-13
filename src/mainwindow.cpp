@@ -108,15 +108,22 @@ MainWindow::initGui()
 
   QString text;
 
-
   // Errors
   text = ""
-                  "/* comment1 */ /*   comment2\n"
-                  "  */ QTableWidget ::   branch {\n"
-                  " color: red; /* comment3 */ /*"
-         " A multiline comment \n"
-         "*/ }"
-         "\n" 
+         //         "/* comment1 */ /*   comment2  */"
+         "  /* comment1 \n"
+         "*/ /*   \n"
+         "comment2  */"
+         "QTabWidget::branch {\n"
+         "color: red;\n"
+         "border: green solid 1px;\n"
+         " background-color: blue; \n"
+         "}\n"
+
+    //         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
+    //         color: red; /* comment3 */ /*" " A multiline comment \n"
+    //         "*/ }"
+    //         "\n"
 
     //    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
     ////    pseudostate    -    WORKING

@@ -50,7 +50,8 @@ class StylesheetEdit : public QPlainTextEdit
   void setPlainText(const QString& text);
 
   // TODO
-  void showNewlineMarkers(bool show);
+  void setShowNewlineMarkers(bool show);
+  bool showNewlineMarkers();
 
   //! Reimplemented from QPlainText::stylesheet()
   QString styleSheet() const;

@@ -116,7 +116,8 @@ struct StylesheetEditPrivate
 
   QMap<QTextCursor, Node *> nodes();
 
-  void showNewlineMarkers(bool show);
+  void setShowNewlineMarkers(bool show);
+  bool showLineMarkers();
 
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);

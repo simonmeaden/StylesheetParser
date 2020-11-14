@@ -55,11 +55,11 @@ public:
   Node(const Node& other);
   ~Node();
 
-  virtual int start() const;
   void setStart(int position);
   void moveStart(int count);
   virtual int end() const;
   QTextCursor cursor() const;
+  virtual int start() const;
   virtual int length() const;
 
   QString name() const;
@@ -141,12 +141,14 @@ public:
 
   QPair<NodeSectionType, int> isIn(QPoint pos) override;
 
-  void setSubControlMarkerPosition(QTextCursor position);
-  void setPseudoStateMarkerPosition(QTextCursor position);
-  QTextCursor extensionPosition() const;
-  void setExtensionPosition(QTextCursor position);
-  QTextCursor markerPosition() const;
-  void setMarkerPosition(QTextCursor position);
+  void setSubControlMarkerCursor(QTextCursor cursor);
+  void setPseudoStateMarkerCursor(QTextCursor cursor);
+  QTextCursor extensionCursor() const;
+  int extensionPosition() const;
+  void setExtensionCursor(QTextCursor cursor);
+  QTextCursor markerCursor() const;
+  int markerPosition() const;
+  void setMarkerCursor(QTextCursor cursor);
 
   QString extensionName() const;
   void setExtensionName(const QString& name);
@@ -158,12 +160,14 @@ public:
   int extensionLength() const;
 
   bool hasStartBrace() const;
-  void setStartBracePosition(QTextCursor position);
-  QTextCursor startBracePosition() const;
+  void setStartBraceCursor(QTextCursor cursor);
+  QTextCursor startBraceCursor() const;
+  int startBracePosition() const;
   void removeStartBrace();
   bool hasEndBrace() const;
-  void setEndBracePosition(QTextCursor position);
-  QTextCursor endBracePosition() const;
+  void setEndBraceCursor(QTextCursor cursor);
+  QTextCursor endBraceCursor() const;
+  int endBracePosition() const;
   void removeEndBrace();
   bool offsetsMatch() const;
 
@@ -180,12 +184,12 @@ struct PropertyNodeData
 {
   QStringList values;
   QList<PropertyCheck> checks;
-  QList<QTextCursor> positions;
+  QList<QTextCursor> cursors;
   QList<DataStore::AttributeType> attributeTypes;
   bool propertyMarkerExists = false;
-  QTextCursor propertyMarkerPosition;
+  QTextCursor propertyMarkerCursor;
   bool endMarkerExists = false;
-  QTextCursor endMarkerPosition;
+  QTextCursor endMarkerCursor;
   bool validProperty = true;
 };
 
@@ -211,6 +215,7 @@ public:
                 PropertyCheck check,
                 QTextCursor offset,
                 DataStore::AttributeType attType);
+  QString value(int index);
 
   //! Returns the checks as a list.
   QList<PropertyCheck> checks() const;
@@ -218,13 +223,15 @@ public:
   void setChecks(const QList<PropertyCheck>& checks);
   //! Sets the check at index if index is valid.
   void setCheck(int index, PropertyCheck check);
+  PropertyCheck check(int index);
 
   //! Returns the positions as a list.
-  QList<QTextCursor> positions() const;
+  QList<QTextCursor> positionCursors() const;
   //! Sets the position at index if index is valid.
-  void setPosition(int index, QTextCursor position);
+  void setCursor(int index, QTextCursor position);
   //! Sets the positions to the supplied QTextCursor positions.
-  void setPositions(const QList<QTextCursor>& positions);
+  void setCursors(const QList<QTextCursor>& positions);
+  int position(int index);
 //  void incrementOffsets(int increment = 1, int startIndex = 0);
 
   //! Returns the attribute types as a list.
@@ -253,14 +260,16 @@ public:
 
   bool hasPropertyMarker() const;
   void setPropertyMarkerExists(bool exists);
-  QTextCursor propertyMarkerPosition() const;
-  void setPropertyMarkerPosition(QTextCursor position);
+  QTextCursor propertyMarkerCursor() const;
+  int propertyMarkerPosition() const;
+  void setPropertyMarkerCursor(QTextCursor position);
 //  void incrementPropertyMarker(int increment = 1);
 
   bool hasEndMarker();
   void setPropertyEndMarker(bool exists);
-  QTextCursor propertyEndMarkerPosition();
-  void setPropertyEndMarkerPosition(QTextCursor position);
+  QTextCursor propertyEndMarkerCursor();
+  int propertyEndMarkerPosition();
+  void setPropertyEndMarkerCursor(QTextCursor position);
 //  void incrementEndMarkerOffset(int increment = 1);
 
   QPair<NodeSectionType, int> isIn(QPoint pos) override;
@@ -331,9 +340,9 @@ private:
 struct CommentNodeData
 {
   bool validComment = true;
-  int position = 0;
+  QTextCursor cursor;
   bool endCommentExists = false;
-  int endPosition = 0;
+  QTextCursor endCursor;
 };
 
 class CommentNode : public Node
@@ -350,13 +359,14 @@ public:
   void append(QString text);
   int end() const override;
   int length() const override;
+  QTextCursor textCursor() const;
+  void setTextCursor(QTextCursor cursor);
   int textPosition() const;
-  void setTextPosition(int position);
 
   bool hasEndComment() const;
   void setEndCommentExists(bool exists);
-  int endCommentPosition() const;
-  void setEndCommentPosition(int offset);
+  QTextCursor endCommentCursor() const;
+  void setEndCommentCursor(QTextCursor cursor);
 
   QPair<NodeSectionType, int> isIn(QPoint pos) override;
 

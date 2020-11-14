@@ -56,10 +56,10 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
           &QTextDocument::contentsChange,
           this,
           &StylesheetEdit::handleDocumentChanged);
-//  connect(this,
-//          &QPlainTextEdit::textChanged,
-//          this,
-//          &StylesheetEdit::handleTextChanged);
+  //  connect(this,
+  //          &QPlainTextEdit::textChanged,
+  //          this,
+  //          &StylesheetEdit::handleTextChanged);
   //  updateLineNumberAreaWidth(0);
   //  setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -189,16 +189,27 @@ StylesheetEditPrivate::nodes()
 }
 
 void
-StylesheetEdit::showNewlineMarkers(bool show)
+StylesheetEdit::setShowNewlineMarkers(bool show)
 {
-  d_ptr->showNewlineMarkers(show);
+  d_ptr->setShowNewlineMarkers(show);
+}
+
+bool
+StylesheetEdit::showNewlineMarkers()
+{
+  return d_ptr->showLineMarkers();
 }
 
 void
-StylesheetEditPrivate::showNewlineMarkers(bool show)
+StylesheetEditPrivate::setShowNewlineMarkers(bool show)
 {
-  // TODO show/hide newline markers.
-  // maybe detect position of line end and draw a [NL] box??
+  m_parser->setShowLineMarkers(show);
+}
+
+bool
+StylesheetEditPrivate::showLineMarkers()
+{
+  return m_parser->showLineMarkers();
 }
 
 QString
@@ -762,8 +773,8 @@ StylesheetEditPrivate::getValueAtCursor(int pos, const QString& text)
   return value;
 }
 
-//QString
-//StylesheetEditPrivate::getOldNodeValue(CursorData* data)
+// QString
+// StylesheetEditPrivate::getOldNodeValue(CursorData* data)
 //{
 //  QString oldValue;
 

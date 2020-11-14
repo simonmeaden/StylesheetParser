@@ -109,67 +109,87 @@ MainWindow::initGui()
   QString text;
 
   // Errors
-  text = ""
-         //         "/* comment1 */ /*   comment2  */"
-         "  /* comment1 \n"
-         "*/ /*   \n"
-         "comment2  */"
-         "QTabWidget::branch {\n"
-         "color: red;\n"
-         "border: green solid 1px;\n"
-         " background-color: blue; \n"
-         "}\n"
+  text =
+    ""
+    "color: red\n"
+//    "color: red;\n"
+//    "color: red; background: green\n"
+//    "color: red; background: green;\n"
+//    "color: red; border: green solid 1px\n"
+//    "color red; \n"
+    "border: green solid 1px;\n"
+    ""
+    "{}\n"
+    "QTabWidget::branch {color: red}\n"
+    "QTabWidget::branch {color: red; background: green}\n"
+    "QTabWidget::branch {color: red; border: green solid 1px;\n" // MISSING END
+                                                                 // BRACE
+    "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
+    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
+    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
+    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
+    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
+    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
+    "  /* comment1 \n"
+    "*/ /*   \n"
+    "comment2  */"
+    "QTableWidget::branch {\n"
+    "color: red;\n"
+    "border: green solid 1px;\n"
+    " background-color: blue; \n"
+    "}\n"
+    "\n";
 
-    //         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
-    //         color: red; /* comment3 */ /*" " A multiline comment \n"
-    //         "*/ }"
-    //         "\n"
+  //         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
+  //         color: red; /* comment3 */ /*" " A multiline comment \n"
+  //         "*/ }"
+  //         "\n"
 
-    //    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
-    ////    pseudostate    -    WORKING
-    //    "QTabWidget::branh {}\n\n"            // BAD subcontrol -
-    //    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD
-    //    subcontrol "QTbWidget::branh {}\n\n"             // BAD  widget and
-    //    GOOD subcontrol "QTabWidget::branch {color: red; border: green solid
-    //    1px; background-color: blue;" // BAD missing end brace, property end
-    //    marker
-    //    "QTabWidget::branch { color: red;
-    //    border: green solid 1px; background-color: blue; }" // GOOD
-    //    widget/subcontrol "QTabWidget";
-    //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
-    //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
-    //  text = "QTabWidget::branh {}"; // BAD subcontrol
-    //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
-    //  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
+  //    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
+  ////    pseudostate    -    WORKING
+  //    "QTabWidget::branh {}\n\n"            // BAD subcontrol -
+  //    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD
+  //    subcontrol "QTbWidget::branh {}\n\n"             // BAD  widget and
+  //    GOOD subcontrol "QTabWidget::branch {color: red; border: green solid
+  //    1px; background-color: blue;" // BAD missing end brace, property end
+  //    marker
+  //    "QTabWidget::branch { color: red;
+  //    border: green solid 1px; background-color: blue; }" // GOOD
+  //    widget/subcontrol "QTabWidget";
+  //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
+  //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
+  //  text = "QTabWidget::branh {}"; // BAD subcontrol
+  //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
+  //  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
 
-    //    "\n\n"
-    //    "color blu;" // BAD missing property marker        - WORKING
-    //    "\n"
-    //    "bordr: green slid 1px;"
-    //    " \n\n"          // BAD property name, missing property end char -
-    //    WORKING " shitwidget:active {}\n\n"             // BAD widget name -
-    //    WORKING "background-color: blue;\n\n"        // GOOD property. -
-    //    WORKING "color red; \n" "border: green solid 1px;\n" // missing first
-    //    end property marker. text =  "color red; border: green solid 1px;"; //
-    //    missing first end property marker.
-    //  text =  "color: red border: green solid 1px;\n background-color: blue;";
-    //  // missing first end property char. text =   "color: rd"; text = "color:
-    //  red;"; text =  "color: red; background: green"; text =  "color: red;
-    //  background: green;";
-    //    text =  "  color rd; border: gren solid 1x;";
-    //  text =  "color: red border: green solid 1px;\n background-color: blue;";
-    //  // missing first end property char.
+  //    "\n\n"
+  //    "color blu;" // BAD missing property marker        - WORKING
+  //    "\n"
+  //    "bordr: green slid 1px;"
+  //    " \n\n"          // BAD property name, missing property end char -
+  //    WORKING " shitwidget:active {}\n\n"             // BAD widget name -
+  //    WORKING "background-color: blue;\n\n"        // GOOD property. -
+  //    WORKING "color red; \n" "border: green solid 1px;\n" // missing first
+  //    end property marker. text =  "color red; border: green solid 1px;"; //
+  //    missing first end property marker.
+  //  text =  "color: red border: green solid 1px;\n background-color: blue;";
+  //  // missing first end property char. text =   "color: rd"; text = "color:
+  //  red;"; text =  "color: red; background: green"; text =  "color: red;
+  //  background: green;";
+  //    text =  "  color rd; border: gren solid 1x;";
+  //  text =  "color: red border: green solid 1px;\n background-color: blue;";
+  //  // missing first end property char.
 
-    //  text = "QTabWidget::branch {color: red; border: green solid 1px;
-    //  background-color: blue;"; // missing end brace text = ; // BAD
-    //  pseudostate
+  //  text = "QTabWidget::branch {color: red; border: green solid 1px;
+  //  background-color: blue;"; // missing end brace text = ; // BAD
+  //  pseudostate
 
-    //    text = "StylesheetEdit {\n"
-    //           "  widget: blue liht yellow;\n"
-    //           "subcntrol: yelow blue normal;\n"
-    //           " subcntrolmarker: blue blck yellow;\n"
-    //           "}";
-    ;
+  //    text = "StylesheetEdit {\n"
+  //           "  widget: blue liht yellow;\n"
+  //           "subcntrol: yelow blue normal;\n"
+  //           " subcntrolmarker: blue blck yellow;\n"
+  //           "}";
+  ;
 
   // Correct stuff
   //  text =   "color: red";
@@ -210,6 +230,7 @@ MainWindow::initGui()
   //    "}";
 
   //  m_editor->setStyleSheet(stylesheet);
+  m_editor->setShowNewlineMarkers(true);
   m_editor->setPlainText(text);
 
   QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();

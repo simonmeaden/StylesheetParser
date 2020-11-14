@@ -130,8 +130,9 @@ private:
   //  int getPositionRelToBlock(Node* node,
   //                            QTextBlock block,
   //                            int offset = 0);
+  bool isInBlock(int position, int length, int blockStart, int blockEnd);
   void formatVisiblePart(int blockStart,
-                                    int blockLength,
+                                    int blockEnd,
                                     int position,
                                     int length, QTextCharFormat format);
   //  int getLengthRelToBlock(Node* node,
@@ -142,6 +143,7 @@ private:
                       int length,
                       int blockEnd,
                       QTextCharFormat format);
+  void formatProperty(PropertyNode *property, int blockStart, int blockEnd);
 };
 
 #endif // STYLESHEETHIGHLIGHTER_H

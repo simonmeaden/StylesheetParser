@@ -55,14 +55,20 @@ enum NodeType
   NoType,
   NodeType,
   WidgetType,
+  FuzzyWidgetType,
   PseudoStateType,
+  FuzzyPseudoStateType,
   PseudoStateMarkerType,
   SubControlType,
+  FuzzySubControlType,
   SubControlMarkerType,
+  ColonType, //! Either a PropertyMarkerType or a PseudoStateMarkerType
   StartBraceType,
   EndBraceType,
   NewlineType,
   PropertyType,
+  FuzzyPropertyType,
+  PropertyMarkerType,
   BadNodeType,
   CommentType,
   CommentStartMarkerType,
@@ -82,6 +88,7 @@ enum WidgetExtension {
 
 enum PropertyCheck
 {
+  NoCheck,
   GoodValue,
   ValidPropertyType,
   BadValue,

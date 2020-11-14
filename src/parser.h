@@ -37,6 +37,7 @@ class PropertyNode;
 class StartBraceNode;
 class EndBraceNode;
 class WidgetNode;
+class NewlineNode;
 
 struct ParserData
 {
@@ -93,6 +94,9 @@ public:
   QPair<NodeSectionType, int> nodeForPoint(const QPoint& pos,
                                            Node **nNode);
 
+  bool showLineMarkers() const;
+  void setShowLineMarkers(bool showLineMarkers);
+
 signals:
   void finished();
   void rehighlight();
@@ -103,6 +107,7 @@ private:
   DataStore* m_datastore;
   QMenu *m_contextMenu, *m_suggestionsMenu;
   QAction *m_addPropertyMarkerAct, *m_formatAct;
+  bool m_showLineMarkers;
 
   void parsePropertyWithValues(PropertyNode* property,
                               const QString& text,
@@ -126,22 +131,9 @@ private:
   void stashBadNode(int position,
                     const QString& block,
                     ParserState::Error error);
-//  void stashBadSubControlMarkerNode(int position, ParserState::Error error);
-//  void stashBadPseudoStateMarkerNode(int position, ParserState::Error error);
-//  void stashPseudoState(int position, const QString& block, bool valid = true);
-//  void stashSubControl(int position, const QString& block, bool valid = true);
+  NewlineNode* stashNewline(int position);
   EndBraceNode* stashEndBrace(int position);
   StartBraceNode* stashStartBrace(int position);
-//  void stashPseudoStateMarker(int position);
-//  void stashSubControlMarker(int position);
-//  void stashPropertyEndNode(int position, Node** endnode);
-//  void stashPropertyEndMarkerNode(int position, Node** endnode);
-
-//  void updatePropertyValues(int pos,
-//                            PropertyNode* property,
-//                            int charsAdded,
-//                            int charsRemoved,
-//                            const QString& newValue);
 
   QMenu* createContextMenu();
   void updateContextMenu(QMap<int, QString> matches,

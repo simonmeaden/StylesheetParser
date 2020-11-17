@@ -80,22 +80,73 @@ struct NodeStateData
   bool stateValid;
 };
 
-enum WidgetExtension {
+enum WidgetExtension
+{
   NoExtension,
   SubControlExtension,
   PseudoStateExtension,
 };
 
+enum AttributeType
+{
+  NoAttributeValue,
+  Alignment,
+  Attachment,
+  Background,
+  Bool,    //!< This is true/false value
+  Boolean, //!< This is 0/1 value
+  Border,
+  BorderImage,
+  BorderStyle,
+  BoxColors,
+  BoxLengths,
+  Brush,
+  Color,
+  Font,
+  FontSize,
+  FontStyle,
+  FontWeight,
+  Gradient,
+  Icon,
+  Length,
+  Number,
+  Origin,
+  PaletteRole,
+  Radius,
+  Repeat,
+  Url,
+  String,
+  Outline,
+  OutlineStyle,
+  OutlineRadius,
+  Position,
+  TextDecoration,
+  List,
+  // below here are specific to StylesheetEdit
+  StylesheetEditGood,
+  StylesheetEditBad,
+};
 enum PropertyCheck
+{
+  BadProperty = 0,
+  PropertyMarker = 0x1,
+  PropertyEndMarker = 0x2,
+  ValidName = 0x4,
+  GoodProperty = 0x7,
+};
+Q_DECLARE_FLAGS(PropertyChecks, PropertyCheck);
+Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyChecks)
+
+enum PropertyValueCheck
 {
   NoCheck,
   GoodValue,
   ValidPropertyType,
   BadValue,
-  MissingPropertyEnd,
 };
 
-enum NodeIsIn {
+enum NodeIsIn
+{
   InNode,
   BeforeNode,
   AfterNode,

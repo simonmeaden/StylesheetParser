@@ -28,14 +28,14 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QList>
-#include <QTableView>
 #include <QResizeEvent>
+#include <QTableView>
 #include <QTextCharFormat>
-#include <QWidget>
 #include <QThread>
+#include <QWidget>
 
-#include "datastore.h"
 #include "common.h"
+#include "datastore.h"
 #include "node.h"
 #include "parserstate.h"
 #include "stylesheethighlighter.h"
@@ -50,8 +50,6 @@ class BookmarkArea;
 class HoverWidget;
 class Parser;
 class StylesheetData;
-
-
 
 class LineNumberArea : public QWidget
 {
@@ -87,7 +85,6 @@ private:
   int m_currentLineNumber, m_left;
 };
 
-
 struct StylesheetEditPrivate
 {
   Q_DECLARE_PUBLIC(StylesheetEdit)
@@ -97,24 +94,27 @@ struct StylesheetEditPrivate
   StylesheetEdit* q_ptr;
   BookmarkArea* m_bookmarkArea;
   LineNumberArea* m_lineNumberArea;
-    Parser* m_parser;
+  DataStore *m_datastore;
+  Parser* m_parser;
   StylesheetHighlighter* m_highlighter;
   PropertyNode* m_propertynode = nullptr;
   QString m_stylesheet;
   HoverWidget* m_hoverWidget;
-  Node* m_currentHover;
+  WidgetNode* m_currentHover;
   int m_lineCount;
 
-  QAction* m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct, *m_clearBookmarksAct, *m_gotoBookmarkAct;
-  QMenu* m_contextMenu, *m_bookmarkMenu, *m_suggestionsMenu;
+  QAction *m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct,
+    *m_clearBookmarksAct, *m_gotoBookmarkAct;
+  QMenu *m_contextMenu, *m_bookmarkMenu, *m_suggestionsMenu;
   void initActions();
   void initMenus();
   void createBookmarkMenu();
+  void setContextMenu(QMenu*);
 
   void setPlainText(const QString& text);
   void handleParseComplete();
 
-  QMap<QTextCursor, Node *> nodes();
+//  QMap<QTextCursor, Node*> nodes();
 
   void setShowNewlineMarkers(bool show);
   bool showLineMarkers();
@@ -208,12 +208,12 @@ struct StylesheetEditPrivate
   void updateLeftArea(const QRect& rect, int dy);
 
   void resizeEvent(QRect cr);
-  void handleMousePress(const QPoint &pos);
+  void handleMouseClicked(const QPoint& pos);
   void handleLeaveEvent();
-  void displayBookmark(BookmarkData*data, QPoint pos);
+  void displayBookmark(BookmarkData* data, QPoint pos);
 
-  void handleCursorPositionChanged(QTextCursor textCursor);
-  void handleSuggestion(QAction *act);
+  void cursorPositionChanged(QTextCursor textCursor);
+  void suggestion(QAction* act);
 
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
@@ -223,13 +223,12 @@ struct StylesheetEditPrivate
   void nodeAtCursorPosition(CursorData* data, int position);
 
   QString getValueAtCursor(int anchor, const QString& text);
-//  QString getOldNodeValue(CursorData* data);
+  //  QString getOldNodeValue(CursorData* data);
 
   bool checkStylesheetColors(StylesheetData* data,
                              QColor& color1,
                              QColor& color2,
                              QColor& color3);
-
 
 public:
   int getLineCount() const;
@@ -242,7 +241,6 @@ private:
   void createHover();
   QList<int> reverseLastNValues(QMap<int, QString> matches);
 };
-
 
 /// \endcond DO_NOT_DOCUMENT
 

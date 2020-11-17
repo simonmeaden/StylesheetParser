@@ -20,6 +20,7 @@
   SOFTWARE.
 */
 #include "datastore.h"
+#include "node.h"
 #include "parser.h"
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
@@ -34,6 +35,10 @@ DataStore::DataStore(QObject* parent)
   , m_subControls(initialiseSubControlMap())
   , m_attributes(initialiseAttributeMap())
   , m_stylesheetAttributes(initialiseStylesheetMap())
+  , m_braceCount(0)
+  , m_manualMove(false)
+  , m_hasSuggestion(false)
+  , m_maxSuggestionCount(30)
 {
   m_alignmentValues << "top"
                     << "bottom"
@@ -121,21 +126,25 @@ DataStore::DataStore(QObject* parent)
                  << "thick";
   m_position << "relative"
              << "absolute";
-  m_repeat<< "repeat-x"
+  m_repeat << "repeat-x"
            << "repeat-y"
            << "repeat"
            << "no-repeat";
-  m_textDecoration<< "none"
+  m_textDecoration << "none"
                    << "underline"
                    << "overline"
                    << "line-through";
 }
 
-DataStore::~DataStore() {}
+DataStore::~DataStore()
+{
+  emit finished();
+}
 
 void
 DataStore::addWidget(const QString& widget)
 {
+  m_locker.lock();
   if (!m_widgets.contains(widget)) {
     m_widgets.append(widget);
   }
@@ -144,12 +153,14 @@ DataStore::addWidget(const QString& widget)
 void
 DataStore::removeWidget(const QString& widget)
 {
+  m_locker.lock();
   m_widgets.removeAll(widget);
 }
 
 bool
 DataStore::containsWidget(const QString& name)
 {
+  m_locker.lock();
   // NOT toLower() as widget names are cased.
   return m_widgets.contains(name);
 }
@@ -157,6 +168,7 @@ DataStore::containsWidget(const QString& name)
 QMultiMap<int, QString>
 DataStore::fuzzySearch(const QString& name, QStringList list)
 {
+  m_locker.lock();
   QMultiMap<int, QString> matches;
   char* pattern = new char[name.size() + 1];
   strcpy(pattern, name.toStdString().c_str());
@@ -178,36 +190,30 @@ DataStore::fuzzySearch(const QString& name, QStringList list)
 QMultiMap<int, QString>
 DataStore::fuzzySearchWidgets(const QString& name)
 {
+  m_locker.lock();
   return fuzzySearch(name, m_widgets);
 }
 
 bool
 DataStore::containsProperty(const QString& name)
 {
+  m_locker.lock();
   return m_properties.contains(name.toLower());
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchProperty(const QString& name)
 {
+  m_locker.lock();
   return fuzzySearch(name, m_properties);
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 {
+  m_locker.lock();
   QMap<int, QString> data, dataIn;
   QStringList list;
-
-//  if (name.isEmpty()) {
-//    list << m_alignmentValues << m_attachment << m_colors << m_paletteRoles
-//         << m_gradient << m_borderStyle << m_borderImage << m_fontStyle
-//         << m_fontWeight << m_icon << m_origin << m_outlineStyle
-//         << m_outlineColor << m_outlineWidth<<m_position<<m_repeat;
-
-//    return fuzzySearch(value, list);
-//  }
-
   auto attribute = m_attributes.value(name);
 
 #pragma clang diagnostic push
@@ -319,13 +325,13 @@ DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 }
 
 bool
-DataStore::containsStylesheetProperty(const QString& name)
+DataStore::containsStylesheetProperty(const QString& name) const
 {
   return m_StylesheetProperties.contains(name.toLower());
 }
 
 bool
-DataStore::containsPseudoState(const QString& name)
+DataStore::containsPseudoState(const QString& name) const
 {
   return m_pseudoStates.contains(name.toLower());
 }
@@ -333,34 +339,37 @@ DataStore::containsPseudoState(const QString& name)
 QMultiMap<int, QString>
 DataStore::fuzzySearchPseudoStates(const QString& name)
 {
+  m_locker.lock();
   return fuzzySearch(name, m_pseudoStates);
 }
 
 bool
-DataStore::containsSubControl(const QString& name)
+DataStore::containsSubControl(const QString& name) const
 {
   return m_subControls.contains(name.toLower());
 }
 
-QMultiMap<int, QString> DataStore::fuzzySearchSubControl(const QString& name)
+QMultiMap<int, QString>
+DataStore::fuzzySearchSubControl(const QString& name)
 {
+  m_locker.lock();
   return fuzzySearch(name, m_subControls.keys());
 }
 
 bool
-DataStore::checkAlignment(const QString& value)
+DataStore::checkAlignment(const QString& value) const
 {
   return m_alignmentValues.contains(value);
 }
 
 bool
-DataStore::checkAttachment(const QString& value)
+DataStore::checkAttachment(const QString& value) const
 {
   return m_attachment.contains(value);
 }
 
 bool
-DataStore::checkBackground(const QString& value)
+DataStore::checkBackground(const QString& value) const
 {
   if (checkBrush(value)) {
     return true;
@@ -382,7 +391,7 @@ DataStore::checkBackground(const QString& value)
 }
 
 bool
-DataStore::checkBool(const QString& value)
+DataStore::checkBool(const QString& value) const
 {
   if (value == "true" || value == "false") {
     return true;
@@ -392,7 +401,7 @@ DataStore::checkBool(const QString& value)
 }
 
 bool
-DataStore::checkBoolean(const QString& value)
+DataStore::checkBoolean(const QString& value) const
 {
   if (value == "0" || value == "1") {
     return true;
@@ -402,7 +411,7 @@ DataStore::checkBoolean(const QString& value)
 }
 
 bool
-DataStore::checkBorder(const QString& value)
+DataStore::checkBorder(const QString& value) const
 {
   if (checkBorderStyle(value)) {
     return true;
@@ -420,7 +429,7 @@ DataStore::checkBorder(const QString& value)
 }
 
 bool
-DataStore::checkBorderImage(const QString& value)
+DataStore::checkBorderImage(const QString& value) const
 {
   if (checkUrl(value)) {
     return true;
@@ -434,25 +443,25 @@ DataStore::checkBorderImage(const QString& value)
 }
 
 bool
-DataStore::checkBorderStyle(const QString& value)
+DataStore::checkBorderStyle(const QString& value) const
 {
   return m_borderStyle.contains(value);
 }
 
 bool
-DataStore::checkBoxColors(const QString& value)
+DataStore::checkBoxColors(const QString& value) const
 {
   return checkColor(value);
 }
 
 bool
-DataStore::checkBoxLengths(const QString& value)
+DataStore::checkBoxLengths(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkBrush(const QString& value)
+DataStore::checkBrush(const QString& value) const
 {
   if (checkColor(value)) {
     return true;
@@ -470,7 +479,7 @@ DataStore::checkBrush(const QString& value)
 }
 
 bool
-DataStore::checkColor(const QString& value)
+DataStore::checkColor(const QString& value) const
 {
   // check if this was a color name.
   if (m_colors.contains(value)) {
@@ -655,13 +664,13 @@ DataStore::checkColor(const QString& value)
 }
 
 bool
-DataStore::checkFontStyle(const QString& value)
+DataStore::checkFontStyle(const QString& value) const
 {
   return m_fontStyle.contains(value);
 }
 
 bool
-DataStore::checkFont(const QString& value)
+DataStore::checkFont(const QString& value) const
 {
   if (checkFontSize(value)) {
     return true;
@@ -680,25 +689,25 @@ DataStore::checkFont(const QString& value)
 }
 
 bool
-DataStore::checkFontSize(const QString& value)
+DataStore::checkFontSize(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkFontWeight(const QString& value)
+DataStore::checkFontWeight(const QString& value) const
 {
   return m_fontWeight.contains(value);
 }
 
 bool
-DataStore::checkGradient(const QString& value)
+DataStore::checkGradient(const QString& value) const
 {
   return m_gradient.contains(value);
 }
 
 bool
-DataStore::checkIcon(const QString& value)
+DataStore::checkIcon(const QString& value) const
 {
   if (checkUrl(value)) {
     return true;
@@ -708,7 +717,7 @@ DataStore::checkIcon(const QString& value)
 }
 
 bool
-DataStore::checkLength(const QString& value)
+DataStore::checkLength(const QString& value) const
 {
   bool ok = false;
 
@@ -728,7 +737,7 @@ DataStore::checkLength(const QString& value)
 }
 
 bool
-DataStore::checkNumber(const QString& value)
+DataStore::checkNumber(const QString& value) const
 {
   bool ok = false;
   // don't actually need the value, I only want to know
@@ -738,7 +747,7 @@ DataStore::checkNumber(const QString& value)
 }
 
 bool
-DataStore::checkOutline(const QString& value)
+DataStore::checkOutline(const QString& value) const
 {
   if (checkOutlineColor(value)) {
     return true;
@@ -760,19 +769,19 @@ DataStore::checkOutline(const QString& value)
 }
 
 bool
-DataStore::checkOrigin(const QString& value)
+DataStore::checkOrigin(const QString& value) const
 {
   return m_origin.contains(value);
 }
 
 bool
-DataStore::checkOutlineStyle(const QString& value)
+DataStore::checkOutlineStyle(const QString& value) const
 {
   return m_outlineStyle.contains(value);
 }
 
 bool
-DataStore::checkOutlineColor(const QString& value)
+DataStore::checkOutlineColor(const QString& value) const
 {
   if (value == m_outlineColor) {
     return true;
@@ -782,7 +791,7 @@ DataStore::checkOutlineColor(const QString& value)
 }
 
 bool
-DataStore::checkOutlineWidth(const QString& value)
+DataStore::checkOutlineWidth(const QString& value) const
 {
   if (m_outlineWidth.contains(value)) {
     return true;
@@ -792,20 +801,20 @@ DataStore::checkOutlineWidth(const QString& value)
 }
 
 bool
-DataStore::checkOutlineOffset(const QString& value)
+DataStore::checkOutlineOffset(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkOutlineRadius(const QString& value)
+DataStore::checkOutlineRadius(const QString& value) const
 {
   // check for 4 radius values.
   return checkRadius(value);
 }
 
 bool
-DataStore::checkPaletteRole(const QString& value)
+DataStore::checkPaletteRole(const QString& value) const
 {
   if (m_paletteRoles.contains(value)) {
     return true;
@@ -815,19 +824,19 @@ DataStore::checkPaletteRole(const QString& value)
 }
 
 bool
-DataStore::checkRadius(const QString& value)
+DataStore::checkRadius(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkRepeat(const QString& value)
+DataStore::checkRepeat(const QString& value) const
 {
   return m_repeat.contains(value);
 }
 
 bool
-DataStore::checkUrl(const QString& value)
+DataStore::checkUrl(const QString& value) const
 {
   QFile file(value);
 
@@ -844,19 +853,19 @@ DataStore::checkUrl(const QString& value)
 }
 
 bool
-DataStore::checkPosition(const QString& value)
+DataStore::checkPosition(const QString& value) const
 {
   return m_position.contains(value);
 }
 
 bool
-DataStore::checkTextDecoration(const QString& value)
+DataStore::checkTextDecoration(const QString& value) const
 {
   return m_textDecoration.contains(value);
 }
 
 bool
-DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
+DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data) const
 {
   if (data && checkColor(value)) {
     data->colors.append(value);
@@ -871,7 +880,8 @@ DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data)
 }
 
 bool
-DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* data)
+DataStore::checkStylesheetEditBad(const QString& value,
+                                  StylesheetData* data) const
 {
   if (data) {
     if (checkColor(value)) {
@@ -921,7 +931,8 @@ DataStore::checkStylesheetEditBad(const QString& value, StylesheetData* data)
 }
 
 bool
-DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* data)
+DataStore::checkStylesheetFontWeight(const QString& value,
+                                     StylesheetData* data) const
 {
   if (data) {
     if (value == "thin") {
@@ -966,7 +977,7 @@ DataStore::checkStylesheetFontWeight(const QString& value, StylesheetData* data)
 }
 
 bool
-DataStore::checkPropertyValue(DataStore::AttributeType propertyAttribute,
+DataStore::checkPropertyValue(AttributeType propertyAttribute,
                               const QString& valuename,
                               StylesheetData* data)
 {
@@ -1190,6 +1201,7 @@ DataStore::removeSubControl(const QString& control)
 void
 DataStore::addPseudoState(const QString& state)
 {
+  m_locker.lock();
   if (!m_pseudoStates.contains(state)) {
     m_pseudoStates.append(state);
   }
@@ -1198,10 +1210,185 @@ DataStore::addPseudoState(const QString& state)
 void
 DataStore::removePseudoState(const QString& state)
 {
+  m_locker.lock();
   m_pseudoStates.removeAll(state);
 }
 
-DataStore::AttributeType
+int
+DataStore::braceCount() const
+{
+  return m_braceCount;
+}
+
+void
+DataStore::setBraceCount(int value)
+{
+  m_locker.lock();
+  m_braceCount = value;
+}
+
+void
+DataStore::incrementBraceCount()
+{
+  m_locker.lock();
+  m_braceCount++;
+}
+
+bool
+DataStore::decrementBraceCount()
+{
+  m_locker.lock();
+  if (m_braceCount > 0) {
+    m_braceCount--;
+    return true;
+  }
+  return false;
+}
+
+bool
+DataStore::isBraceCountZero() const
+{
+  return m_braceStack.isEmpty();
+}
+
+void
+DataStore::pushStartBrace(StartBraceNode* startbrace)
+{
+  m_locker.lock();
+  m_startbraces.append(startbrace);
+  m_braceStack.push(startbrace);
+}
+
+void
+DataStore::pushEndBrace(EndBraceNode* endbrace)
+{
+  m_locker.lock();
+  m_endbraces.append(endbrace);
+  if (!isBraceCountZero()) {
+    auto startbrace = m_braceStack.pop();
+    endbrace->setStartNode(startbrace);
+    startbrace->setEndBrace(endbrace);
+  }
+}
+
+// StartBraceNode*
+// DataStore::popStartBrace()
+//{
+//  return braceStack.pop();
+//}
+
+// EndBraceNode*
+// DataStore::popEndBrace()
+//{
+//  return braceStack.pop();
+//}
+
+QMap<QTextCursor, Node*>
+DataStore::nodes() const
+{
+  return m_nodes;
+}
+
+void
+DataStore::insertNode(QTextCursor cursor, Node* node)
+{
+  m_locker.lock();
+  m_nodes.insert(cursor, node);
+  switch (node->type()) {
+    case StartBraceType:
+      pushStartBrace(qobject_cast<StartBraceNode*>(node));
+      break;
+    case EndBraceType:
+      pushEndBrace(qobject_cast<EndBraceNode*>(node));
+  }
+}
+
+bool
+DataStore::isNodesEmpty() const
+{
+  return m_nodes.isEmpty();
+}
+
+// QList<StartBraceNode *> DataStore::startBraces() const
+//{
+//  return m_startbraces;
+//}
+
+// QList<EndBraceNode *> DataStore::endBraces() const
+//{
+//  return m_endbraces;
+//}
+
+int
+DataStore::maxSuggestionCount() const
+{
+  return m_maxSuggestionCount;
+}
+
+void
+DataStore::setMaxSuggestionCount(int maxSuggestionCount)
+{
+  m_locker.lock();
+  m_maxSuggestionCount = maxSuggestionCount;
+}
+
+bool
+DataStore::hasSuggestion() const
+{
+  return m_hasSuggestion;
+}
+
+void
+DataStore::setHasSuggestion(bool suggestion)
+{
+  m_locker.lock();
+  m_hasSuggestion = suggestion;
+}
+
+bool
+DataStore::isManualMove() const
+{
+  return m_manualMove;
+}
+
+void
+DataStore::setManualMove(bool manualMove)
+{
+  m_locker.lock();
+  m_manualMove = manualMove;
+}
+
+WidgetNode*
+DataStore::currentWidget() const
+{
+  return m_currentWidget;
+}
+
+void
+DataStore::setCurrentWidget(WidgetNode* widget)
+{
+  m_locker.lock();
+  m_currentWidget = widget;
+}
+
+bool
+DataStore::isCurrentWidget(WidgetNode* node) const
+{
+  return (m_currentWidget == node);
+}
+
+QTextCursor DataStore::currentCursor() const
+{
+  return m_currentCursor;
+}
+
+void DataStore::setCurrentCursor(const QTextCursor &currentCursor)
+{
+  m_locker.lock();
+  m_currentCursor = currentCursor;
+}
+
+AttributeType
 DataStore::propertyValueAttribute(const QString& value)
 {
   if (checkColor(value)) {
@@ -1649,7 +1836,7 @@ DataStore::initialiseStylesheetProperties()
   return list;
 }
 
-QMap<QString, DataStore::AttributeType>
+QMap<QString, AttributeType>
 DataStore::initialiseStylesheetMap()
 {
   QMap<QString, AttributeType> map;
@@ -1824,7 +2011,7 @@ DataStore::initialiseColorList()
   return list;
 }
 
-QMap<QString, DataStore::AttributeType>
+QMap<QString, AttributeType>
 DataStore::initialiseAttributeMap()
 {
   QMap<QString, AttributeType> map;

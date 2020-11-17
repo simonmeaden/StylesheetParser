@@ -37,6 +37,7 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
   : QPlainTextEdit(parent)
   , d_ptr(new StylesheetEditPrivate(this))
 {
+  qRegisterMetaType<QTextCursor>("QTextCursor");
   initActions();
   initMenus();
   setMouseTracking(true);
@@ -51,32 +52,64 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
   connect(this,
           &QPlainTextEdit::cursorPositionChanged,
           this,
-          &StylesheetEdit::handleCursorPositionChanged);
+          &StylesheetEdit::cursorPositionChanged);
   connect(this->document(),
           &QTextDocument::contentsChange,
           this,
           &StylesheetEdit::handleDocumentChanged);
+
+  connect(this,
+          &StylesheetEdit::parseInitialText,
+          d_ptr->m_parser,
+          &Parser::parseInitialText);
+  connect(this,
+          &StylesheetEdit::handleMouseClicked,
+          d_ptr->m_parser,
+          &Parser::handleMouseClicked);
+  connect(this,
+          &StylesheetEdit::handleCursorPositionChanged,
+          d_ptr->m_parser,
+          &Parser::handleCursorPositionChanged);
+  connect(this,
+          &StylesheetEdit::handleSuggestion,
+          d_ptr->m_parser,
+          &Parser::handleSuggestion);
+  connect(this,
+          &StylesheetEdit::handleDocumentChanged,
+          d_ptr->m_parser,
+          &Parser::handleDocumentChanged);
+  connect(d_ptr->m_parser,
+          &Parser::sendContextMenu,
+          this,
+          &StylesheetEdit::setContextMenu);
   //  connect(this,
   //          &QPlainTextEdit::textChanged,
   //          this,
   //          &StylesheetEdit::handleTextChanged);
   //  updateLineNumberAreaWidth(0);
   //  setContextMenuPolicy(Qt::CustomContextMenu);
-
-  //  connect(this,
-  //          SIGNAL(customContextMenuRequested(const QPoint&)),
-  //          SLOT(handleContextMenuRequested(const QPoint&)));
 }
 
 StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   : q_ptr(parent)
   , m_bookmarkArea(new BookmarkArea(q_ptr))
   , m_lineNumberArea(new LineNumberArea(q_ptr))
-  , m_highlighter(new StylesheetHighlighter(q_ptr))
 {
-  QThread* thread = new QThread;
-  m_parser = new Parser(q_ptr);
-  m_parser->moveToThread(thread);
+  QThread* dataThread = new QThread;
+  m_datastore = new DataStore();
+  m_datastore->moveToThread(dataThread);
+  q_ptr->connect(m_datastore, &DataStore::finished, dataThread, &QThread::quit);
+  q_ptr->connect(
+    m_datastore, &DataStore::finished, m_datastore, &Parser::deleteLater);
+  q_ptr->connect(
+    dataThread, &QThread::finished, dataThread, &QThread::deleteLater);
+  dataThread->start();
+
+  m_highlighter = new StylesheetHighlighter(q_ptr, m_datastore);
+
+  QThread* parserThread = new QThread;
+  m_parser = new Parser(m_datastore, q_ptr);
+  m_parser->moveToThread(parserThread);
   //  q_ptr->connect(worker, SIGNAL(error(QString)), this,
   //  SLOT(errorString(QString))); q_ptr->connect(thread, SIGNAL(started()),
   //  m_parser, SLOT(process()));
@@ -84,11 +117,11 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
                  &Parser::rehighlight,
                  q_ptr,
                  &StylesheetEdit::handleParseComplete);
-  q_ptr->connect(m_parser, &Parser::finished, thread, &QThread::quit);
+  q_ptr->connect(m_parser, &Parser::finished, parserThread, &QThread::quit);
   q_ptr->connect(m_parser, &Parser::finished, m_parser, &Parser::deleteLater);
-  q_ptr->connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-  thread->start();
-
+  q_ptr->connect(
+    parserThread, &QThread::finished, parserThread, &QThread::deleteLater);
+  parserThread->start();
   m_hoverWidget = new HoverWidget(q_ptr);
   m_hoverWidget->setVisible(
     true); // always showing just 0 size when not needed.
@@ -161,7 +194,7 @@ StylesheetEdit::setPlainText(const QString& text)
 void
 StylesheetEditPrivate::setPlainText(const QString& text)
 {
-  m_parser->parseInitialText(text);
+  emit q_ptr->parseInitialText(text);
 }
 
 void
@@ -176,17 +209,17 @@ StylesheetEditPrivate::handleParseComplete()
   m_highlighter->rehighlight();
 }
 
-QMap<QTextCursor, Node*>
-StylesheetEdit::nodes()
-{
-  return d_ptr->nodes();
-}
+// QMap<QTextCursor, Node*>
+// StylesheetEdit::nodes()
+//{
+//  return d_ptr->nodes();
+//}
 
-QMap<QTextCursor, Node*>
-StylesheetEditPrivate::nodes()
-{
-  return m_parser->nodes();
-}
+// QMap<QTextCursor, Node*>
+// StylesheetEditPrivate::nodes()
+//{
+//  return m_parser->nodes();
+//}
 
 void
 StylesheetEdit::setShowNewlineMarkers(bool show)
@@ -588,16 +621,17 @@ StylesheetEdit::mousePressEvent(QMouseEvent* event)
 {
   if (event->button() == Qt::RightButton) {
     // context menu.
-    d_ptr->handleMousePress(event->pos());
+    d_ptr->handleMouseClicked(event->pos());
   } else {
     QPlainTextEdit::mousePressEvent(event);
   }
 }
 
 void
-StylesheetEditPrivate::handleMousePress(const QPoint& pos)
+StylesheetEditPrivate::handleMouseClicked(const QPoint& pos)
 {
-  m_parser->handleMouseClicked(pos);
+  m_contextMenu = nullptr;
+  emit q_ptr->handleMouseClicked(pos);
 }
 
 void
@@ -606,21 +640,11 @@ StylesheetEdit::mouseMoveEvent(QMouseEvent* event)
   QPlainTextEdit::mouseMoveEvent(event);
 }
 
-// void
-// StylesheetEditPrivate::handleMouseMove(const QPoint &pos)
-//{}
-
 void
 StylesheetEdit::mouseReleaseEvent(QMouseEvent* event)
 {
   QPlainTextEdit::mouseReleaseEvent(event);
 }
-
-// void
-// StylesheetEditPrivate::handleMouseRelease(const QPoint &pos)
-//{
-//  m_parser->handleMouseClicked(pos);
-//}
 
 void
 StylesheetEdit::mouseDoubleClickEvent(QMouseEvent* event)
@@ -882,25 +906,41 @@ StylesheetEditPrivate::calculateColumn(QTextCursor textCursor)
 }
 
 void
-StylesheetEdit::handleCursorPositionChanged()
+StylesheetEdit::cursorPositionChanged()
 {
-  d_ptr->handleCursorPositionChanged(textCursor());
+  d_ptr->cursorPositionChanged(textCursor());
 }
 
 void
-StylesheetEditPrivate::handleCursorPositionChanged(QTextCursor textCursor)
+StylesheetEditPrivate::cursorPositionChanged(QTextCursor textCursor)
 {
-  m_parser->handleCursorPositionChanged(textCursor);
+  emit q_ptr->handleCursorPositionChanged(textCursor);
 }
 
 void
-StylesheetEditPrivate::handleSuggestion(QAction* act)
+StylesheetEdit::suggestion(bool)
 {
-  m_parser->handleSuggestion(act);
+  auto act = dynamic_cast<QAction*>(sender());
+
+  if (act) {
+    d_ptr->suggestion(act);
+  }
 }
 
 void
-StylesheetEdit::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
+StylesheetEdit::setContextMenu(QMenu* menu)
+{
+  d_ptr->setContextMenu(menu);
+}
+
+void
+StylesheetEditPrivate::suggestion(QAction* act)
+{
+  emit q_ptr->handleSuggestion(act);
+}
+
+void
+StylesheetEdit::documentChanged(int pos, int charsRemoved, int charsAdded)
 {
   d_ptr->onDocumentChanged(pos, charsRemoved, charsAdded);
 }
@@ -916,7 +956,7 @@ StylesheetEditPrivate::onDocumentChanged(int pos,
                                          int charsRemoved,
                                          int charsAdded)
 {
-  m_parser->handleDocumentChanged(pos, charsRemoved, charsAdded);
+  emit q_ptr->handleDocumentChanged(pos, charsRemoved, charsAdded);
 }
 
 void
@@ -1264,9 +1304,21 @@ StylesheetEditPrivate::gotoBookmark(int bookmark)
 }
 
 void
+StylesheetEditPrivate::setContextMenu(QMenu* menu)
+{
+  m_contextMenu = menu;
+}
+
+void
 StylesheetEditPrivate::handleContextMenuEvent(QPoint pos)
 {
-  m_contextMenu->exec(pos);
+  while (true) {
+    if (m_contextMenu) {
+      m_contextMenu->exec(pos);
+      break;
+    }
+    q_ptr->thread()->sleep(100);
+  }
 }
 
 void
@@ -1337,19 +1389,9 @@ StylesheetEdit::setLineNumber(int lineNumber)
 }
 
 void
-StylesheetEdit::suggestion(bool)
-{
-  auto act = dynamic_cast<QAction*>(sender());
-
-  if (act) {
-    d_ptr->handleSuggestion(act);
-  }
-}
-
-void
 StylesheetEditPrivate::setLineNumber(int linenumber)
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Start);
   cursor.movePosition(
@@ -1357,7 +1399,7 @@ StylesheetEditPrivate::setLineNumber(int linenumber)
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1386,13 +1428,13 @@ StylesheetEditPrivate::setLineData(QTextCursor cursor)
 void
 StylesheetEditPrivate::up(int n)
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Up, QTextCursor::MoveAnchor, n);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1410,13 +1452,13 @@ StylesheetEdit::down(int n)
 void
 StylesheetEditPrivate::down(int n)
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, n);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1434,13 +1476,13 @@ StylesheetEdit::left(int n)
 void
 StylesheetEditPrivate::left(int n)
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, n);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1458,13 +1500,13 @@ StylesheetEdit::right(int n)
 void
 StylesheetEditPrivate::right(int n)
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, n);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1476,13 +1518,13 @@ StylesheetEdit::start()
 void
 StylesheetEditPrivate::start()
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Start);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1494,13 +1536,13 @@ StylesheetEdit::end()
 void
 StylesheetEditPrivate::end()
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::End);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1512,13 +1554,13 @@ StylesheetEdit::startOfLine()
 void
 StylesheetEditPrivate::startOfLine()
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::StartOfLine);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void
@@ -1530,13 +1572,13 @@ StylesheetEdit::endOfLine()
 void
 StylesheetEditPrivate::endOfLine()
 {
-  m_parser->setManualMove(true);
+  m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::EndOfLine);
   q_ptr->setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
-  m_parser->setManualMove(false);
+  m_datastore->setManualMove(false);
 }
 
 void

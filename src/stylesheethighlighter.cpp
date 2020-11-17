@@ -22,9 +22,11 @@
 #include "stylesheethighlighter.h"
 #include "stylesheetparser/stylesheetedit.h"
 
-StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor)
+StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor,
+                                             DataStore* datastore)
   : QSyntaxHighlighter(editor->document())
   , m_editor(editor)
+  , m_datastore(datastore)
 {
   m_back = QColor("white"); /*editor->palette().brush(QPalette::Background)*/
   //  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
@@ -135,7 +137,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   auto length = property->name().length();
   auto position = property->start();
   if (isInBlock(position, length, blockStart, blockEnd)) {
-    if (property->hasPropertyMarker()) {
+    if (property->isValidProperty()) {
       formatVisiblePart(
         blockStart, blockEnd, position, length, m_propertyFormat);
       position = property->propertyMarkerPosition();
@@ -143,17 +145,18 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
         formatVisiblePart(
           blockStart, blockEnd, position, 1, m_propertyMarkerFormat);
       }
-    } else if (!property->isValidProperty()) {
-      formatVisiblePart(
-        blockStart, blockEnd, position, length, m_badPropertyFormat);
+    } /* else if (!property->isValidPropertyName()) {
+       formatVisiblePart(
+         blockStart, blockEnd, position, length, m_badPropertyFormat);
 
-    } else {
+     }*/
+    else {
       formatVisiblePart(
         blockStart, blockEnd, position, length, m_badPropertyFormat);
     }
   }
 
-  PropertyCheck check;
+  PropertyValueCheck check;
   QString value;
 
   for (int i = 0; i < property->count(); i++) {
@@ -163,8 +166,8 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     length = value.length();
 
     if (isInBlock(position, length, blockStart, blockEnd)) {
-      if (check == PropertyCheck::GoodValue ||
-          check == PropertyCheck::ValidPropertyType) {
+      if (check == PropertyValueCheck::GoodValue ||
+          check == PropertyValueCheck::ValidPropertyType) {
         formatVisiblePart(
           blockStart, blockEnd, position, length, m_valueFormat);
       } else {
@@ -174,7 +177,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     }
   }
 
-  if (property->hasEndMarker()) {
+  if (property->hasPropertyEndMarker()) {
     position = property->propertyEndMarkerPosition();
     if (isInBlock(position, 1, blockStart, blockEnd)) {
       formatVisiblePart(
@@ -186,7 +189,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
 void
 StylesheetHighlighter::highlightBlock(const QString& text)
 {
-  auto nodes = m_editor->nodes();
+  auto nodes = m_datastore->nodes();
 
   if (text.isEmpty() || nodes.isEmpty()) {
     return;

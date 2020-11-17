@@ -27,16 +27,15 @@
 
 Node::Node(const QString& name,
            QTextCursor cursor,
-           StylesheetEdit* parent,
+           StylesheetEdit* editor,
+           QObject* parent,
            enum NodeType type)
   : QObject(parent)
-  , previous(nullptr)
-  , next(nullptr)
 {
   d_ptr = new NodeData;
   d_ptr->cursor = cursor;
   d_ptr->type = type;
-  d_ptr->parent = parent;
+  d_ptr->editor = editor;
   d_ptr->name = name;
 }
 
@@ -106,28 +105,14 @@ Node::toString() const
       return "\n";
     case PropertyType:
       return d_ptr->name;
+    case CommentType:
+      return d_ptr->name;
     case BadNodeType:
       return "";
   }
 
   return QString();
 }
-
-// NameNode::NameNode(const QString& name)
-//{
-//  d_ptr = new NameNodeData;
-//  d_ptr->name = name;
-//}
-
-// NameNode::NameNode(const NameNode& other)
-//{
-//  d_ptr = new NameNodeData(*other.d_ptr);
-//}
-
-// NameNode::~NameNode()
-//{
-//  delete d_ptr;
-//}
 
 QString
 Node::name() const
@@ -152,9 +137,9 @@ Node::isIn(QPoint pos)
 {
   auto x = pos.x();
   auto y = pos.y();
-  auto rect = d_ptr->parent->cursorRect(QTextCursor(d_ptr->cursor));
+  auto rect = d_ptr->editor->cursorRect(QTextCursor(d_ptr->cursor));
   auto left = rect.x();
-  auto fm = d_ptr->parent->fontMetrics();
+  auto fm = d_ptr->editor->fontMetrics();
   auto width = fm.horizontalAdvance(d_ptr->name);
   auto height = fm.height();
   auto right = left + width;
@@ -171,9 +156,10 @@ Node::isIn(QPoint pos)
 BadBlockNode::BadBlockNode(const QString& name,
                            QTextCursor start,
                            ParserState::Errors errors,
-                           StylesheetEdit* parent,
+                           StylesheetEdit* editor,
+                           QObject* parent,
                            enum NodeType type)
-  : Node(name, start, parent, type)
+  : Node(name, start, editor, parent, type)
   , BadNode(errors)
 {}
 
@@ -199,33 +185,22 @@ BadNode::setError(const ParserState::Errors& errors)
   m_errors = errors;
 }
 
-// BadSubControlMarkerNode::BadSubControlMarkerNode(QTextCursor start,
-//                                                 ParserState::Errors errors,
-//                                                 StylesheetEdit* parent,
-//                                                 enum NodeType type)
-//  : SubControlMarkerNode(start, parent, type)
-//  , BadNode(errors)
-//{}
-
-// BadPseudoStateMarkerNode::BadPseudoStateMarkerNode(QTextCursor start,
-//                                                   ParserState::Errors errors,
-//                                                   StylesheetEdit* parent,
-//                                                   enum NodeType type)
-//  : PseudoStateMarkerNode(start, parent, type)
-//  , BadNode(errors)
-//{}
-
 WidgetNode::WidgetNode(const QString& name,
                        QTextCursor start,
-                       StylesheetEdit* parent,
+                       StylesheetEdit* editor,
+                       QObject* parent,
                        enum NodeType type)
-  : Node(name, start, parent, type)
+  : Node(name, start, editor, parent, type)
 {
   w_ptr = new WidgetNodeData;
 }
 
 WidgetNode::WidgetNode(const WidgetNode& other)
-  : Node(other.name(), other.cursor(), other.d_ptr->parent, other.type())
+  : Node(other.name(),
+         other.cursor(),
+         other.d_ptr->editor,
+         other.parent(),
+         other.type())
 {
   w_ptr = new WidgetNodeData(*other.w_ptr);
 }
@@ -284,17 +259,17 @@ WidgetNode::isIn(QPoint pos)
   auto y = pos.y();
   auto cursor = QTextCursor(d_ptr->cursor);
   auto oldPos = cursor.position();
-  auto rect = d_ptr->parent->cursorRect(cursor);
+  auto rect = d_ptr->editor->cursorRect(cursor);
   auto left = rect.x();
   auto top = rect.top();
-  auto fm = d_ptr->parent->fontMetrics();
+  auto fm = d_ptr->editor->fontMetrics();
   int right = left, bottom = top;
 
   int end;
   end = length();
   while (true) {
     cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 1);
-    rect = d_ptr->parent->cursorRect(cursor);
+    rect = d_ptr->editor->cursorRect(cursor);
     right = (rect.right() > right ? rect.right() : right);
     bottom = (rect.bottom() > bottom ? rect.bottom() : bottom);
     if (cursor.position() == end) {
@@ -498,15 +473,20 @@ WidgetNode::propertyCount() const
 
 PropertyNode::PropertyNode(const QString& name,
                            QTextCursor start,
-                           StylesheetEdit* parent,
+                           StylesheetEdit* editor,
+                           QObject* parent,
                            enum NodeType type)
-  : Node(name, start, parent, type)
+  : WidgetNode(name, start, editor, parent, type)
 {
   p_ptr = new PropertyNodeData;
 }
 
 PropertyNode::PropertyNode(const PropertyNode& other)
-  : Node(other.name(), other.cursor(), other.d_ptr->parent, other.type())
+  : WidgetNode(other.name(),
+         other.cursor(),
+         other.d_ptr->editor,
+         other.parent(),
+         other.type())
 {
   p_ptr = new PropertyNodeData(*other.p_ptr);
 }
@@ -522,7 +502,7 @@ PropertyNode::values() const
   return p_ptr->values;
 }
 
-QList<PropertyCheck>
+QList<PropertyValueCheck>
 PropertyNode::checks() const
 {
   return p_ptr->checks;
@@ -542,7 +522,7 @@ PropertyNode::setCursor(int index, QTextCursor position)
   }
 }
 
-QList<DataStore::AttributeType>
+QList<AttributeType>
 PropertyNode::attributeTypes() const
 {
   return p_ptr->attributeTypes;
@@ -563,25 +543,25 @@ PropertyNode::setValue(int index, const QString& value)
 }
 
 void
-PropertyNode::setChecks(const QList<PropertyCheck>& checks)
+PropertyNode::setChecks(const QList<PropertyValueCheck>& checks)
 {
   p_ptr->checks = checks;
 }
 
 void
-PropertyNode::setCheck(int index, PropertyCheck check)
+PropertyNode::setCheck(int index, PropertyValueCheck check)
 {
   if (index >= 0 && index < p_ptr->checks.length()) {
     p_ptr->checks.replace(index, check);
   }
 }
 
-PropertyCheck
+PropertyValueCheck
 PropertyNode::check(int index)
 {
   if (index >= 0 && index < p_ptr->values.size())
     return p_ptr->checks.at(index);
-  return PropertyCheck::NoCheck;
+  return PropertyValueCheck::NoCheck;
 }
 
 void
@@ -601,9 +581,9 @@ PropertyNode::position(int index)
 void
 PropertyNode::addValue(
   const QString& value,
-  PropertyCheck check,
+  PropertyValueCheck check,
   QTextCursor position,
-  DataStore::AttributeType attType = DataStore::NoAttributeValue)
+  AttributeType attType = NoAttributeValue)
 {
   p_ptr->values.append(value);
   p_ptr->checks.append(check);
@@ -620,7 +600,7 @@ PropertyNode::value(int index)
 }
 
 bool
-PropertyNode::setBadCheck(PropertyCheck check, int index)
+PropertyNode::setBadCheck(PropertyValueCheck check, int index)
 {
   if (index == -1 && !p_ptr->checks.isEmpty()) {
     p_ptr->checks[p_ptr->checks.length() - 1] = check;
@@ -640,7 +620,7 @@ PropertyNode::count()
   return p_ptr->cursors.size();
 }
 
-PropertyCheck
+PropertyValueCheck
 PropertyNode::isValueValid(int index)
 {
   if (index > 00 && index < count()) {
@@ -648,7 +628,7 @@ PropertyNode::isValueValid(int index)
   }
 
   // default to bad.
-  return PropertyCheck::BadValue;
+  return PropertyValueCheck::BadValue;
 }
 
 int
@@ -664,42 +644,47 @@ PropertyNode::end() const
 int
 PropertyNode::length() const
 {
-  auto value = d_ptr->name.length();
-
   if (p_ptr->cursors.isEmpty()) {
-    if (hasPropertyMarker()) {
-      value += propertyMarkerCursor().anchor() + 1;
+    if (!hasPropertyMarker()) {
+      return d_ptr->name.length();
+    } else {
+      return propertyMarkerCursor().anchor() + 1;
     }
   } else {
-    value += p_ptr->cursors.last().anchor();
-    value += p_ptr->values.last().length();
+    return p_ptr->cursors.last().anchor() + p_ptr->values.last().length();
   }
 
-  return value;
+  return 0;
 }
 
 bool
 PropertyNode::hasPropertyMarker() const
 {
-  return p_ptr->propertyMarkerExists;
+  return p_ptr->propertyState.testFlag(PropertyCheck::PropertyMarker);
 }
 
 void
-PropertyNode::setPropertyMarkerExists(bool exists)
+PropertyNode::setPropertyMarker(bool exists)
 {
-  p_ptr->propertyMarkerExists = exists;
+  p_ptr->propertyState.setFlag(PropertyCheck::PropertyMarker, exists);
 }
 
 bool
-PropertyNode::isValidProperty() const
+PropertyNode::isValidPropertyName() const
 {
-  return p_ptr->validProperty;
+  return p_ptr->propertyState.testFlag(PropertyCheck::ValidName);
 }
 
 void
-PropertyNode::setValidProperty(bool valid)
+PropertyNode::setValidPropertyName(bool valid)
 {
-  p_ptr->validProperty = valid;
+  p_ptr->propertyState.setFlag(PropertyCheck::ValidName, valid);
+}
+
+bool
+PropertyNode::isValidProperty()
+{
+  return p_ptr->propertyState.testFlag(PropertyCheck::GoodProperty);
 }
 
 QTextCursor
@@ -720,22 +705,17 @@ PropertyNode::setPropertyMarkerCursor(QTextCursor position)
   p_ptr->propertyMarkerCursor = position;
 }
 
-// void
-// PropertyNode::incrementPropertyMarker(int increment)
-//{
-//  p_ptr->propertyMarkerOffset += increment;
-//}
-
 bool
-PropertyNode::hasEndMarker()
+PropertyNode::hasPropertyEndMarker()
 {
-  return p_ptr->endMarkerExists;
+  return p_ptr->propertyState.testFlag(PropertyCheck::PropertyEndMarker);
+  ;
 }
 
 void
 PropertyNode::setPropertyEndMarker(bool exists)
 {
-  p_ptr->endMarkerExists = exists;
+  p_ptr->propertyState.setFlag(PropertyCheck::PropertyEndMarker, exists);
 }
 
 QTextCursor
@@ -762,9 +742,9 @@ PropertyNode::isIn(QPoint pos)
   auto x = pos.x();
   auto y = pos.y();
   auto cursor = QTextCursor(d_ptr->cursor);
-  auto rect = d_ptr->parent->cursorRect(cursor);
+  auto rect = d_ptr->editor->cursorRect(cursor);
   auto left = rect.x();
-  auto fm = d_ptr->parent->fontMetrics();
+  auto fm = d_ptr->editor->fontMetrics();
   auto width =
     fm.horizontalAdvance(d_ptr->name); // initially just property name
   auto height = fm.height();
@@ -773,12 +753,13 @@ PropertyNode::isIn(QPoint pos)
   auto bottom = top + height;
   auto propLeft = left;
   QTextCursor propCursor(cursor);
-  propCursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, length());
-  rect = d_ptr->parent->cursorRect(propCursor);
-  auto propRight = rect.x() + fm.horizontalAdvance(values().last());
+  propCursor.movePosition(
+    QTextCursor::Right, QTextCursor::MoveAnchor, length());
+  rect = d_ptr->editor->cursorRect(propCursor);
+  //  auto propRight = rect.x()/* + fm.horizontalAdvance(values().last())*/;
 
   // is it inside the entire property boundaries.
-  if (y >= top && y <= bottom && x >= propLeft && x <= propRight) {
+  if (y >= top && y <= bottom && x >= propLeft && x <= rect.right()) {
     // Property name.
     if (x >= left && x <= right) {
       return qMakePair<NodeSectionType, int>(NodeSectionType::Name, 0);
@@ -792,7 +773,7 @@ PropertyNode::isIn(QPoint pos)
       auto oldRight = right;
       valCursor.movePosition(
         QTextCursor::Right, QTextCursor::MoveAnchor, offset);
-      rect = d_ptr->parent->cursorRect(valCursor);
+      rect = d_ptr->editor->cursorRect(valCursor);
       width = fm.horizontalAdvance(value);
       left = rect.x();
       right = left + width + 1;
@@ -834,21 +815,26 @@ PropertyNode::isProperty(int pos) const
 
 void
 PropertyNode::setAttributeTypes(
-  const QList<DataStore::AttributeType>& attributeTypes)
+  const QList<AttributeType>& attributeTypes)
 {
   p_ptr->attributeTypes = attributeTypes;
 }
 
 CommentNode::CommentNode(QTextCursor start,
-                         StylesheetEdit* parent,
+                         StylesheetEdit* editor,
+                         QObject* parent,
                          enum NodeType type)
-  : Node(QString(), start, parent, type)
+  : WidgetNode(QString(), start, editor, parent, type)
 {
   c_ptr = new CommentNodeData;
 }
 
 CommentNode::CommentNode(const CommentNode& other)
-  : Node(other.name(), other.cursor(), other.d_ptr->parent, other.type())
+  : WidgetNode(other.name(),
+         other.cursor(),
+         other.d_ptr->editor,
+         other.parent(),
+         other.type())
 {
   c_ptr = new CommentNodeData(*other.c_ptr);
 }
@@ -937,16 +923,16 @@ CommentNode::isIn(QPoint pos)
   auto y = pos.y();
   auto cursor = QTextCursor(d_ptr->cursor);
   auto oldPos = cursor.position();
-  auto rect = d_ptr->parent->cursorRect(cursor);
+  auto rect = d_ptr->editor->cursorRect(cursor);
   auto left = rect.x();
   auto top = rect.top();
-  auto fm = d_ptr->parent->fontMetrics();
+  auto fm = d_ptr->editor->fontMetrics();
   int right = left, bottom = top;
 
   int end = length();
   while (true) {
     cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 1);
-    rect = d_ptr->parent->cursorRect(cursor);
+    rect = d_ptr->editor->cursorRect(cursor);
     right = (rect.right() > right ? rect.right() : right);
     bottom = (rect.bottom() > bottom ? rect.bottom() : bottom);
     if (cursor.position() == end) {
@@ -963,15 +949,17 @@ CommentNode::isIn(QPoint pos)
 }
 
 NewlineNode::NewlineNode(QTextCursor start,
-                         StylesheetEdit* parent,
+                         StylesheetEdit* editor,
+                         QObject* parent,
                          enum NodeType type)
-  : Node("\n", start, parent, type)
+  : WidgetNode("\n", start, editor, parent, type)
 {}
 
 StartBraceNode::StartBraceNode(QTextCursor start,
-                               StylesheetEdit* parent,
+                               StylesheetEdit* editor,
+                               QObject* parent,
                                enum NodeType type)
-  : Node("{", start, parent, type)
+  : WidgetNode("{", start, editor, parent, type)
   , m_isBraceAtCursor(false)
   , m_endBrace(nullptr)
 {}
@@ -1007,9 +995,10 @@ StartBraceNode::endBrace() const
 }
 
 EndBraceNode::EndBraceNode(QTextCursor start,
-                           StylesheetEdit* parent,
+                           StylesheetEdit* editor,
+                           QObject* parent,
                            enum NodeType type)
-  : Node("}", start, parent, type)
+  : WidgetNode("}", start, editor, parent, type)
   , m_isBraceAtCursor(false)
   , m_startBrace(nullptr)
 {}
@@ -1046,9 +1035,10 @@ EndBraceNode::startBrace() const
 
 BadStartCommentNode::BadStartCommentNode(QTextCursor start,
                                          ParserState::Errors errors,
-                                         StylesheetEdit* parent,
+                                         StylesheetEdit* editor,
+                                         QObject* parent,
                                          enum NodeType type)
-  : Node("/*", start, parent, type)
+  : WidgetNode("/*", start, editor, parent, type)
   , BadNode(errors)
 {}
 
@@ -1060,9 +1050,10 @@ BadStartCommentNode::end() const
 
 BadEndCommentNode::BadEndCommentNode(QTextCursor start,
                                      ParserState::Errors errors,
-                                     StylesheetEdit* parent,
+                                     StylesheetEdit* editor,
+                                     QObject* parent,
                                      enum NodeType type)
-  : Node("*/", start, parent, type)
+  : WidgetNode("*/", start, editor, parent, type)
   , BadNode(errors)
 {}
 

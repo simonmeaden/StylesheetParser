@@ -37,7 +37,7 @@ class LineNumberArea;
 class StylesheetEditPrivate;
 class BookmarkArea;
 class BookmarkData;
-class Node;
+class WidgetNode;
 
 class StylesheetEdit : public QPlainTextEdit
 {
@@ -119,8 +119,8 @@ class StylesheetEdit : public QPlainTextEdit
   //! match format
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
 
-  //! Returns the list of nodes.
-  QMap<QTextCursor, Node *> nodes();
+//  //! Returns the list of nodes.
+//  QMap<QTextCursor, Node*> nodes();
 
   //! Returns the bookmarks with associated text, if any.
   //!
@@ -262,6 +262,11 @@ signals:
   void lineNumber(int);
   void lineCount(int);
   void column(int);
+  void parseInitialText(const QString&);
+  void handleMouseClicked(const QPoint&);
+  void handleCursorPositionChanged(QTextCursor);
+  void handleSuggestion(QAction*);
+  void handleDocumentChanged(int, int, int);
 
 protected:
   void contextMenuEvent(QContextMenuEvent* event);
@@ -275,10 +280,11 @@ protected:
 
   void setLineNumber(int lineNumber);
   void suggestion(bool);
+  void setContextMenu(QMenu* menu);
 
 private:
   StylesheetEditPrivate* d_ptr;
-  Node* m_hoverNode;
+  WidgetNode* m_hoverNode;
   bool m_mousePressed;
 
   void initActions();
@@ -289,8 +295,8 @@ private:
   void handleEditBookmark(bool);
   void handleGotoBookmark();
   void handleClearBookmarks(bool);
-  void handleCursorPositionChanged();
-  void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  void cursorPositionChanged();
+  void documentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
 
   void updateLeftArea(const QRect& rect, int dy);

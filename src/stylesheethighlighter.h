@@ -28,11 +28,12 @@
 #include "node.h"
 
 class StylesheetEdit;
+class DataStore;
 
 class StylesheetHighlighter : public QSyntaxHighlighter
 {
 public:
-  explicit StylesheetHighlighter(StylesheetEdit* editor);
+  explicit StylesheetHighlighter(StylesheetEdit* editor, DataStore *datastore);
 
   void highlightBlock(const QString& text);
 
@@ -96,6 +97,7 @@ public:
 
 private:
   StylesheetEdit* m_editor;
+  DataStore *m_datastore;
   QTextCharFormat m_baseFormat;
   QTextCharFormat m_widgetFormat;
   QTextCharFormat m_badWidgetFormat;

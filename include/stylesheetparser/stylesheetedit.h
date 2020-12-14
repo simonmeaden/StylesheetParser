@@ -272,15 +272,16 @@ protected:
   void contextMenuEvent(QContextMenuEvent* event);
 
   void resizeEvent(QResizeEvent* event) override;
-  void mousePressEvent(QMouseEvent* event) override;
-  void mouseMoveEvent(QMouseEvent* event) override;
-  void mouseReleaseEvent(QMouseEvent* event) override;
-  void mouseDoubleClickEvent(QMouseEvent* event) override;
+//  void mousePressEvent(QMouseEvent* event) override;
+//  void mouseMoveEvent(QMouseEvent* event) override;
+//  void mouseReleaseEvent(QMouseEvent* event) override;
+//  void mouseDoubleClickEvent(QMouseEvent* event) override;
   void leaveEvent(QEvent* event) override;
 
   void setLineNumber(int lineNumber);
   void suggestion(bool);
   void setContextMenu(QMenu* menu);
+  void customMenuRequested(QPoint pos);
 
 private:
   StylesheetEditPrivate* d_ptr;
@@ -290,6 +291,7 @@ private:
   void initActions();
   void initMenus();
   void handleParseComplete();
+  void handleRehighlight();
   void handleAddBookmark(bool);
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);

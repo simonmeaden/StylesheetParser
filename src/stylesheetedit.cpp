@@ -62,10 +62,10 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
           &StylesheetEdit::parseInitialText,
           d_ptr->m_parser,
           &Parser::parseInitialText);
-  connect(this,
-          &StylesheetEdit::handleMouseClicked,
-          d_ptr->m_parser,
-          &Parser::handleMouseClicked);
+  //  connect(this,
+  //          &StylesheetEdit::handleMouseClicked,
+  //          d_ptr->m_parser,
+  //          &Parser::handleMouseClicked);
   connect(this,
           &StylesheetEdit::handleCursorPositionChanged,
           d_ptr->m_parser,
@@ -95,6 +95,12 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   , m_bookmarkArea(new BookmarkArea(q_ptr))
   , m_lineNumberArea(new LineNumberArea(q_ptr))
 {
+  q_ptr->setContextMenuPolicy(Qt::CustomContextMenu);
+  q_ptr->connect(q_ptr,
+                 &StylesheetEdit::customContextMenuRequested,
+                 q_ptr,
+                 &StylesheetEdit::customMenuRequested);
+
   QThread* dataThread = new QThread;
   m_datastore = new DataStore();
   m_datastore->moveToThread(dataThread);
@@ -114,9 +120,11 @@ StylesheetEditPrivate::StylesheetEditPrivate(StylesheetEdit* parent)
   //  SLOT(errorString(QString))); q_ptr->connect(thread, SIGNAL(started()),
   //  m_parser, SLOT(process()));
   q_ptr->connect(m_parser,
-                 &Parser::rehighlight,
+                 &Parser::parseComplete,
                  q_ptr,
                  &StylesheetEdit::handleParseComplete);
+  q_ptr->connect(
+    m_parser, &Parser::rehighlight, q_ptr, &StylesheetEdit::handleRehighlight);
   q_ptr->connect(m_parser, &Parser::finished, parserThread, &QThread::quit);
   q_ptr->connect(m_parser, &Parser::finished, m_parser, &Parser::deleteLater);
   q_ptr->connect(
@@ -162,7 +170,7 @@ StylesheetEditPrivate::initActions()
 void
 StylesheetEditPrivate::initMenus()
 {
-  m_contextMenu = m_parser->contextMenu();
+//  m_contextMenu = m_parser->contextMenu();
   createBookmarkMenu();
 }
 
@@ -198,6 +206,18 @@ StylesheetEditPrivate::setPlainText(const QString& text)
 }
 
 void
+StylesheetEdit::handleRehighlight()
+{
+  d_ptr->handleRehighlight();
+}
+
+void
+StylesheetEditPrivate::handleRehighlight()
+{
+  m_highlighter->rehighlight();
+}
+
+void
 StylesheetEdit::handleParseComplete()
 {
   d_ptr->handleParseComplete();
@@ -206,20 +226,9 @@ StylesheetEdit::handleParseComplete()
 void
 StylesheetEditPrivate::handleParseComplete()
 {
+  // TODO - handle the parse complete code.
   m_highlighter->rehighlight();
 }
-
-// QMap<QTextCursor, Node*>
-// StylesheetEdit::nodes()
-//{
-//  return d_ptr->nodes();
-//}
-
-// QMap<QTextCursor, Node*>
-// StylesheetEditPrivate::nodes()
-//{
-//  return m_parser->nodes();
-//}
 
 void
 StylesheetEdit::setShowNewlineMarkers(bool show)
@@ -616,41 +625,41 @@ StylesheetEdit::resizeEvent(QResizeEvent* event)
   d_ptr->resizeEvent(contentsRect());
 }
 
-void
-StylesheetEdit::mousePressEvent(QMouseEvent* event)
-{
-  if (event->button() == Qt::RightButton) {
-    // context menu.
-    d_ptr->handleMouseClicked(event->pos());
-  } else {
-    QPlainTextEdit::mousePressEvent(event);
-  }
-}
+//void
+//StylesheetEdit::mousePressEvent(QMouseEvent* event)
+//{
+//  if (event->button() == Qt::RightButton) {
+//    // context menu.
+//    d_ptr->handleMouseClicked(event->pos());
+//  } else {
+//    QPlainTextEdit::mousePressEvent(event);
+//  }
+//}
 
-void
-StylesheetEditPrivate::handleMouseClicked(const QPoint& pos)
-{
-  m_contextMenu = nullptr;
-  emit q_ptr->handleMouseClicked(pos);
-}
+//void
+//StylesheetEditPrivate::handleMouseClicked(const QPoint& pos)
+//{
+//  m_contextMenu = nullptr;
+//  emit q_ptr->handleMouseClicked(pos);
+//}
 
-void
-StylesheetEdit::mouseMoveEvent(QMouseEvent* event)
-{
-  QPlainTextEdit::mouseMoveEvent(event);
-}
+//void
+//StylesheetEdit::mouseMoveEvent(QMouseEvent* event)
+//{
+//  QPlainTextEdit::mouseMoveEvent(event);
+//}
 
-void
-StylesheetEdit::mouseReleaseEvent(QMouseEvent* event)
-{
-  QPlainTextEdit::mouseReleaseEvent(event);
-}
+//void
+//StylesheetEdit::mouseReleaseEvent(QMouseEvent* event)
+//{
+//  QPlainTextEdit::mouseReleaseEvent(event);
+//}
 
-void
-StylesheetEdit::mouseDoubleClickEvent(QMouseEvent* event)
-{
-  QPlainTextEdit::mouseDoubleClickEvent(event);
-}
+//void
+//StylesheetEdit::mouseDoubleClickEvent(QMouseEvent* event)
+//{
+//  QPlainTextEdit::mouseDoubleClickEvent(event);
+//}
 
 void
 StylesheetEdit::leaveEvent(QEvent* /*event*/)
@@ -727,7 +736,12 @@ StylesheetEdit::calculateLineNumber(QTextCursor textCursor)
 void
 StylesheetEdit::format()
 {
-  // TODO format code nicely.
+  d_ptr->format();
+}
+
+void StylesheetEditPrivate::format()
+{
+  // TODO pretty print format
 }
 
 void
@@ -931,6 +945,33 @@ void
 StylesheetEdit::setContextMenu(QMenu* menu)
 {
   d_ptr->setContextMenu(menu);
+}
+
+void
+StylesheetEdit::customMenuRequested(QPoint pos)
+{
+  d_ptr->handleCustomMenuRequested(pos);
+}
+
+void
+StylesheetEditPrivate::handleCustomMenuRequested(QPoint pos)
+{
+  QMenu* menu = q_ptr->createStandardContextMenu();
+  menu->addSeparator();
+  auto suggestionsMenu = menu->addMenu(q_ptr->tr("&Suggestions"));
+  suggestionsMenu->setEnabled(false);
+  m_parser->handleMouseClicked(pos, &suggestionsMenu);
+
+  menu->addSeparator();
+
+  auto m_formatAct = new QAction(q_ptr->tr("&Format"));
+  m_formatAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
+  m_formatAct->setStatusTip(q_ptr->tr("Prettyfy the stylesheet"));
+  q_ptr->connect(
+    m_formatAct, &QAction::triggered, q_ptr, &StylesheetEdit::format);
+  menu->addAction(m_formatAct);
+
+  menu->popup(q_ptr->viewport()->mapToGlobal(pos));
 }
 
 void
@@ -1307,6 +1348,7 @@ void
 StylesheetEditPrivate::setContextMenu(QMenu* menu)
 {
   m_contextMenu = menu;
+  m_contextMenu->show();
 }
 
 void

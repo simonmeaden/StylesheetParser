@@ -31,7 +31,7 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheeteditdialog.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/abstractlabelledwidget.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledwidget.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/labelledlineedit.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/labelledspinbox.h>
 
@@ -40,7 +40,7 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheeteditdialog.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/x11colors.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/abstractlabelledwidget.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledwidget.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/labelledlineedit.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/labelledspinbox.h>
 

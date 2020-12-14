@@ -25,10 +25,11 @@
 #include <QFile>
 #include <QList>
 #include <QMap>
-#include <QObject>
-#include <QTextCursor>
-#include <QStack>
+#include <QMutex>
 #include <QMutexLocker>
+#include <QObject>
+#include <QStack>
+#include <QTextCursor>
 
 #include "common.h"
 
@@ -42,13 +43,11 @@ class WidgetNode;
 class StartBraceNode;
 class EndBraceNode;
 
-
 class DataStore : public QObject
 {
   Q_OBJECT
 public:
-
-  explicit DataStore(QObject* parent=nullptr);
+  explicit DataStore(QObject* parent = nullptr);
   ~DataStore();
 
   void addWidget(const QString& widget);
@@ -58,26 +57,22 @@ public:
   bool containsProperty(const QString& name);
   QMultiMap<int, QString> fuzzySearchProperty(const QString& name);
   QMultiMap<int, QString> fuzzySearchPropertyValue(const QString& name,
-                                              const QString& value);
-  bool containsStylesheetProperty(const QString& name) const;
-  bool containsPseudoState(const QString& name) const;
+                                                   const QString& value);
+  bool containsStylesheetProperty(const QString& name);
+  bool containsPseudoState(const QString& name);
   QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
-  bool containsSubControl(const QString& name) const;
+  bool containsSubControl(const QString& name);
   QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
 
-  bool getIfValidStylesheetValue(const QString& propertyname,
-                                 const QString& valuename,
-                                 StylesheetData* data);
+  bool ifValidStylesheetValue(const QString& propertyname,
+                              const QString& valuename,
+                              StylesheetData* data);
   bool isValidPropertyValueForProperty(const QString& propertyname,
                                        const QString& value);
-  //  QList<bool> isValidPropertyValues(const QString& name, const QStringList&
-  //  values);
   AttributeType propertyValueAttribute(const QString& value);
-  //  QMap<int, QString> propertyValueAttributes(const QString &name, const
-  //  QString& value);
 
   //! Returns the names of all widgets for which this sub-control is valid.
-  QStringList possibleSubControlWidgets(const QString& name) const;
+  QStringList possibleSubControlWidgets(const QString& name);
 
   void addSubControl(const QString& control, const QString& widget);
   void addSubControl(const QString& control, QStringList& widgets);
@@ -85,39 +80,36 @@ public:
   void addPseudoState(const QString& state);
   void removePseudoState(const QString& state);
 
-  QMap<QTextCursor, Node *> nodes() const;
-  void insertNode(QTextCursor cursor, Node *node);
-  bool isNodesEmpty() const;
+  QMap<QTextCursor, Node*> nodes();
+  void insertNode(QTextCursor cursor, Node* node);
+  bool isNodesEmpty();
 
-  int braceCount() const;
+  int braceCount();
   void setBraceCount(int value);
   void incrementBraceCount();
   bool decrementBraceCount();
-  bool isBraceCountZero() const;
-  void pushStartBrace(StartBraceNode *startbrace);
-  void pushEndBrace(EndBraceNode *endbrace);
 
-  int maxSuggestionCount() const;
+  int maxSuggestionCount();
   void setMaxSuggestionCount(int maxSuggestionCount);
 
-  bool hasSuggestion() const;
+  bool hasSuggestion();
   void setHasSuggestion(bool suggestion);
 
-  bool isManualMove() const;
+  bool isManualMove();
   void setManualMove(bool manualMove);
 
-  WidgetNode *currentWidget() const;
-  void setCurrentWidget(WidgetNode *value);
-  bool isCurrentWidget(WidgetNode* node) const;
+  Node *currentNode();
+  void setCurrentWidget(WidgetNode* value);
+  bool isCurrentWidget(WidgetNode* node);
 
-  QTextCursor currentCursor() const;
-  void setCurrentCursor(const QTextCursor &currentCursor);
+  QTextCursor currentCursor();
+  void setCurrentCursor(const QTextCursor& currentCursor);
 
 signals:
   void finished();
 
 private:
-  QMutex m_locker;
+  QMutex m_mutex;
   QStringList m_widgets;
   QStringList m_colors;
   QStringList m_attributeNames;
@@ -127,8 +119,8 @@ private:
   QStringList m_StylesheetProperties;
   QStringList m_alignmentValues;
   QStringList m_paletteRoles, m_gradient, m_attachment, m_borderStyle,
-    m_borderImage, m_fontStyle, m_fontWeight, m_icon, m_origin, m_outlineStyle
-    , m_outlineWidth,m_position,m_repeat,m_textDecoration;
+    m_borderImage, m_fontStyle, m_fontWeight, m_icon, m_origin, m_outlineStyle,
+    m_outlineWidth, m_position, m_repeat, m_textDecoration;
   QString m_outlineColor;
 
   QMap<QString, QStringList> m_subControls;
@@ -141,9 +133,13 @@ private:
   int m_braceCount;
   bool m_manualMove, m_hasSuggestion;
   QTextCursor m_currentCursor;
-  WidgetNode* m_currentWidget;
+  Node* m_currentNode;
   int m_maxSuggestionCount;
   QStack<StartBraceNode*> m_braceStack;
+
+  bool isBraceCountZero();
+  void pushStartBrace(StartBraceNode* startbrace);
+  void pushEndBrace(EndBraceNode* endbrace);
 
   bool checkPropertyValue(AttributeType propertyAttribute,
                           const QString& valuename,
@@ -186,7 +182,8 @@ private:
                            StylesheetData* data = nullptr) const;
   bool checkStylesheetEditBad(const QString& value,
                               StylesheetData* data = nullptr) const;
-  bool checkStylesheetFontWeight(const QString& value, StylesheetData* data) const;
+  bool checkStylesheetFontWeight(const QString& value,
+                                 StylesheetData* data) const;
 
   QMap<QString, QStringList> initialiseSubControlMap();
   QStringList initialiseWidgetList();

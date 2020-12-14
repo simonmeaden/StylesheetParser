@@ -22,7 +22,7 @@
 #ifndef LABELLEDLINEEDIT_H
 #define LABELLEDLINEEDIT_H
 
-#include "sm_widgets/abstractlabelledwidget.h"
+#include "abstractlabelledwidget.h"
 #include "sm_widgets_global.h"
 
 #include <QLineEdit>

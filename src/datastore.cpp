@@ -144,7 +144,7 @@ DataStore::~DataStore()
 void
 DataStore::addWidget(const QString& widget)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   if (!m_widgets.contains(widget)) {
     m_widgets.append(widget);
   }
@@ -153,14 +153,14 @@ DataStore::addWidget(const QString& widget)
 void
 DataStore::removeWidget(const QString& widget)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_widgets.removeAll(widget);
 }
 
 bool
 DataStore::containsWidget(const QString& name)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   // NOT toLower() as widget names are cased.
   return m_widgets.contains(name);
 }
@@ -168,7 +168,6 @@ DataStore::containsWidget(const QString& name)
 QMultiMap<int, QString>
 DataStore::fuzzySearch(const QString& name, QStringList list)
 {
-  m_locker.lock();
   QMultiMap<int, QString> matches;
   char* pattern = new char[name.size() + 1];
   strcpy(pattern, name.toStdString().c_str());
@@ -190,28 +189,27 @@ DataStore::fuzzySearch(const QString& name, QStringList list)
 QMultiMap<int, QString>
 DataStore::fuzzySearchWidgets(const QString& name)
 {
-  m_locker.lock();
   return fuzzySearch(name, m_widgets);
 }
 
 bool
 DataStore::containsProperty(const QString& name)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   return m_properties.contains(name.toLower());
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchProperty(const QString& name)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   return fuzzySearch(name, m_properties);
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   QMap<int, QString> data, dataIn;
   QStringList list;
   auto attribute = m_attributes.value(name);
@@ -325,34 +323,37 @@ DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 }
 
 bool
-DataStore::containsStylesheetProperty(const QString& name) const
+DataStore::containsStylesheetProperty(const QString& name)
 {
+  QMutexLocker locker(&m_mutex);
   return m_StylesheetProperties.contains(name.toLower());
 }
 
 bool
-DataStore::containsPseudoState(const QString& name) const
+DataStore::containsPseudoState(const QString& name)
 {
+  QMutexLocker locker(&m_mutex);
   return m_pseudoStates.contains(name.toLower());
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchPseudoStates(const QString& name)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   return fuzzySearch(name, m_pseudoStates);
 }
 
 bool
-DataStore::containsSubControl(const QString& name) const
+DataStore::containsSubControl(const QString& name)
 {
+  QMutexLocker locker(&m_mutex);
   return m_subControls.contains(name.toLower());
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchSubControl(const QString& name)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   return fuzzySearch(name, m_subControls.keys());
 }
 
@@ -1092,10 +1093,11 @@ DataStore::checkPropertyValue(AttributeType propertyAttribute,
 }
 
 bool
-DataStore::getIfValidStylesheetValue(const QString& propertyname,
+DataStore::ifValidStylesheetValue(const QString& propertyname,
                                      const QString& valuename,
                                      StylesheetData* data)
 {
+  QMutexLocker locker(&m_mutex);
   if (valuename.isEmpty()) {
     return false;
   }
@@ -1110,6 +1112,7 @@ bool
 DataStore::isValidPropertyValueForProperty(const QString& propertyname,
                                            const QString& valuename)
 {
+  QMutexLocker locker(&m_mutex);
   if (valuename.isEmpty()) {
     return false;
   }
@@ -1120,79 +1123,31 @@ DataStore::isValidPropertyValueForProperty(const QString& propertyname,
                              new StylesheetData()) != NoAttributeValue);
 }
 
-// QList<bool> DataStore::isValidPropertyValues(const QString& name, const
-// QStringList& values)
-//{
-//  QList<bool> results;
-
-//  if (values.length() == 1) {
-//    results.append(isValidPropertyValue(name, values.at(0)));
-
-//  } else {
-//    AttributeType type = m_attributes.value(name);
-
-//    for (auto value : values) {
-//      switch (type) {
-//      case BoxColors:
-//        if (values.length() == 0 || values.length() > 4) {
-//          results.append(false);
-
-//        } else {
-//          results.append(checkColor(value));
-//        }
-
-//        break;
-
-//      case BoxLengths:
-//        if (values.length() == 0 || values.length() > 4) {
-//          results.append(false);
-
-//        } else {
-//          results.append(checkLength(value));
-//        }
-
-//        break;
-
-//      case Radius:
-//        if (values.length() == 0 || values.length() > 2) {
-//          results.append(false);
-
-//        } else {
-//          results.append(checkRadius(value));
-//        }
-
-//        break;
-
-//      default:
-//        break;
-//      }
-//    }
-//  }
-
-//  return results;
-//}
-
 QStringList
-DataStore::possibleSubControlWidgets(const QString& name) const
+DataStore::possibleSubControlWidgets(const QString& name)
 {
+  QMutexLocker locker(&m_mutex);
   return m_subControls.value(name);
 }
 
 void
 DataStore::addSubControl(const QString& control, const QString& widget)
 {
+  QMutexLocker locker(&m_mutex);
   m_subControls.insert(control, addControls(1, &widget));
 }
 
 void
 DataStore::addSubControl(const QString& control, QStringList& widgets)
 {
+  QMutexLocker locker(&m_mutex);
   m_subControls.insert(control, widgets);
 }
 
 void
 DataStore::removeSubControl(const QString& control)
 {
+  QMutexLocker locker(&m_mutex);
   if (m_subControls.contains(control)) {
     m_subControls.remove(control);
   }
@@ -1201,7 +1156,7 @@ DataStore::removeSubControl(const QString& control)
 void
 DataStore::addPseudoState(const QString& state)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   if (!m_pseudoStates.contains(state)) {
     m_pseudoStates.append(state);
   }
@@ -1210,34 +1165,35 @@ DataStore::addPseudoState(const QString& state)
 void
 DataStore::removePseudoState(const QString& state)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_pseudoStates.removeAll(state);
 }
 
 int
-DataStore::braceCount() const
+DataStore::braceCount()
 {
+  QMutexLocker locker(&m_mutex);
   return m_braceCount;
 }
 
 void
 DataStore::setBraceCount(int value)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_braceCount = value;
 }
 
 void
 DataStore::incrementBraceCount()
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_braceCount++;
 }
 
 bool
 DataStore::decrementBraceCount()
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   if (m_braceCount > 0) {
     m_braceCount--;
     return true;
@@ -1246,7 +1202,7 @@ DataStore::decrementBraceCount()
 }
 
 bool
-DataStore::isBraceCountZero() const
+DataStore::isBraceCountZero()
 {
   return m_braceStack.isEmpty();
 }
@@ -1254,7 +1210,6 @@ DataStore::isBraceCountZero() const
 void
 DataStore::pushStartBrace(StartBraceNode* startbrace)
 {
-  m_locker.lock();
   m_startbraces.append(startbrace);
   m_braceStack.push(startbrace);
 }
@@ -1262,7 +1217,6 @@ DataStore::pushStartBrace(StartBraceNode* startbrace)
 void
 DataStore::pushEndBrace(EndBraceNode* endbrace)
 {
-  m_locker.lock();
   m_endbraces.append(endbrace);
   if (!isBraceCountZero()) {
     auto startbrace = m_braceStack.pop();
@@ -1271,28 +1225,17 @@ DataStore::pushEndBrace(EndBraceNode* endbrace)
   }
 }
 
-// StartBraceNode*
-// DataStore::popStartBrace()
-//{
-//  return braceStack.pop();
-//}
-
-// EndBraceNode*
-// DataStore::popEndBrace()
-//{
-//  return braceStack.pop();
-//}
-
 QMap<QTextCursor, Node*>
-DataStore::nodes() const
+DataStore::nodes()
 {
+  QMutexLocker locker(&m_mutex);
   return m_nodes;
 }
 
 void
 DataStore::insertNode(QTextCursor cursor, Node* node)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_nodes.insert(cursor, node);
   switch (node->type()) {
     case StartBraceType:
@@ -1304,93 +1247,91 @@ DataStore::insertNode(QTextCursor cursor, Node* node)
 }
 
 bool
-DataStore::isNodesEmpty() const
+DataStore::isNodesEmpty()
 {
+  QMutexLocker locker(&m_mutex);
   return m_nodes.isEmpty();
 }
 
-// QList<StartBraceNode *> DataStore::startBraces() const
-//{
-//  return m_startbraces;
-//}
-
-// QList<EndBraceNode *> DataStore::endBraces() const
-//{
-//  return m_endbraces;
-//}
-
 int
-DataStore::maxSuggestionCount() const
+DataStore::maxSuggestionCount()
 {
+  QMutexLocker locker(&m_mutex);
   return m_maxSuggestionCount;
 }
 
 void
 DataStore::setMaxSuggestionCount(int maxSuggestionCount)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_maxSuggestionCount = maxSuggestionCount;
 }
 
 bool
-DataStore::hasSuggestion() const
+DataStore::hasSuggestion()
 {
+  QMutexLocker locker(&m_mutex);
   return m_hasSuggestion;
 }
 
 void
 DataStore::setHasSuggestion(bool suggestion)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_hasSuggestion = suggestion;
 }
 
 bool
-DataStore::isManualMove() const
+DataStore::isManualMove()
 {
+  QMutexLocker locker(&m_mutex);
   return m_manualMove;
 }
 
 void
 DataStore::setManualMove(bool manualMove)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_manualMove = manualMove;
 }
 
-WidgetNode*
-DataStore::currentWidget() const
+Node*
+DataStore::currentNode()
 {
-  return m_currentWidget;
+  QMutexLocker locker(&m_mutex);
+  return m_currentNode;
 }
 
 void
 DataStore::setCurrentWidget(WidgetNode* widget)
 {
-  m_locker.lock();
-  m_currentWidget = widget;
+  QMutexLocker locker(&m_mutex);
+  m_currentNode = widget;
 }
 
 bool
-DataStore::isCurrentWidget(WidgetNode* node) const
+DataStore::isCurrentWidget(WidgetNode* node)
 {
-  return (m_currentWidget == node);
+  QMutexLocker locker(&m_mutex);
+  return (m_currentNode == node);
 }
 
-QTextCursor DataStore::currentCursor() const
+QTextCursor DataStore::currentCursor()
 {
+  QMutexLocker locker(&m_mutex);
   return m_currentCursor;
 }
 
 void DataStore::setCurrentCursor(const QTextCursor &currentCursor)
 {
-  m_locker.lock();
+  QMutexLocker locker(&m_mutex);
   m_currentCursor = currentCursor;
 }
 
 AttributeType
 DataStore::propertyValueAttribute(const QString& value)
 {
+  QMutexLocker locker(&m_mutex);
   if (checkColor(value)) {
     return Color;
 
@@ -1500,12 +1441,6 @@ DataStore::fuzzyTestBrush(const QString& value)
   data.insert(fuzzySearch(value, m_gradient));
   return data;
 }
-
-// QMap<int, QString>
-// DataStore::propertyValueAttributes(const QString& name, const QString& value)
-//{
-
-//}
 
 QMap<QString, QStringList>
 DataStore::initialiseSubControlMap()

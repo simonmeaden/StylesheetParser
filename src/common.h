@@ -39,15 +39,79 @@ public:
   QList<QTextCharFormat::UnderlineStyle> underline;
 };
 
-enum NodeSectionType
+struct NodeSection
 {
-  None,
-  Name,
-  Value, // only valid for propety nodes.
-  Widget,
-  WidgetPropertyName,
-  WidgetPropertyValue,
-  Comment,
+  enum Type
+  {
+    None,
+    Name,
+    PropertyName,
+    PropertyValue, // only valid for propety nodes.
+    PropertyMarker,
+    PropertyEndMarker,
+    WidgetName,
+    WidgetPseudoState,
+    WidgetSubControl,
+    WidgetPropertyName,
+    WidgetPropertyMarker,
+    WidgetPropertyValue,
+    WidgetPropertyEndMarker,
+    WidgetPseudoStateMarker,
+    WidgetSubControlMarker,
+    WidgetStartBrace,
+    WidgetEndBrace,
+    Comment,
+  };
+  NodeSection(Type t = None, int p = -1, int i = -1)
+    : type(t)
+    , position(p)
+    , node(nullptr)
+    , propertyIndex(i)
+  {}
+  bool isPropertyType()
+  {
+    switch (type) {
+      case PropertyName:
+      case PropertyMarker:
+      case PropertyEndMarker:
+      case PropertyValue:
+        return true;
+      default:
+        return false;
+    }
+  }
+  bool isWidgetType()
+  {
+    switch (type) {
+      case WidgetName:
+      case WidgetPseudoStateMarker:
+      case WidgetSubControlMarker:
+      case WidgetPseudoState:
+      case WidgetSubControl:
+      case WidgetPropertyName:
+      case WidgetPropertyValue:
+      case WidgetPropertyMarker:
+      case WidgetPropertyEndMarker:
+      case WidgetStartBrace:
+      case WidgetEndBrace:
+        return true;
+      default:
+        return false;
+    }
+  }
+  bool isCommentType()
+  {
+    switch (type) {
+      case Comment:
+        return true;
+      default:
+        return false;
+    }
+  }
+  Type type;
+  int position;
+  Node* node;
+  int propertyIndex;
 };
 
 enum NodeType
@@ -80,12 +144,12 @@ struct NodeStateData
   bool stateValid;
 };
 
-enum WidgetExtension
-{
-  NoExtension,
-  SubControlExtension,
-  PseudoStateExtension,
-};
+// enum WidgetExtension
+//{
+//  NoExtension,
+//  SubControlExtension,
+//  PseudoStateExtension,
+//};
 
 enum AttributeType
 {
@@ -128,11 +192,11 @@ enum AttributeType
 };
 enum PropertyCheck
 {
-  BadProperty = 0,
-  PropertyMarker = 0x1,
-  PropertyEndMarker = 0x2,
-  ValidName = 0x4,
-  GoodProperty = 0x7,
+  BadPropertyCheck = 0,
+  PropertyMarkerCheck = 0x1,
+  PropertyEndMarkerCheck = 0x2,
+  ValidNameCheck = 0x4,
+  GoodPropertyCheck = 0x7,
 };
 Q_DECLARE_FLAGS(PropertyChecks, PropertyCheck);
 Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyChecks)

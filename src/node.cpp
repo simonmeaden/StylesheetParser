@@ -71,6 +71,20 @@ Node::end() const
   return d_ptr->cursor.anchor() + d_ptr->name.length();
 }
 
+int
+Node::pointWidth() const
+{
+  auto fm = d_ptr->editor->fontMetrics();
+  return fm.horizontalAdvance(d_ptr->name);
+}
+
+int
+Node::pointHeight() const
+{
+  auto fm = d_ptr->editor->fontMetrics();
+  return fm.height();
+}
+
 QTextCursor
 Node::cursor() const
 {
@@ -132,25 +146,24 @@ Node::length() const
   return d_ptr->name.length();
 }
 
-QPair<NodeSectionType, int>
+NodeSection*
 Node::isIn(QPoint pos)
 {
   auto x = pos.x();
   auto y = pos.y();
   auto rect = d_ptr->editor->cursorRect(QTextCursor(d_ptr->cursor));
   auto left = rect.x();
-  auto fm = d_ptr->editor->fontMetrics();
-  auto width = fm.horizontalAdvance(d_ptr->name);
-  auto height = fm.height();
+  auto width = pointWidth();
+  auto height = pointHeight();
   auto right = left + width;
   auto top = rect.y();
   auto bottom = top + height;
 
   if (x >= left && x <= right && y >= top && y <= bottom) {
-    return qMakePair<NodeSectionType, int>(NodeSectionType::Name, 0);
+    return new NodeSection(NodeSection::Type::Name, -1);
   }
 
-  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
+  return new NodeSection(NodeSection::Type::None, -1);
 }
 
 BadBlockNode::BadBlockNode(const QString& name,
@@ -238,64 +251,123 @@ WidgetNode::setWidgetValid(bool widgetValid)
   w_ptr->widgetValid = widgetValid;
 }
 
-QPair<NodeSectionType, int>
+NodeSection*
 WidgetNode::isIn(QPoint pos)
 {
 
-  // first check if it is the widget properties.
-  for (int i = 0; i < propertyCount(); i++) {
-    auto isin = w_ptr->properties.at(i)->isIn(pos);
-    if (isin.first == NodeSectionType::Name) {
-      isin.first = NodeSectionType::WidgetPropertyName;
-      return isin;
-    } else if (isin.first == NodeSectionType::Value) {
-      isin.first = NodeSectionType::WidgetPropertyValue;
-      return isin;
-    }
+  // this just checks the property name.
+  auto isin = Node::isIn(pos);
+  if (isin->type == NodeSection::Type::Name) {
+    isin->type = NodeSection::Type::WidgetName;
+    return isin;
   }
 
-  // then elsewhere in the widget.
+  QRect rect;
   auto x = pos.x();
   auto y = pos.y();
-  auto cursor = QTextCursor(d_ptr->cursor);
-  auto oldPos = cursor.position();
-  auto rect = d_ptr->editor->cursorRect(cursor);
-  auto left = rect.x();
-  auto top = rect.top();
+  int left, right;
   auto fm = d_ptr->editor->fontMetrics();
-  int right = left, bottom = top;
+  int top, bottom;
+  QTextCursor cursor;
 
-  int end;
-  end = length();
-  while (true) {
-    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 1);
+  if (hasMarker()) {
+    cursor = markerCursor();
     rect = d_ptr->editor->cursorRect(cursor);
-    right = (rect.right() > right ? rect.right() : right);
-    bottom = (rect.bottom() > bottom ? rect.bottom() : bottom);
-    if (cursor.position() == end) {
-      break;
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    if (isSubControl())
+      right = left + fm.horizontalAdvance("::");
+    else
+      right = left + fm.horizontalAdvance(":");
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      if (isSubControl())
+        isin->type = NodeSection::Type::WidgetSubControlMarker;
+      else
+        isin->type = NodeSection::Type::WidgetPseudoStateMarker;
+      return isin;
     }
   }
 
-  if (x > left && x <= right && y > top && y <= bottom)
-    return qMakePair<NodeSectionType, int>(NodeSectionType::Widget, -1);
+  if (hasExtension()) {
+    cursor = extensionCursor();
+    rect = d_ptr->editor->cursorRect(cursor);
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    right = left + fm.horizontalAdvance(extensionName());
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      if (isSubControl())
+        isin->type = NodeSection::Type::WidgetSubControl;
+      else
+        isin->type = NodeSection::Type::WidgetPseudoState;
+      return isin;
+    }
+  }
 
-  cursor.setPosition(oldPos);
+  if (hasStartBrace()) {
+    cursor = startBraceCursor();
+    rect = d_ptr->editor->cursorRect(cursor);
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    right = left + fm.horizontalAdvance("{");
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      isin->type = NodeSection::Type::WidgetStartBrace;
+      return isin;
+    }
+  }
 
-  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
+  // then value(s)
+  QString value;
+  for (int i = 0; i < propertyCount(); i++) {
+    PropertyNode* p = property(i);
+    isin = p->isIn(pos);
+    if (isin->isPropertyType()) {
+      switch (isin->type) {
+        case NodeSection::Type::PropertyName:
+          isin->type = NodeSection::Type::WidgetPropertyName;
+          break;
+        case NodeSection::Type::PropertyMarker:
+          isin->type = NodeSection::Type::WidgetPropertyMarker;
+          break;
+        case NodeSection::Type::PropertyValue:
+          isin->type = NodeSection::Type::WidgetPropertyValue;
+          break;
+        case NodeSection::Type::PropertyEndMarker:
+          isin->type = NodeSection::Type::WidgetPropertyEndMarker;
+          break;
+      }
+      isin->propertyIndex = i;
+      return isin;
+    }
+  }
+
+  if (hasEndBrace()) {
+    cursor = endBraceCursor();
+    rect = d_ptr->editor->cursorRect(cursor);
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    right = left + fm.horizontalAdvance("}");
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      isin->type = NodeSection::Type::WidgetEndBrace;
+      return isin;
+    }
+  }
+
+  return isin;
 }
 
 void
 WidgetNode::setSubControlMarkerCursor(QTextCursor cursor)
 {
-  w_ptr->extension = SubControlExtension;
   w_ptr->markerPosition = cursor;
 }
 
 void
 WidgetNode::setPseudoStateMarkerCursor(QTextCursor cursor)
 {
-  w_ptr->extension = PseudoStateExtension;
   w_ptr->markerPosition = cursor;
 }
 
@@ -335,6 +407,12 @@ WidgetNode::setMarkerCursor(QTextCursor cursor)
   w_ptr->markerPosition = cursor;
 }
 
+bool
+WidgetNode::hasMarker()
+{
+  return (w_ptr->markerPosition.isNull());
+}
+
 QString
 WidgetNode::extensionName() const
 {
@@ -350,32 +428,43 @@ WidgetNode::setExtensionName(const QString& name)
 bool
 WidgetNode::isExtensionValid() const
 {
-  return w_ptr->extensionValid;
+  return (w_ptr->extensionType == NodeType::SubControlType ||
+          w_ptr->extensionType == NodeType::PseudoStateType);
 }
 
 bool
 WidgetNode::isSubControl() const
 {
-  return (w_ptr->extension == SubControlExtension);
+  return (w_ptr->extensionType == NodeType::SubControlType ||
+          w_ptr->extensionType == NodeType::FuzzySubControlType);
 }
 
 bool
 WidgetNode::isPseudoState() const
 {
-  return (w_ptr->extension == PseudoStateExtension);
+  return (w_ptr->extensionType == NodeType::PseudoStateType ||
+          w_ptr->extensionType == NodeType::FuzzyPseudoStateType);
 }
 
 void
-WidgetNode::setExtensionValid(bool valid)
+WidgetNode::setExtensionType(enum NodeType type)
 {
-  w_ptr->extensionValid = valid;
+  switch (type) {
+    case NodeType::SubControlType:
+    case NodeType::PseudoStateType:
+    case NodeType::FuzzySubControlType:
+    case NodeType::FuzzyPseudoStateType:
+      w_ptr->extensionType = type;
+  }
 }
 
 bool
 WidgetNode::hasExtension() const
 {
-  return (w_ptr->extension == SubControlExtension ||
-          w_ptr->extension == PseudoStateExtension);
+  return (w_ptr->extensionType == NodeType::SubControlType ||
+          w_ptr->extensionType == NodeType::PseudoStateType ||
+          w_ptr->extensionType == NodeType::FuzzySubControlType ||
+          w_ptr->extensionType == NodeType::FuzzyPseudoStateType);
 }
 
 int
@@ -476,13 +565,13 @@ PropertyNode::PropertyNode(const QString& name,
                            StylesheetEdit* editor,
                            QObject* parent,
                            enum NodeType type)
-  : WidgetNode(name, start, editor, parent, type)
+  : Node(name, start, editor, parent, type)
 {
   p_ptr = new PropertyNodeData;
 }
 
 PropertyNode::PropertyNode(const PropertyNode& other)
-  : WidgetNode(other.name(),
+  : Node(other.name(),
          other.cursor(),
          other.d_ptr->editor,
          other.parent(),
@@ -579,11 +668,10 @@ PropertyNode::position(int index)
 }
 
 void
-PropertyNode::addValue(
-  const QString& value,
-  PropertyValueCheck check,
-  QTextCursor position,
-  AttributeType attType = NoAttributeValue)
+PropertyNode::addValue(const QString& value,
+                       PropertyValueCheck check,
+                       QTextCursor position,
+                       AttributeType attType = NoAttributeValue)
 {
   p_ptr->values.append(value);
   p_ptr->checks.append(check);
@@ -660,31 +748,31 @@ PropertyNode::length() const
 bool
 PropertyNode::hasPropertyMarker() const
 {
-  return p_ptr->propertyState.testFlag(PropertyCheck::PropertyMarker);
+  return p_ptr->propertyState.testFlag(PropertyCheck::PropertyMarkerCheck);
 }
 
 void
 PropertyNode::setPropertyMarker(bool exists)
 {
-  p_ptr->propertyState.setFlag(PropertyCheck::PropertyMarker, exists);
+  p_ptr->propertyState.setFlag(PropertyCheck::PropertyMarkerCheck, exists);
 }
 
 bool
 PropertyNode::isValidPropertyName() const
 {
-  return p_ptr->propertyState.testFlag(PropertyCheck::ValidName);
+  return p_ptr->propertyState.testFlag(PropertyCheck::ValidNameCheck);
 }
 
 void
 PropertyNode::setValidPropertyName(bool valid)
 {
-  p_ptr->propertyState.setFlag(PropertyCheck::ValidName, valid);
+  p_ptr->propertyState.setFlag(PropertyCheck::ValidNameCheck, valid);
 }
 
 bool
 PropertyNode::isValidProperty()
 {
-  return p_ptr->propertyState.testFlag(PropertyCheck::GoodProperty);
+  return p_ptr->propertyState.testFlag(PropertyCheck::GoodPropertyCheck);
 }
 
 QTextCursor
@@ -708,14 +796,14 @@ PropertyNode::setPropertyMarkerCursor(QTextCursor position)
 bool
 PropertyNode::hasPropertyEndMarker()
 {
-  return p_ptr->propertyState.testFlag(PropertyCheck::PropertyEndMarker);
+  return p_ptr->propertyState.testFlag(PropertyCheck::PropertyEndMarkerCheck);
   ;
 }
 
 void
 PropertyNode::setPropertyEndMarker(bool exists)
 {
-  p_ptr->propertyState.setFlag(PropertyCheck::PropertyEndMarker, exists);
+  p_ptr->propertyState.setFlag(PropertyCheck::PropertyEndMarkerCheck, exists);
 }
 
 QTextCursor
@@ -736,61 +824,70 @@ PropertyNode::setPropertyEndMarkerCursor(QTextCursor position)
   p_ptr->endMarkerCursor = position;
 }
 
-QPair<NodeSectionType, int>
+NodeSection*
 PropertyNode::isIn(QPoint pos)
 {
+  // this just checks the property name.
+  auto isin = Node::isIn(pos);
+  if (isin->type == NodeSection::Type::Name) {
+    isin->type = NodeSection::Type::PropertyName;
+    return isin;
+  }
+
+  QRect rect;
   auto x = pos.x();
   auto y = pos.y();
-  auto cursor = QTextCursor(d_ptr->cursor);
-  auto rect = d_ptr->editor->cursorRect(cursor);
-  auto left = rect.x();
+  int left, right;
   auto fm = d_ptr->editor->fontMetrics();
-  auto width =
-    fm.horizontalAdvance(d_ptr->name); // initially just property name
-  auto height = fm.height();
-  auto right = left + width;
-  auto top = rect.y();
-  auto bottom = top + height;
-  auto propLeft = left;
-  QTextCursor propCursor(cursor);
-  propCursor.movePosition(
-    QTextCursor::Right, QTextCursor::MoveAnchor, length());
-  rect = d_ptr->editor->cursorRect(propCursor);
-  //  auto propRight = rect.x()/* + fm.horizontalAdvance(values().last())*/;
+  int top, bottom;
+  QTextCursor cursor;
 
-  // is it inside the entire property boundaries.
-  if (y >= top && y <= bottom && x >= propLeft && x <= rect.right()) {
-    // Property name.
-    if (x >= left && x <= right) {
-      return qMakePair<NodeSectionType, int>(NodeSectionType::Name, 0);
+  // check marker;
+  if (hasPropertyMarker()) {
+    cursor = propertyMarkerCursor();
+    rect = d_ptr->editor->cursorRect(cursor);
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    right = left + fm.horizontalAdvance(":");
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      isin->type = NodeSection::Type::PropertyMarker;
+      return isin;
     }
+  }
 
-    // Property values.
-    for (int i = 0; i < positionCursors().count(); i++) {
-      auto value = values().at(i);
-      auto offset = positionCursors().at(i).anchor();
-      auto valCursor(cursor);
-      auto oldRight = right;
-      valCursor.movePosition(
-        QTextCursor::Right, QTextCursor::MoveAnchor, offset);
-      rect = d_ptr->editor->cursorRect(valCursor);
-      width = fm.horizontalAdvance(value);
-      left = rect.x();
-      right = left + width + 1;
+  // then value(s)
+  QString value;
+  for (int i = 0; i < positionCursors().count(); i++) {
+    value = values().at(i);
+    cursor = positionCursors().at(i);
+    rect = d_ptr->editor->cursorRect(cursor);
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    right = left + fm.horizontalAdvance(value);
 
-      if (x >= oldRight && x <= left) {
-        // between values or name and first value.
-        return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
-      }
-
-      if (x >= left && x <= right) {
-        // inside a value.
-        return qMakePair<NodeSectionType, int>(NodeSectionType::Value, i);
-      }
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      isin->type = NodeSection::Type::PropertyValue;
+      isin->position = i;
+      break;
     }
-  } // else return not inside.
+  }
 
-  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
+  if (hasPropertyEndMarker()) {
+    cursor = propertyEndMarkerCursor();
+    rect = d_ptr->editor->cursorRect(cursor);
+    top = rect.y();
+    bottom = top + rect.height();
+    left = rect.x();
+    right = left + fm.horizontalAdvance(":");
+    if (x >= left && x <= right && y >= top && y < bottom) {
+      isin->type = NodeSection::Type::PropertyEndMarker;
+      return isin;
+    }
+  }
+
+  return isin;
 }
 
 PropertyStatus
@@ -814,8 +911,7 @@ PropertyNode::isProperty(int pos) const
 }
 
 void
-PropertyNode::setAttributeTypes(
-  const QList<AttributeType>& attributeTypes)
+PropertyNode::setAttributeTypes(const QList<AttributeType>& attributeTypes)
 {
   p_ptr->attributeTypes = attributeTypes;
 }
@@ -831,10 +927,10 @@ CommentNode::CommentNode(QTextCursor start,
 
 CommentNode::CommentNode(const CommentNode& other)
   : WidgetNode(other.name(),
-         other.cursor(),
-         other.d_ptr->editor,
-         other.parent(),
-         other.type())
+               other.cursor(),
+               other.d_ptr->editor,
+               other.parent(),
+               other.type())
 {
   c_ptr = new CommentNodeData(*other.c_ptr);
 }
@@ -916,36 +1012,33 @@ CommentNode::setEndCommentCursor(QTextCursor cursor)
   c_ptr->endCursor = cursor;
 }
 
-QPair<NodeSectionType, int>
+NodeSection*
 CommentNode::isIn(QPoint pos)
 {
+  QRect rect;
   auto x = pos.x();
   auto y = pos.y();
-  auto cursor = QTextCursor(d_ptr->cursor);
-  auto oldPos = cursor.position();
-  auto rect = d_ptr->editor->cursorRect(cursor);
-  auto left = rect.x();
-  auto top = rect.top();
+  int left, right;
   auto fm = d_ptr->editor->fontMetrics();
-  int right = left, bottom = top;
+  int top, bottom, l;
+  NodeSection* isin = new NodeSection();
 
-  int end = length();
-  while (true) {
-    cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, 1);
-    rect = d_ptr->editor->cursorRect(cursor);
-    right = (rect.right() > right ? rect.right() : right);
-    bottom = (rect.bottom() > bottom ? rect.bottom() : bottom);
-    if (cursor.position() == end) {
-      break;
-    }
+  // check marker;
+  QTextCursor s(d_ptr->editor->document());
+  s.setPosition(start());
+  rect = d_ptr->editor->cursorRect(s);
+  top = rect.y();
+  bottom = top + rect.height();
+  left = rect.x();
+  s.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, length());
+  rect = d_ptr->editor->cursorRect(s);
+  right = rect.x();
+  if (x >= left && x <= right && y >= top && y < bottom) {
+    isin->type = NodeSection::Type::Comment;
+    return isin;
   }
 
-  if (x > left && x <= right && y > top && y <= bottom)
-    return qMakePair<NodeSectionType, int>(NodeSectionType::Comment, -1);
-
-  cursor.setPosition(oldPos);
-
-  return qMakePair<NodeSectionType, int>(NodeSectionType::None, -1);
+  return isin;
 }
 
 NewlineNode::NewlineNode(QTextCursor start,

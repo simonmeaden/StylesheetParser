@@ -58,11 +58,13 @@ public:
   QTextCursor cursor() const;
   virtual int start() const;
   virtual int length() const;
+  virtual int pointWidth() const;
+  virtual int pointHeight() const;
 
   QString name() const;
   void setName(const QString& value);
 
-  virtual QPair<NodeSectionType, int> isIn(QPoint pos);
+  virtual NodeSection *isIn(QPoint pos);
 
   enum NodeType type() const;
   QString toString() const;
@@ -105,24 +107,25 @@ public:
 };
 
 class PropertyNode;
-struct WidgetNodeData
-{
-  bool widgetValid = false;
-  WidgetExtension extension = NoExtension;
-  QTextCursor markerPosition;
-  QTextCursor extensionPosition;
-  QString extensionName;
-  bool extensionValid = false;
-  bool startBrace = false;
-  QTextCursor startBracePosition;
-  bool endBrace = false;
-  QTextCursor endBracePosition;
-  QList<PropertyNode*> properties;
-};
 
 class WidgetNode : public Node
 {
   Q_OBJECT
+
+  struct WidgetNodeData
+  {
+    bool widgetValid = false;
+    enum NodeType extensionType = NoType;
+    QTextCursor markerPosition;
+    QTextCursor extensionPosition;
+    QString extensionName;
+    bool startBrace = false;
+    QTextCursor startBracePosition;
+    bool endBrace = false;
+    QTextCursor endBracePosition;
+    QList<PropertyNode*> properties;
+  };
+
 public:
   explicit WidgetNode(const QString& name,
                       QTextCursor start,
@@ -134,11 +137,14 @@ public:
 
   //  int end() const override;
   int length() const override;
+  int pointWidth() const override {return Node::pointWidth();}
+  int pointHeight() const override {return Node::pointHeight();}
 
   bool isWidgetValid() const;
   void setWidgetValid(bool widgetValid);
 
-  QPair<NodeSectionType, int> isIn(QPoint pos) override;
+  NodeSection *isIn(QPoint pos) override;
+//  bool isPropertyType()
 
   void setSubControlMarkerCursor(QTextCursor cursor);
   void setPseudoStateMarkerCursor(QTextCursor cursor);
@@ -148,13 +154,14 @@ public:
   QTextCursor markerCursor() const;
   int markerPosition() const;
   void setMarkerCursor(QTextCursor cursor);
+  bool hasMarker();
 
   QString extensionName() const;
   void setExtensionName(const QString& name);
   bool isExtensionValid() const;
   bool isSubControl() const;
   bool isPseudoState() const;
-  void setExtensionValid(bool valid);
+  void setExtensionType(enum NodeType type);
   bool hasExtension() const;
   int extensionLength() const;
 
@@ -179,7 +186,7 @@ private:
   WidgetNodeData* w_ptr;
 };
 
-class PropertyNode : public WidgetNode
+class PropertyNode : public Node
 {
   Q_OBJECT
   Q_FLAGS(PropertyChecks)
@@ -191,7 +198,7 @@ class PropertyNode : public WidgetNode
     QList<QTextCursor> cursors;
     QList<AttributeType> attributeTypes;
 
-    PropertyChecks propertyState = PropertyCheck::BadProperty;
+    PropertyChecks propertyState = PropertyCheck::BadPropertyCheck;
     QTextCursor propertyMarkerCursor;
     QTextCursor endMarkerCursor;
   };
@@ -235,6 +242,9 @@ public:
   int position(int index);
   //  void incrementOffsets(int increment = 1, int startIndex = 0);
 
+  int pointWidth() const override {return Node::pointWidth();}
+  int pointHeight() const override {return Node::pointHeight();}
+
   //! Returns the attribute types as a list.
   QList<AttributeType> attributeTypes() const;
   //! Sets the attribute types as a list.
@@ -274,7 +284,7 @@ public:
   void setPropertyEndMarkerCursor(QTextCursor position);
   //  void incrementEndMarkerOffset(int increment = 1);
 
-  QPair<NodeSectionType, int> isIn(QPoint pos) override;
+  NodeSection *isIn(QPoint pos) override;
   PropertyStatus isProperty(int offset) const;
 
 private:
@@ -366,7 +376,7 @@ public:
   QTextCursor endCommentCursor() const;
   void setEndCommentCursor(QTextCursor cursor);
 
-  QPair<NodeSectionType, int> isIn(QPoint pos) override;
+  NodeSection *isIn(QPoint pos) override;
 
 private:
   CommentNodeData* c_ptr;

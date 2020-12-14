@@ -115,30 +115,30 @@ MainWindow::initGui()
     //    "color: red; background: green\n"
     //    "color: red; background: green;\n"
     //    "color: red; border: green solid 1px\n"
-    //    "color red; \n"
-    "color: red\n"
-    "border: green solid 1px;\n"
-    "\n"
-    "{}\n"
-    "QTabWidget::branch {color: red}\n"
-    "QTabWidget::branch {color: red; background: green}\n"
-    "QTabWidget::branch {color: red; border: green solid 1px;\n" // MISSING END
-                                                                 // BRACE
-    "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
-    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
-    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
-    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
-    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
-    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
-    "  /* comment1 \n"
-    "*/ /*   \n"
-    "comment2  */"
-    "QTableWidget::branch {\n"
-    "color: red;\n"
-    "border: green solid 1px;\n"
-    " background-color: blue; \n"
-    "}\n"
-    "\n";
+        "color : red; \n"
+//    "color: red\n"
+//    "border: green solid 1px;\n"
+//    "\n"
+//    "{}\n"
+//    "QTabWidget::branch {color: red}\n"
+//    "QTabWidget::branch {color: red; background: green}\n"
+//    "QTabWidget::branch {color: red; border: green solid 1px;\n" // MISSING END
+//                                                                 // BRACE
+//    "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
+//    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
+//    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
+//    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
+//    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
+//    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
+//    "  /* comment1 \n"
+//    "*/ /*   \n"
+//    "comment2  */"
+//    "QTableWidget::branch {\n"
+//    "color: red;\n"
+//    "border: green solid 1px;\n"
+//    " background-color: blue; \n"
+//    "}\n"
+//    "\n";
 
   //         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
   //         color: red; /* comment3 */ /*" " A multiline comment \n"

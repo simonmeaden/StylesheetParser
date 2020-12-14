@@ -10,5 +10,15 @@
         <file alias="endline">go-end.png</file>
         <file alias="startline">go-start.png</file>
         <file alias="jump">go-jump.png</file>
+        <file alias="add-colon">add-colon.png</file>
+        <file alias="add-dcolon">add-dcolon.png</file>
+        <file alias="add-scolon">add-semicolon.png</file>
+        <file>valid.png</file>
+        <file alias="invalid">invalid.png</file>
+        <file alias="bad-colon">bad-colon.png</file>
+        <file alias="bad-dcolon">bad-dcolon.png</file>
+        <file alias="bad-scolon">bad-semicolon.png</file>
+        <file alias="no">no.png</file>
+        <file alias="ok">ok.png</file>
     </qresource>
 </RCC>

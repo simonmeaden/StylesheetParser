@@ -78,40 +78,39 @@ public:
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
-  void handleMouseClicked(const QPoint& pos);
+  void handleMouseClicked(const QPoint& pos, QMenu **suggestionsMenu);
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
 
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
-//  bool manualMove() const;
-//  void setManualMove(bool manualMove);
-
-  QMenu* contextMenu() const;
+//  QMenu* contextMenu() const;
 
   void handleSuggestion(QAction* act);
 
-  QPair<NodeSectionType, int> nodeForPoint(const QPoint& pos, WidgetNode** nNode);
+  void nodeForPoint(const QPoint& pos, NodeSection **nodeSection);
 
   bool showLineMarkers() const;
   void setShowLineMarkers(bool showLineMarkers);
 
-  QMenu* getContextMenu() const;
+//  QMenu* getContextMenu() const;
 
-  QMenu* getSuggestionsMenu() const;
+//  QMenu* getSuggestionsMenu() const;
 
 signals:
   void finished();
+  void parseComplete();
   void rehighlight();
   void sendContextMenu(QMenu*);
 
+  void setBraceCount(int);
+
 private:
   StylesheetEdit* m_editor;
-//  ParserData* d_ptr;
   DataStore* m_datastore;
-  QMenu *m_contextMenu, *m_suggestionsMenu;
-  QAction *m_addPropertyMarkerAct, *m_addPropertyEndMarkerAct, *m_formatAct;
+//  QMenu *m_contextMenu, *m_suggestionsMenu;
+  QAction *m_addPropertyMarkerAct, *m_addPropertyEndMarkerAct/*, *m_formatAct*/;
   bool m_showLineMarkers;
 
   void parsePropertyWithValues(PropertyNode* property,
@@ -128,8 +127,8 @@ private:
   CursorData getNodeAtCursor(QTextCursor cursor);
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
-  Node *nextNode(QTextCursor cursor);
-  Node* previousNode(QTextCursor cursor);
+//  Node *nextNode(QTextCursor cursor);
+//  Node* previousNode(QTextCursor cursor);
 
   WidgetNode* stashWidget(int position,
                           const QString& block,
@@ -141,23 +140,22 @@ private:
   void stashEndBrace(int position);
   void stashStartBrace(int position);
 
-  QMenu* createContextMenu();
+//  QMenu* createContextMenu();
   void updateContextMenu(QMap<int, QString> matches,
-                         WidgetNode* nNode,
-                         const QPoint& pos);
+                         WidgetNode* node,
+                         const QPoint& pos, QMenu **suggestionsMenu);
   void updatePropertyContextMenu(PropertyNode* property,
-                                 const QPoint& pos,
+                                 const QPoint& pos, QMenu **suggestionsMenu,
                                  QMap<int, QString> matches);
   void updatePropertyValueContextMenu(QMultiMap<int, QString> matches,
-                                      PropertyNode* nNode,
+                                      PropertyNode* property,
                                       const QString& valueName,
-                                      const QPoint& pos);
-  void updatePropertyValueContextMenu(
-    QMultiMap<int, QPair<QString, QString>> matches,
+                                      const QPoint& pos, QMenu **suggestionsMenu);
+  void updatePropertyValueContextMenu(QMultiMap<int, QPair<QString, QString>> matches,
     PropertyNode* nNode,
     const QString& valueName,
-    const QPoint& pos);
-  void updateMenu(QMap<int, QString> matches, WidgetNode* nNode, const QPoint& pos);
+    const QPoint& pos, QMenu **suggestionsMenu);
+  void updateMenu(QMap<int, QString> matches, Node *nNode, const QPoint& pos, QMenu **suggestionsMenu);
   QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
   QList<QPair<QString, QString>> sortLastNValues(
     QMultiMap<int, QPair<QString, QString>> matches);
@@ -166,7 +164,7 @@ private:
                                  const PropertyStatus& status,
                                  const QString& newName);
   void stepBack(int& pos, const QString& block);
-  enum NodeType checkType(const QString& block);
+  enum NodeType checkType(const QString& block) const;
 };
 
 #endif // PARSER_H

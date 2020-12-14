@@ -110,9 +110,13 @@ struct StylesheetEditPrivate
   void initMenus();
   void createBookmarkMenu();
   void setContextMenu(QMenu*);
+  void handleCustomMenuRequested(QPoint pos);
 
   void setPlainText(const QString& text);
+  void handleRehighlight();
   void handleParseComplete();
+
+  void format();
 
 //  QMap<QTextCursor, Node*> nodes();
 
@@ -208,7 +212,7 @@ struct StylesheetEditPrivate
   void updateLeftArea(const QRect& rect, int dy);
 
   void resizeEvent(QRect cr);
-  void handleMouseClicked(const QPoint& pos);
+//  void handleMouseClicked(const QPoint& pos);
   void handleLeaveEvent();
   void displayBookmark(BookmarkData* data, QPoint pos);
 
@@ -229,14 +233,10 @@ struct StylesheetEditPrivate
                              QColor& color1,
                              QColor& color2,
                              QColor& color3);
-
-public:
   int getLineCount() const;
 
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
-
-private:
   void setLineData(QTextCursor cursor);
   void createHover();
   QList<int> reverseLastNValues(QMap<int, QString> matches);

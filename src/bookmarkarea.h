@@ -23,10 +23,13 @@
 #define BOOKMARKAREA_H
 
 #include <QAbstractTableModel>
+#include <QAction>
 #include <QColor>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QGroupBox>
+#include <QHeaderView>
+#include <QMenu>
 #include <QRect>
 #include <QTableView>
 #include <QVariant>
@@ -35,14 +38,12 @@
 class LabelledSpinBox;
 class LabelledLineEdit;
 class HoverWidget;
-class StylesheetEdit;
+class StylesheetEditor;
 
 class BookmarkData
 {
 public:
-  BookmarkData(QString str = QString()) {
-    text = str;
-  }
+  BookmarkData(QString str = QString()) { text = str; }
   QString text;
   QRect rect;
 };
@@ -84,9 +85,8 @@ class GoToBookmarkDialog : public QDialog
 {
   Q_OBJECT
 public:
-  explicit GoToBookmarkDialog(
-    QMap<int, BookmarkData*>* bookmarks,
-    QWidget* parent = nullptr);
+  explicit GoToBookmarkDialog(QMap<int, BookmarkData*>* bookmarks,
+                              QWidget* parent = nullptr);
 
   int bookmark();
   QString text();
@@ -105,7 +105,7 @@ class BookmarkArea : public QWidget
 {
 
 public:
-  BookmarkArea(StylesheetEdit* parent = nullptr);
+  BookmarkArea(StylesheetEditor* parent = nullptr);
 
   QSize sizeHint() const override;
 
@@ -119,17 +119,18 @@ public:
   int bookmarkAreaWidth() const;
   void setWidth(int width);
 
-  int left() const;
-  void setLeft(int left);
+  //  int left() const;
+  //  void setLeft(int left);
 
   int isIn(QPoint pos);
 
   QMap<int, BookmarkData*>* bookmarks();
   void setBookmarks(QMap<int, BookmarkData*>* bookmarks);
-  void insertBookmark(int bookmark, const QString& text = QString());
+  void insertBookmark(int bookmark,
+                      const QString& text = QString());
   void toggleBookmark(int bookmark);
   void removeBookmark(int bookmark);
-  void editBookmark(int bookmark);
+  void editBookmark(int lineNumber);
   void clearBookmarks();
   bool hasBookmark(int bookmark);
   bool hasBookmarkText(int bookmark);
@@ -141,11 +142,17 @@ protected:
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
-  void contextMenuEvent(QContextMenuEvent* event);
-  void leaveEvent(QEvent *event) override;
+  //  void contextMenuEvent(QContextMenuEvent* event);
+  void leaveEvent(QEvent* event) override;
+
+  void handleAddBookmark(bool);
+  void handleRemoveBookmark(bool);
+  void handleEditBookmark(bool);
+  void handleGotoBookmark();
+  void handleClearBookmarks(bool);
 
 private:
-  StylesheetEdit* m_editor;
+  StylesheetEditor* m_editor;
   QColor m_foreSelected, m_foreUnselected, m_back;
   QFont::Weight m_weight;
   int m_width, m_left;
@@ -153,9 +160,10 @@ private:
   QMap<int, QString> m_oldBookmarks;
   QRect m_rect;
   HoverWidget* m_hoverWidget;
+  int m_lineNumber;
 
-//  void drawHoverWidget(QPoint pos, QString text);
-//  void hideHoverWidget();
+  //  void drawHoverWidget(QPoint pos, QString text);
+  //  void hideHoverWidget();
 };
 
 #endif // BOOKMARKAREA_H

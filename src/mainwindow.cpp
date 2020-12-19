@@ -36,6 +36,16 @@ MainWindow::~MainWindow() {}
 QWidget*
 MainWindow::initGui()
 {
+  auto* f1 = new QFrame(this);
+  auto* l1 = new QGridLayout;
+  f1->setLayout(l1);
+
+  m_lineBox = new QSpinBox(this);
+  m_lineBox->setMinimum(1);
+
+  auto gotoBtn = new QPushButton(tr("Go To Line"), this);
+  connect(gotoBtn, &QPushButton::clicked, this, &MainWindow::gotoLine);
+
   m_toolBar = addToolBar(tr("Main"));
   m_statusBar = statusBar();
   m_lineLbl = new QLabel("--/--", this);
@@ -45,35 +55,27 @@ MainWindow::initGui()
 
   m_editor = new StylesheetEdit(this);
   m_editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  l1->addWidget(m_editor, 0, 1);
 
   connect(
     m_editor, &StylesheetEdit::lineNumber, this, &MainWindow::setLineNumber);
   connect(
     m_editor, &StylesheetEdit::lineCount, this, &MainWindow::setLineCount);
+  connect(m_editor, &StylesheetEdit::lineCount, m_lineBox, &QSpinBox::setMaximum);
   connect(m_editor, &StylesheetEdit::column, this, &MainWindow::setColumn);
 
   const QIcon leftIcon(":/icons/left");
   QAction* leftAct = new QAction(leftIcon, tr("&Left"), this);
-  connect(leftAct,
-          &QAction::triggered,
-          m_editor,
-          qOverload<bool>(&StylesheetEdit::left));
+  connect(leftAct, &QAction::triggered, m_editor, &StylesheetEdit::left);
   const QIcon rightIcon(":/icons/right");
   QAction* rightAct = new QAction(rightIcon, tr("&Right"), this);
-  connect(rightAct,
-          &QAction::triggered,
-          m_editor,
-          qOverload<bool>(&StylesheetEdit::right));
+  connect(rightAct, &QAction::triggered, m_editor, &StylesheetEdit::right);
   const QIcon upIcon(":/icons/up");
   QAction* upAct = new QAction(upIcon, tr("&Up"), this);
-  connect(
-    upAct, &QAction::triggered, m_editor, qOverload<bool>(&StylesheetEdit::up));
+  connect(upAct, &QAction::triggered, m_editor, &StylesheetEdit::up);
   const QIcon downIcon(":/icons/down");
   QAction* downAct = new QAction(downIcon, tr("&Down"), this);
-  connect(downAct,
-          &QAction::triggered,
-          m_editor,
-          qOverload<bool>(&StylesheetEdit::down));
+  connect(downAct, &QAction::triggered, m_editor, &StylesheetEdit::down);
   const QIcon startIcon(":/icons/start");
   QAction* startAct = new QAction(startIcon, tr("&Start"), this);
   connect(startAct, &QAction::triggered, m_editor, &StylesheetEdit::start);
@@ -105,40 +107,58 @@ MainWindow::initGui()
   m_toolBar->addAction(endLineAct);
   m_toolBar->addAction(endAct);
   m_toolBar->addAction(goToAct);
+  m_toolBar->addWidget(m_lineBox);
+  m_toolBar->addWidget(gotoBtn);
 
   QString text;
 
   // Errors
-  text =
-    ""
-    //    "color: red;\n"
-    //    "color: red; background: green\n"
-    //    "color: red; background: green;\n"
-    //    "color: red; border: green solid 1px\n"
-        "color : red; \n"
-//    "color: red\n"
-//    "border: green solid 1px;\n"
-//    "\n"
-//    "{}\n"
-//    "QTabWidget::branch {color: red}\n"
-//    "QTabWidget::branch {color: red; background: green}\n"
-//    "QTabWidget::branch {color: red; border: green solid 1px;\n" // MISSING END
-//                                                                 // BRACE
-//    "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
-//    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
-//    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
-//    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
-//    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
-//    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
-//    "  /* comment1 \n"
-//    "*/ /*   \n"
-//    "comment2  */"
-//    "QTableWidget::branch {\n"
-//    "color: red;\n"
-//    "border: green solid 1px;\n"
-//    " background-color: blue; \n"
-//    "}\n"
-//    "\n";
+  text = "color : red; \n"
+         "QTabWidget::branch {color: red}\n"
+         "QTabWidget::branch {color: red; background: green}\n"
+         "QTableWidget:active {}\n\n"
+         "QTableWidget::branch {\n\n"
+         "color: blue;\n"
+         "border: green solid 1px;\n"
+         " background-color: blue; \n"
+         "}\n";
+  QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
+  bookmarks->insert(1, new BookmarkData());
+  bookmarks->insert(5, new BookmarkData("Test string"));
+  bookmarks->insert(8, new BookmarkData());
+  bookmarks->insert(12, new BookmarkData());
+  m_editor->setBookmarks(bookmarks);
+  m_editor->setShowNewlineMarkers(true);
+  m_editor->setPlainText(text);
+
+  //    "color: red;\n"
+  //    "color: red; background: green\n"
+  //    "color: red; background: green;\n"
+  //    "color: red; border: green solid 1px\n"
+  //    "color: red\n"
+  //    "border: green solid 1px;\n"
+  //    "\n"
+  //    "{}\n"
+  //    "QTabWidget::branch {color: red}\n"
+  //    "QTabWidget::branch {color: red; background: green}\n"
+  //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
+  //    MISSING END
+  //                                                                 // BRACE
+  //    "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
+  //    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
+  //    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
+  //    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
+  //    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
+  //    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
+  //    "  /* comment1 \n"
+  //    "*/ /*   \n"
+  //    "comment2  */"
+  //    "QTableWidget::branch {\n"
+  //    "color: red;\n"
+  //    "border: green solid 1px;\n"
+  //    " background-color: blue; \n"
+  //    "}\n"
+  //    "\n";
 
   //         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
   //         color: red; /* comment3 */ /*" " A multiline comment \n"
@@ -189,7 +209,6 @@ MainWindow::initGui()
   //           "subcntrol: yelow blue normal;\n"
   //           " subcntrolmarker: blue blck yellow;\n"
   //           "}";
-  ;
 
   // Correct stuff
   //  text =   "color: red";
@@ -230,31 +249,10 @@ MainWindow::initGui()
   //    "}";
 
   //  m_editor->setStyleSheet(stylesheet);
-  m_editor->setShowNewlineMarkers(true);
-  m_editor->setPlainText(text);
 
-  QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
-  bookmarks->insert(1, new BookmarkData());
-  bookmarks->insert(5, new BookmarkData("Test string"));
-  bookmarks->insert(10, new BookmarkData());
-  m_editor->setBookmarks(bookmarks);
   //  layout->addWidget(m_editor, 0, 0);
 
-  bool hasntText = m_editor->hasBookmarkText(1);
-  bool hasText = m_editor->hasBookmarkText(5);
-  QString bookmarkText = m_editor->bookmarkText(5);
-  int count = m_editor->bookmarkCount();
-
-  if (!hasntText && hasText && bookmarkText == "Test string" && count == 3) {
-    qWarning() << tr("Tested Good");
-
-  } else {
-    qWarning() << tr("Tested Bad");
-  }
-
-  m_editor->goToLine(8);
-
-  return m_editor;
+  return f1;
 }
 
 void
@@ -288,4 +286,10 @@ MainWindow::setLabels()
 
   m_lineLbl->setText(line);
   m_colLbl->setText(col);
+}
+
+void
+MainWindow::gotoLine()
+{
+  m_editor->goToLine(m_lineBox->value());
 }

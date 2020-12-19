@@ -36,7 +36,7 @@ struct NodeData
 {
   QTextCursor cursor;
   enum NodeType type;
-  StylesheetEdit* editor;
+  StylesheetEditor* editor;
   QString name;
 };
 
@@ -46,7 +46,7 @@ class Node : public QObject
 public:
   explicit Node(const QString& name,
                 QTextCursor cursor,
-                StylesheetEdit* editor,
+                StylesheetEditor* editor,
                 QObject* parent = nullptr,
                 enum NodeType type = NodeType);
   Node(const Node& other);
@@ -99,7 +99,7 @@ public:
   explicit BadBlockNode(const QString& name,
                         QTextCursor start,
                         ParserState::Errors errors,
-                        StylesheetEdit* editor,
+                        StylesheetEditor* editor,
                         QObject* parent = nullptr,
                         enum NodeType type = NodeType::BadNodeType);
 
@@ -129,7 +129,7 @@ class WidgetNode : public Node
 public:
   explicit WidgetNode(const QString& name,
                       QTextCursor start,
-                      StylesheetEdit* editor,
+                      StylesheetEditor* editor,
                       QObject* parent = nullptr,
                       enum NodeType type = WidgetType);
   WidgetNode(const WidgetNode& other);
@@ -206,7 +206,7 @@ class PropertyNode : public Node
 public:
   explicit PropertyNode(const QString& name,
                         QTextCursor start,
-                        StylesheetEdit* editor,
+                        StylesheetEditor* editor,
                         QObject* parent = nullptr,
                         enum NodeType type = PropertyType);
   PropertyNode(const PropertyNode& other);
@@ -296,7 +296,7 @@ class NewlineNode : public WidgetNode
   Q_OBJECT
 public:
   explicit NewlineNode(QTextCursor start,
-                       StylesheetEdit* editor,
+                       StylesheetEditor* editor,
                        QObject* parent = nullptr,
                        enum NodeType type = NewlineType);
 };
@@ -307,7 +307,7 @@ class StartBraceNode : public WidgetNode
   Q_OBJECT
 public:
   explicit StartBraceNode(QTextCursor start,
-                          StylesheetEdit* editor,
+                          StylesheetEditor* editor,
                           QObject* parent = nullptr,
                           enum NodeType type = StartBraceType);
 
@@ -328,7 +328,7 @@ class EndBraceNode : public WidgetNode
   Q_OBJECT
 public:
   explicit EndBraceNode(QTextCursor start,
-                        StylesheetEdit* editor,
+                        StylesheetEditor* editor,
                         QObject* parent = nullptr,
                         enum NodeType type = EndBraceType);
 
@@ -357,7 +357,7 @@ class CommentNode : public WidgetNode
   Q_OBJECT
 public:
   explicit CommentNode(QTextCursor start,
-                       StylesheetEdit* editor,
+                       StylesheetEditor* editor,
                        QObject* parent = nullptr,
                        enum NodeType type = CommentType);
   CommentNode(const CommentNode& other);
@@ -390,7 +390,7 @@ class BadStartCommentNode
 public:
   explicit BadStartCommentNode(QTextCursor start,
                                ParserState::Errors errors,
-                               StylesheetEdit* editor,
+                               StylesheetEditor* editor,
                                QObject* parent = nullptr,
                                enum NodeType type = CommentStartMarkerType);
 
@@ -405,7 +405,7 @@ class BadEndCommentNode
 public:
   explicit BadEndCommentNode(QTextCursor start,
                              ParserState::Errors errors,
-                             StylesheetEdit* editor,
+                             StylesheetEditor* editor,
                              QObject* parent = nullptr,
                              enum NodeType type = CommentEndMarkerType);
 

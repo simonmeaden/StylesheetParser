@@ -28,8 +28,8 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QList>
+#include <QPlainTextEdit>
 #include <QResizeEvent>
-#include <QTableView>
 #include <QTextCharFormat>
 #include <QThread>
 #include <QWidget>
@@ -44,72 +44,38 @@
 
 /// \cond DO_NOT_DOCUMENT
 
-class StylesheetEdit;
+class StylesheetEditor;
 class BookmarkData;
 class BookmarkArea;
 class HoverWidget;
 class Parser;
 class StylesheetData;
+class LineNumberArea;
 
-class LineNumberArea : public QWidget
+struct StylesheetEditorPrivate
 {
-public:
-  LineNumberArea(StylesheetEdit* editor = nullptr);
+  Q_DECLARE_PUBLIC(StylesheetEditor)
 
-  QSize sizeHint() const override;
+  StylesheetEditorPrivate(StylesheetEditor* parent);
 
-  QColor foreSelected() const;
-  void setForeSelected(const QColor& fore);
-  QColor foreUnselected() const;
-  void setForeUnselected(const QColor& fore);
-  QColor back() const;
-  void setBack(const QColor& back);
-
-  void setLineNumber(int lineNumber);
-  int currentLineNumber() const;
-  int lineNumberAreaWidth();
-
-  QFont::Weight weight() const;
-  void setWeight(const QFont::Weight& weight);
-
-  int left() const;
-  void setLeft(int left);
-
-protected:
-  void paintEvent(QPaintEvent* event) override;
-
-private:
-  StylesheetEdit* m_codeEditor;
-  QColor m_foreSelected, m_foreUnselected, m_back;
-  QFont::Weight m_weight;
-  int m_currentLineNumber, m_left;
-};
-
-struct StylesheetEditPrivate
-{
-  Q_DECLARE_PUBLIC(StylesheetEdit)
-
-  StylesheetEditPrivate(StylesheetEdit* parent);
-
-  StylesheetEdit* q_ptr;
+  StylesheetEditor* q_ptr;
   BookmarkArea* m_bookmarkArea;
   LineNumberArea* m_lineNumberArea;
-  DataStore *m_datastore;
+  DataStore* m_datastore;
   Parser* m_parser;
   StylesheetHighlighter* m_highlighter;
   PropertyNode* m_propertynode = nullptr;
   QString m_stylesheet;
   HoverWidget* m_hoverWidget;
   WidgetNode* m_currentHover;
-  int m_lineCount;
+  bool m_parseComplete;
 
-  QAction *m_addBookmarkAct, *m_removeBookmarkAct, *m_editBookmarkAct,
-    *m_clearBookmarksAct, *m_gotoBookmarkAct;
-  QMenu *m_contextMenu, *m_bookmarkMenu, *m_suggestionsMenu;
+  QMenu *m_contextMenu, *m_suggestionsMenu;
+
+  void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
   void initActions();
   void initMenus();
-  void createBookmarkMenu();
-  void setContextMenu(QMenu*);
+//  void createBookmarkMenu();
   void handleCustomMenuRequested(QPoint pos);
 
   void setPlainText(const QString& text);
@@ -118,7 +84,7 @@ struct StylesheetEditPrivate
 
   void format();
 
-//  QMap<QTextCursor, Node*> nodes();
+  //  QMap<QTextCursor, Node*> nodes();
 
   void setShowNewlineMarkers(bool show);
   bool showLineMarkers();
@@ -126,6 +92,7 @@ struct StylesheetEditPrivate
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
 
+  void setCurrentLineNumber(const int number);
   int currentLineNumber() const;
   int currentLineCount() const;
   void setLineNumber(int linenumber);
@@ -152,12 +119,12 @@ struct StylesheetEditPrivate
   void editBookmark(int bookmark = -1);
   QString bookmarkText(int bookmark);
   int bookmarkCount();
-  void gotoBookmark(int bookmark = -1);
+//  void gotoBookmark(int bookmark = -1);
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
   void handleGotoBookmark(bool);
   void handleContextMenuEvent(QPoint pos);
-  void handleBookmarkMenuEvent(QPoint pos);
+//  void handleBookmarkMenuEvent(QPoint pos);
 
   QString styleSheet() const;
   void setStyleSheet(const QString& stylesheet);
@@ -209,10 +176,10 @@ struct StylesheetEditPrivate
   int lineNumberAreaWidth();
   int calculateLineNumber(QTextCursor textCursor);
   int calculateColumn(QTextCursor textCursor);
-  void updateLeftArea(const QRect& rect, int dy);
+  void updateLineNumberArea(int linenumber);
 
   void resizeEvent(QRect cr);
-//  void handleMouseClicked(const QPoint& pos);
+//  void handleMouseClicked(QMouseEvent* event);
   void handleLeaveEvent();
   void displayBookmark(BookmarkData* data, QPoint pos);
 
@@ -240,6 +207,168 @@ struct StylesheetEditPrivate
   void setLineData(QTextCursor cursor);
   void createHover();
   QList<int> reverseLastNValues(QMap<int, QString> matches);
+};
+
+class StylesheetEditor : public QPlainTextEdit
+{
+  Q_OBJECT
+  Q_DECLARE_PRIVATE(StylesheetEditor)
+public:
+  explicit StylesheetEditor(QWidget* parent = nullptr);
+
+  void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
+
+  void setPlainText(const QString& text);
+
+  // TODO
+  void setShowNewlineMarkers(bool show);
+  bool showNewlineMarkers();
+
+  QString styleSheet() const;
+  void setStyleSheet(const QString& stylesheet);
+
+  void setValueFormat(QColor color,
+                      QColor back,
+                      QFont::Weight weight = QFont::Normal);
+  void setWidgetFormat(QColor color,
+                       QColor back,
+                       QFont::Weight weight = QFont::Normal);
+  void setPseudoStateFormat(QColor color,
+                            QColor back,
+                            QFont::Weight weight = QFont::Normal);
+  void setPseudoStateMarkerFormat(QColor color,
+                                  QColor back,
+                                  QFont::Weight weight = QFont::Normal);
+  void setSubControlFormat(QColor color,
+                           QColor back,
+                           QFont::Weight weight = QFont::Normal);
+  void setSubControlMarkerFormat(QColor color,
+                                 QColor back,
+                                 QFont::Weight weight = QFont::Normal);
+  void setPropertyFormat(QColor color,
+                         QColor back,
+                         QFont::Weight weight = QFont::Normal);
+  void setPropertyMarkerFormat(QColor color,
+                               QColor back,
+                               QFont::Weight weight = QFont::Normal);
+  void setLineNumberFormat(QColor foreground,
+                           QColor back,
+                           QFont::Weight weight = QFont::Light);
+  void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
+
+  QMap<int, BookmarkData*>* bookmarks();
+  void setBookmarks(QMap<int, BookmarkData*>* bookmarks);
+  void insertBookmark(int bookmark, const QString& text = QString());
+  void toggleBookmark(int bookmark);
+  void editBookmark(int bookmark = -1);
+  void removeBookmark(int bookmark);
+  void clearBookmarks();
+  bool hasBookmark(int linenumber);
+  bool hasBookmarkText(int bookmark);
+  QString bookmarkText(int bookmark);
+  int bookmarkCount();
+//  void gotoBookmark(int bookmark);
+  void gotoBookmarkDialog();
+
+  void format();
+
+  void up(int n = 1);
+  void down(int n = 1);
+  void left(int n = 1);
+  void right(int n = 1);
+  void start();
+  void end();
+  void startOfLine();
+  void endOfLine();
+  void goToLine(int lineNumber);
+
+  int lineNumberAreaWidth();
+  int bookmarkAreaWidth();
+  int calculateLineNumber(QTextCursor textCursor);
+//  void contextBookmarkMenuEvent(QContextMenuEvent* event);
+  //  void drawHoverWidget(QPoint pos, QString text);
+
+  int maxSuggestionCount() const;
+  void setMaxSuggestionCount(int maxSuggestionCount);
+
+  void mousePressEvent(QMouseEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
+  void mouseDoubleClickEvent(QMouseEvent* event) override;
+
+//  void handleMouseClicked(QMouseEvent* event);
+//  void handleMousePressEvent(QMouseEvent* event);
+//  void handleMouseMoveEvent(QMouseEvent* event);
+//  void handleMouseReleaseEvent(QMouseEvent* event);
+//  void handleMouseDoubleClickEvent(QMouseEvent* event);
+
+  // These should not be documented as they are only removing protected status.
+  QTextBlock firstVisibleBlock() { return QPlainTextEdit::firstVisibleBlock(); }
+  QRectF blockBoundingGeometry(QTextBlock block)
+  {
+    return QPlainTextEdit::blockBoundingGeometry(block);
+  }
+  QRectF blockBoundingRect(QTextBlock block)
+  {
+    return QPlainTextEdit::blockBoundingRect(block);
+  }
+  QPointF contentOffset() { return QPlainTextEdit::contentOffset(); }
+
+  int currentLineNumber() const;
+  int getLineCount();
+
+signals:
+  void lineNumber(int);
+  void lineCount(int);
+  void column(int);
+  void parseInitialText(const QString&);
+  void handleCursorPositionChanged(QTextCursor);
+  void handleSuggestion(QAction*);
+  void handleDocumentChanged(int, int, int);
+
+protected:
+  //  void contextMenuEvent(QContextMenuEvent* event);
+
+  void resizeEvent(QResizeEvent* event) override;
+  //  void mousePressEvent(QMouseEvent* event) override;
+  //  void mouseMoveEvent(QMouseEvent* event) override;
+  //  void mouseReleaseEvent(QMouseEvent* event) override;
+  //  void mouseDoubleClickEvent(QMouseEvent* event) override;
+  void leaveEvent(QEvent* event) override;
+
+  void setLineNumber(int lineNumber);
+  void suggestion(bool);
+  //  void setContextMenu(QMenu* menu);
+  void customMenuRequested(QPoint pos);
+  void bookmarkMenuRequested(QPoint pos);
+  void linenumberMenuRequested(QPoint pos);
+
+private:
+  StylesheetEditorPrivate* d_ptr;
+  WidgetNode* m_hoverNode;
+
+  void initActions();
+  void initMenus();
+  void handleParseComplete();
+  void handleRehighlight();
+  void handleAddBookmark(bool);
+  void handleRemoveBookmark(bool);
+  void handleEditBookmark(bool);
+  void handleGotoBookmark();
+  void handleClearBookmarks(bool);
+  void cursorPositionHasChanged();
+  void documentChanged(int pos, int charsRemoved, int charsAdded);
+  void handleTextChanged();
+
+  void updateLeftArea(const QRect& rect, int dy);
+  void updateLineNumberArea();
+
+public:
+  static const QChar m_arrow;
+
+  friend class Parser;
 };
 
 /// \endcond DO_NOT_DOCUMENT

@@ -23,6 +23,7 @@
 #define DATASTORE_H
 
 #include <QFile>
+#include <QIcon>
 #include <QList>
 #include <QMap>
 #include <QMutex>
@@ -36,7 +37,7 @@
 #define FTS_FUZZY_MATCH_IMPLEMENTATION
 #include "fts_fuzzy_match.h"
 
-class StylesheetEdit;
+class StylesheetEditor;
 class StylesheetData;
 class Node;
 class WidgetNode;
@@ -98,17 +99,25 @@ public:
   bool isManualMove();
   void setManualMove(bool manualMove);
 
-  Node *currentNode();
+  Node* currentNode();
   void setCurrentWidget(WidgetNode* value);
   bool isCurrentWidget(WidgetNode* node);
 
   QTextCursor currentCursor();
   void setCurrentCursor(const QTextCursor& currentCursor);
 
+  QIcon invalidIcon() const;
+  QIcon validIcon() const;
+  QIcon addSColonIcon() const;
+  QIcon addColonIcon() const;
+  QIcon badSColonIcon() const;
+  QIcon noIcon() const;
+
 signals:
   void finished();
 
 private:
+  const QIcon m_invalidIcon, m_validIcon, m_addSColonIcon, m_addColonIcon, m_badSColonIcon, m_noIcon;
   QMutex m_mutex;
   QStringList m_widgets;
   QStringList m_colors;

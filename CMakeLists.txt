@@ -56,6 +56,8 @@ target_sources(tst_parser
       src/stylesheeteditdialog.cpp
       src/bookmarkarea.h
       src/bookmarkarea.cpp
+      src/linenumberarea.h
+      src/linenumberarea.cpp
       src/hoverwidget.h
       src/hoverwidget.cpp
       src/stylesheethighlighter.h

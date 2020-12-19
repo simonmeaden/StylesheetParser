@@ -25,8 +25,15 @@
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
 
+
 DataStore::DataStore(QObject* parent)
   : QObject(parent)
+  , m_invalidIcon(":/icons/invalid")
+  , m_validIcon(":/icons/valid")
+  , m_addSColonIcon(":/icons/add-scolon")
+  , m_addColonIcon(":/icons/add-colon")
+  , m_badSColonIcon(":/icons/bad-scolon")
+  , m_noIcon(":/icons/no")
   , m_widgets(initialiseWidgetList())
   , m_colors(initialiseColorList())
   , m_properties(initialisePropertyList())
@@ -1094,8 +1101,8 @@ DataStore::checkPropertyValue(AttributeType propertyAttribute,
 
 bool
 DataStore::ifValidStylesheetValue(const QString& propertyname,
-                                     const QString& valuename,
-                                     StylesheetData* data)
+                                  const QString& valuename,
+                                  StylesheetData* data)
 {
   QMutexLocker locker(&m_mutex);
   if (valuename.isEmpty()) {
@@ -1316,16 +1323,48 @@ DataStore::isCurrentWidget(WidgetNode* node)
   return (m_currentNode == node);
 }
 
-QTextCursor DataStore::currentCursor()
+QTextCursor
+DataStore::currentCursor()
 {
   QMutexLocker locker(&m_mutex);
   return m_currentCursor;
 }
 
-void DataStore::setCurrentCursor(const QTextCursor &currentCursor)
+void
+DataStore::setCurrentCursor(const QTextCursor& currentCursor)
 {
   QMutexLocker locker(&m_mutex);
   m_currentCursor = currentCursor;
+}
+
+QIcon DataStore::invalidIcon() const
+{
+  return m_invalidIcon;
+}
+
+QIcon DataStore::validIcon() const
+{
+  return m_validIcon;
+}
+
+QIcon DataStore::addSColonIcon() const
+{
+  return m_addSColonIcon;
+}
+
+QIcon DataStore::addColonIcon() const
+{
+  return m_addColonIcon;
+}
+
+QIcon DataStore::badSColonIcon() const
+{
+  return m_badSColonIcon;
+}
+
+QIcon DataStore::noIcon() const
+{
+  return m_noIcon;
 }
 
 AttributeType

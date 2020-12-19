@@ -20,9 +20,9 @@
    SOFTWARE.
 */
 #include "stylesheethighlighter.h"
-#include "stylesheetparser/stylesheetedit.h"
+#include "stylesheetedit_p.h"
 
-StylesheetHighlighter::StylesheetHighlighter(StylesheetEdit* editor,
+StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
                                              DataStore* datastore)
   : QSyntaxHighlighter(editor->document())
   , m_editor(editor)

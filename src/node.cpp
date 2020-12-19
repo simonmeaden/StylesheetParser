@@ -24,10 +24,11 @@
 #include <QtDebug>
 
 #include "stylesheetparser/stylesheetedit.h"
+#include "stylesheetedit_p.h"
 
 Node::Node(const QString& name,
            QTextCursor cursor,
-           StylesheetEdit* editor,
+           StylesheetEditor* editor,
            QObject* parent,
            enum NodeType type)
   : QObject(parent)
@@ -169,7 +170,7 @@ Node::isIn(QPoint pos)
 BadBlockNode::BadBlockNode(const QString& name,
                            QTextCursor start,
                            ParserState::Errors errors,
-                           StylesheetEdit* editor,
+                           StylesheetEditor* editor,
                            QObject* parent,
                            enum NodeType type)
   : Node(name, start, editor, parent, type)
@@ -200,7 +201,7 @@ BadNode::setError(const ParserState::Errors& errors)
 
 WidgetNode::WidgetNode(const QString& name,
                        QTextCursor start,
-                       StylesheetEdit* editor,
+                       StylesheetEditor* editor,
                        QObject* parent,
                        enum NodeType type)
   : Node(name, start, editor, parent, type)
@@ -562,7 +563,7 @@ WidgetNode::propertyCount() const
 
 PropertyNode::PropertyNode(const QString& name,
                            QTextCursor start,
-                           StylesheetEdit* editor,
+                           StylesheetEditor* editor,
                            QObject* parent,
                            enum NodeType type)
   : Node(name, start, editor, parent, type)
@@ -917,7 +918,7 @@ PropertyNode::setAttributeTypes(const QList<AttributeType>& attributeTypes)
 }
 
 CommentNode::CommentNode(QTextCursor start,
-                         StylesheetEdit* editor,
+                         StylesheetEditor* editor,
                          QObject* parent,
                          enum NodeType type)
   : WidgetNode(QString(), start, editor, parent, type)
@@ -1042,14 +1043,14 @@ CommentNode::isIn(QPoint pos)
 }
 
 NewlineNode::NewlineNode(QTextCursor start,
-                         StylesheetEdit* editor,
+                         StylesheetEditor* editor,
                          QObject* parent,
                          enum NodeType type)
   : WidgetNode("\n", start, editor, parent, type)
 {}
 
 StartBraceNode::StartBraceNode(QTextCursor start,
-                               StylesheetEdit* editor,
+                               StylesheetEditor* editor,
                                QObject* parent,
                                enum NodeType type)
   : WidgetNode("{", start, editor, parent, type)
@@ -1088,7 +1089,7 @@ StartBraceNode::endBrace() const
 }
 
 EndBraceNode::EndBraceNode(QTextCursor start,
-                           StylesheetEdit* editor,
+                           StylesheetEditor* editor,
                            QObject* parent,
                            enum NodeType type)
   : WidgetNode("}", start, editor, parent, type)
@@ -1128,7 +1129,7 @@ EndBraceNode::startBrace() const
 
 BadStartCommentNode::BadStartCommentNode(QTextCursor start,
                                          ParserState::Errors errors,
-                                         StylesheetEdit* editor,
+                                         StylesheetEditor* editor,
                                          QObject* parent,
                                          enum NodeType type)
   : WidgetNode("/*", start, editor, parent, type)
@@ -1143,7 +1144,7 @@ BadStartCommentNode::end() const
 
 BadEndCommentNode::BadEndCommentNode(QTextCursor start,
                                      ParserState::Errors errors,
-                                     StylesheetEdit* editor,
+                                     StylesheetEditor* editor,
                                      QObject* parent,
                                      enum NodeType type)
   : WidgetNode("*/", start, editor, parent, type)

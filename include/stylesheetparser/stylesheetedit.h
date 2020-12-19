@@ -34,17 +34,16 @@
 #include <QToolTip>
 
 class LineNumberArea;
-class StylesheetEditPrivate;
+class StylesheetEditorPrivate;
 class BookmarkArea;
 class BookmarkData;
 class WidgetNode;
+class StylesheetEditor;
 
-class StylesheetEdit : public QPlainTextEdit
-{
-  Q_OBJECT Q_DECLARE_PRIVATE(StylesheetEdit) public
-    :
-
-    explicit StylesheetEdit(QWidget* parent = nullptr);
+class StylesheetEdit : public QWidget {
+  Q_OBJECT
+public:
+  explicit StylesheetEdit(QWidget* parent = nullptr);
 
   //! Reimplemented from QPlainText::setPlainText()
   void setPlainText(const QString& text);
@@ -100,7 +99,7 @@ class StylesheetEdit : public QPlainTextEdit
                                QFont::Weight weight = QFont::Normal);
   //! Sets a new foreground/background/fontweight for the highlighter line
   //! numbers format
-  void setLineNumberFormat(QColor foreground,
+  void setLineNumberFormat(QColor color,
                            QColor back,
                            QFont::Weight weight = QFont::Light);
   //  //! Sets a new foreground/background/fontweight for the highlighter bad
@@ -119,8 +118,8 @@ class StylesheetEdit : public QPlainTextEdit
   //! match format
   void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
 
-//  //! Returns the list of nodes.
-//  QMap<QTextCursor, Node*> nodes();
+  //  //! Returns the list of nodes.
+  //  QMap<QTextCursor, Node*> nodes();
 
   //! Returns the bookmarks with associated text, if any.
   //!
@@ -156,73 +155,20 @@ class StylesheetEdit : public QPlainTextEdit
   int bookmarkCount();
   //! Moves the current line number to the supplied number.
   void gotoBookmark(int bookmark);
-  void gotoBookmarkDialog(bool);
+  void gotoBookmarkDialog();
 
   //! Pretty print the text.
   void format();
 
   //! Returns the current line number
   int currentLineNumber() const;
-  //! Moves 1 line up
-  //!
-  //! This is a convenience function to catch signals that have a boolean
-  //! parameter which defaults to 0.
-  //!
-  //! To use it it the modern form you will probably need to use qOverload<bool>
-  //! or QOverload<bool> in order to access it properly.
-  //! \code
-  //!   QAction* act = new QAction(upIcon, tr("&Up"), this);
-  //!   connect(act, &QAction::triggered, m_editor,
-  //!   qOverload<bool>(&StylesheetEdit::up));
-  //! \endcode
-
-  void up(bool);
-  //! Moves n lines up
-  void up(int n = 1);
-  //! Moves 1 line down
-  //!
-  //! This is a convenience function to catch signals that have a boolean
-  //! parameter which defaults to 0.
-  //!
-  //! To use it it the modern form you will probably need to use qOverload<bool>
-  //! or QOverload<bool> in order to access it properly.
-  //! \code
-  //!   QAction* act = new QAction(upIcon, tr("&Down"), this);
-  //!   connect(act, &QAction::triggered, m_editor,
-  //!   qOverload<bool>(&StylesheetEdit::down));
-  //! \endcode
-  void down(bool);
-  //! Moves n lines down
-  void down(int n = 1);
-  //! Moves 1 line left
-  //!
-  //! This is a convenience function to catch signals that have a boolean
-  //! parameter which defaults to 0.
-  //!
-  //! To use it it the modern form you will probably need to use qOverload<bool>
-  //! or QOverload<bool> in order to access it properly.
-  //! \code
-  //!   QAction* act = new QAction(icon, tr("&Left"), this);
-  //!   connect(act, &QAction::triggered, m_editor,
-  //!   qOverload<bool>(&StylesheetEdit::left));
-  //! \endcode
-  void left(bool);
-  //! Moves n characters left.
+  //! Moves n lines up, defaults to 1 line.
+  void up(int n=1);
+  //! Moves n lines down defults to 1 line.
+  void down(int n=1);
+  //! Moves n characters left, defaults to 1 line.
   void left(int n = 1);
-  //! Moves 1 line right
-  //!
-  //! This is a convenience function to catch signals that have a boolean
-  //! parameter which defaults to 0.
-  //!
-  //! To use it it the modern form you will probably need to use qOverload<bool>
-  //! or QOverload<bool> in order to access it properly.
-  //! \code
-  //!   QAction* act = new QAction(icon, tr("&Right"), this);
-  //!   connect(act, &QAction::triggered, m_editor,
-  //!   qOverload<bool>(&StylesheetEdit::right));
-  //! \endcode
-  void right(bool);
-  //! Moves n characters right.
+  //! Moves n characters right, defaults to 1 character.
   void right(int n = 1);
   //! Moves to the start of the document.
   void start();
@@ -230,33 +176,15 @@ class StylesheetEdit : public QPlainTextEdit
   void end();
   //! Moves to the start of the current line.
   void startOfLine();
-  //! Moves to the start of the current line.
+  //! Moves to the start of the current line, or the start
+  //! of the document if this is reached first.
   void endOfLine();
-  //! Moves to the start of the suggested line number.
+  //! Moves to the start of the suggested line number, or the end
+  //! of the document if this is reached first.
   void goToLine(int lineNumber);
-
-  int lineNumberAreaWidth();
-  int bookmarkAreaWidth();
-  int calculateLineNumber(QTextCursor textCursor);
-  void contextBookmarkMenuEvent(QContextMenuEvent* event);
-  //  void drawHoverWidget(QPoint pos, QString text);
 
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
-
-  /// \cond DO_NOT_DOCUMENT
-  // These should not be documented as they are only removing protected status.
-  QTextBlock firstVisibleBlock() { return QPlainTextEdit::firstVisibleBlock(); }
-  QRectF blockBoundingGeometry(QTextBlock block)
-  {
-    return QPlainTextEdit::blockBoundingGeometry(block);
-  }
-  QRectF blockBoundingRect(QTextBlock block)
-  {
-    return QPlainTextEdit::blockBoundingRect(block);
-  }
-  QPointF contentOffset() { return QPlainTextEdit::contentOffset(); }
-  /// \endcond DO_NOT_DOCUMENT
 
 signals:
   void lineNumber(int);
@@ -269,45 +197,17 @@ signals:
   void handleDocumentChanged(int, int, int);
 
 protected:
-  void contextMenuEvent(QContextMenuEvent* event);
-
-  void resizeEvent(QResizeEvent* event) override;
 //  void mousePressEvent(QMouseEvent* event) override;
 //  void mouseMoveEvent(QMouseEvent* event) override;
 //  void mouseReleaseEvent(QMouseEvent* event) override;
 //  void mouseDoubleClickEvent(QMouseEvent* event) override;
-  void leaveEvent(QEvent* event) override;
-
-  void setLineNumber(int lineNumber);
-  void suggestion(bool);
-  void setContextMenu(QMenu* menu);
-  void customMenuRequested(QPoint pos);
 
 private:
-  StylesheetEditPrivate* d_ptr;
-  WidgetNode* m_hoverNode;
-  bool m_mousePressed;
-
-  void initActions();
-  void initMenus();
-  void handleParseComplete();
-  void handleRehighlight();
-  void handleAddBookmark(bool);
-  void handleRemoveBookmark(bool);
-  void handleEditBookmark(bool);
-  void handleGotoBookmark();
-  void handleClearBookmarks(bool);
-  void cursorPositionChanged();
-  void documentChanged(int pos, int charsRemoved, int charsAdded);
-  void handleTextChanged();
-
-  void updateLeftArea(const QRect& rect, int dy);
-  void updateLeftAreaWidth(int);
-
-public:
-  static const QChar m_arrow;
-
-  friend class Parser;
+  StylesheetEditor *m_editor;
+  LineNumberArea *m_linenumberArea;
+  BookmarkArea *m_bookmarkArea;
 };
+
+
 
 #endif // STYLESHEETEDIT_H

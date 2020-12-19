@@ -27,13 +27,13 @@
 
 #include "node.h"
 
-class StylesheetEdit;
+class StylesheetEditor;
 class DataStore;
 
 class StylesheetHighlighter : public QSyntaxHighlighter
 {
 public:
-  explicit StylesheetHighlighter(StylesheetEdit* editor, DataStore *datastore);
+  explicit StylesheetHighlighter(StylesheetEditor* editor, DataStore *datastore);
 
   void highlightBlock(const QString& text);
 
@@ -96,7 +96,7 @@ public:
   QTextCharFormat::UnderlineStyle underlinestyle() const;
 
 private:
-  StylesheetEdit* m_editor;
+  StylesheetEditor* m_editor;
   DataStore *m_datastore;
   QTextCharFormat m_baseFormat;
   QTextCharFormat m_widgetFormat;

@@ -66,8 +66,8 @@ struct StylesheetEditorPrivate
   StylesheetHighlighter* m_highlighter;
   PropertyNode* m_propertynode = nullptr;
   QString m_stylesheet;
-  HoverWidget* m_hoverWidget;
-  WidgetNode* m_currentHover;
+//  HoverWidget* m_hoverWidget;
+//  WidgetNode* m_currentHover;
   bool m_parseComplete;
 
   QMenu *m_contextMenu, *m_suggestionsMenu;
@@ -178,10 +178,10 @@ struct StylesheetEditorPrivate
   int calculateColumn(QTextCursor textCursor);
   void updateLineNumberArea(int linenumber);
 
-  void resizeEvent(QRect cr);
+//  void resizeEvent(QRect cr);
 //  void handleMouseClicked(QMouseEvent* event);
-  void handleLeaveEvent();
-  void displayBookmark(BookmarkData* data, QPoint pos);
+//  void handleLeaveEvent();
+//  void displayBookmark(BookmarkData* data, QPoint pos);
 
   void cursorPositionChanged(QTextCursor textCursor);
   void suggestion(QAction* act);
@@ -189,8 +189,8 @@ struct StylesheetEditorPrivate
   void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
 
-  CursorData getNodeAtCursor(QTextCursor cursor);
-  CursorData getNodeAtCursor(int position);
+//  CursorData getNodeAtCursor(QTextCursor cursor);
+//  CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
 
   QString getValueAtCursor(int anchor, const QString& text);
@@ -205,7 +205,7 @@ struct StylesheetEditorPrivate
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
   void setLineData(QTextCursor cursor);
-  void createHover();
+//  void createHover();
   QList<int> reverseLastNValues(QMap<int, QString> matches);
 };
 
@@ -331,12 +331,12 @@ signals:
 protected:
   //  void contextMenuEvent(QContextMenuEvent* event);
 
-  void resizeEvent(QResizeEvent* event) override;
+//  void resizeEvent(QResizeEvent* event) override;
   //  void mousePressEvent(QMouseEvent* event) override;
   //  void mouseMoveEvent(QMouseEvent* event) override;
   //  void mouseReleaseEvent(QMouseEvent* event) override;
   //  void mouseDoubleClickEvent(QMouseEvent* event) override;
-  void leaveEvent(QEvent* event) override;
+//  void leaveEvent(QEvent* event) override;
 
   void setLineNumber(int lineNumber);
   void suggestion(bool);
@@ -347,7 +347,6 @@ protected:
 
 private:
   StylesheetEditorPrivate* d_ptr;
-  WidgetNode* m_hoverNode;
 
   void initActions();
   void initMenus();

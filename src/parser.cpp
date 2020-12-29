@@ -34,8 +34,8 @@ IconLabel::IconLabel(const QIcon& icon, const QString& text, QWidget* parent)
   : QWidget(parent)
 {
   auto layout = new QGridLayout;
-//  setContentsMargins(0, 0, 0, 0);
-//  layout->setContentsMargins(0, 0, 0, 0);
+  //  setContentsMargins(0, 0, 0, 0);
+  //  layout->setContentsMargins(0, 0, 0, 0);
   setLayout(layout);
   auto iconLbl = new QLabel(this);
   auto pix = icon.pixmap(QSize(16, 16));
@@ -554,7 +554,7 @@ Parser::nodeForPoint(const QPoint& pos, NodeSection** nodeSection)
 {
   auto values = m_datastore->nodes().values();
 
-  for (auto n : values) {
+  for (auto& n : values) {
     auto section = n->isIn(pos);
 
     if (section->type != NodeSection::Type::None) {
@@ -767,8 +767,9 @@ Parser::updatePropertyContextMenu(
     act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     (*suggestionsMenu)->addSeparator();
-    m_addPropertyEndMarkerAct = new QAction(
-      m_datastore->addSColonIcon(), m_editor->tr("Add property end marker (;)"));
+    m_addPropertyEndMarkerAct =
+      new QAction(m_datastore->addSColonIcon(),
+                  m_editor->tr("Add property end marker (;)"));
     (*suggestionsMenu)->addAction(m_addPropertyEndMarkerAct);
     QVariant v;
     v.setValue(qMakePair<Node*, QPoint>(property, pos));

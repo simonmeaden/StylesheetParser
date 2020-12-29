@@ -29,23 +29,13 @@
 BookmarkArea::BookmarkArea(StylesheetEditor* editor)
   : QWidget(editor)
   , m_editor(editor)
-  , m_foreSelected(QColor("#808080"))
-  , m_foreUnselected(QColor("#C5C5C5"))
-  , m_back(QColor("#EEEFEF"))
+  , m_foreSelected(QColor(0x80, 0x80, 0x80 /*"#808080"*/))
+  , m_foreUnselected(QColor(0xC5, 0xC5, 0xC5 /*"#C5C5C5"*/))
+  , m_back(QColor(0xEE, 0xEF, 0xEF /*"#EEEFEF"*/))
   , m_width(15)
   , m_left(0)
   , m_bookmarks(new QMap<int, BookmarkData*>())
 {
-
-  m_hoverWidget = new HoverWidget(editor);
-  m_hoverWidget->setVisible(
-    true); // always showing just 0 size when not needed.
-  m_hoverWidget->setPosition(QPoint(0, 0));
-  m_hoverWidget->hideHover();
-  m_hoverWidget->setDefaultBackground(QColor("lightyellow"));
-  m_hoverWidget->setDefaultForeground(QColor("lightgrey"));
-  m_hoverWidget->setHorizontalOffset(0);
-  m_hoverWidget->setVerticalOffset(40);
   setMouseTracking(true);
 }
 
@@ -106,7 +96,6 @@ BookmarkArea::setWidth(int width)
 void
 BookmarkArea::paintEvent(QPaintEvent* event)
 {
-  //  QRect m_rect;
   m_rect.setLeft(m_left);
   m_rect.setRight(m_left + event->rect().width());
   m_rect.setTop(event->rect().top());
@@ -221,38 +210,20 @@ BookmarkArea::mousePressEvent(QMouseEvent* event)
 void
 BookmarkArea::mouseMoveEvent(QMouseEvent* event)
 {
-  //  if (lineNumber>=0) {
-  //    m_editor->goToLine(lineNumber);
-  //  } else
-  //    QWidget::mousePressEvent(event);
-
-  //  QPoint pos = event->pos();
-
-  //  if (underMouse() && m_bookmarks->contains(lineNumber)) {
-  //    m_hoverWidget->setHoverText(bookmarkText(lineNumber));
-  //    m_hoverWidget->setPosition(pos);
-
-  //  } else {
-  //    m_hoverWidget->hideHover();
-  //  }
-}
-
-void
-BookmarkArea::mouseReleaseEvent(QMouseEvent* event)
-{
-  QWidget::mouseMoveEvent(event);
-}
-
-// void BookmarkArea::contextMenuEvent(QContextMenuEvent* event)
-//{
-//  m_editor->contextBookmarkMenuEvent(event);
-//}
-
-void
-BookmarkArea::leaveEvent(QEvent* event)
-{
-  if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hideHover();
+  auto pos = event->pos();
+  auto tc = m_editor->cursorForPosition(pos);
+  auto lineNumber = m_editor->calculateLineNumber(tc);
+  setToolTip(QString());
+  if (lineNumber > 0 && lineNumber <= m_editor->getLineCount()) {
+    auto bm = m_bookmarks->value(lineNumber);
+    if (bm) {
+      if (bm->text.isEmpty())
+        setToolTip(tr("Line %1").arg(lineNumber));
+      else
+        setToolTip(tr("Line %1: %2")
+                     .arg(lineNumber)
+                     .arg(m_bookmarks->value(lineNumber)->text));
+    }
   }
 }
 
@@ -322,7 +293,8 @@ BookmarkArea::isIn(QPoint pos)
   if (m_rect.isValid()) {
     if (pos.x() >= m_rect.left() && pos.x() <= m_rect.right() &&
         pos.y() >= m_rect.top() && pos.y() <= m_rect.bottom()) {
-      for (auto key : m_bookmarks->keys()) {
+      auto keys = m_bookmarks->keys();
+      for (auto& key : keys) {
         BookmarkData* data = m_bookmarks->value(key);
 
         if (data->rect.contains(pos)) {
@@ -349,8 +321,9 @@ BookmarkArea::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
     delete m_bookmarks;
   }
 
-  for (auto key : bookmarks->keys()) {
-    if (key > 0 && key <= m_editor->getLineCount()) {
+  auto keys = bookmarks->keys();
+  for (auto& key : keys) {
+    if (key <= m_editor->getLineCount()) {
       m_bookmarks->insert(key, bookmarks->value(key));
     }
   }
@@ -404,7 +377,7 @@ void
 BookmarkArea::editBookmark(int lineNumber)
 {
   auto lineCount = m_editor->getLineCount();
-  if (lineNumber > 0 && lineNumber < lineCount){
+  if (lineNumber > 0 && lineNumber < lineCount) {
     QString text = bookmarkText(lineNumber);
 
     BookmarkEditDialog dlg(this);

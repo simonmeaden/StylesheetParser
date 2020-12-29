@@ -416,10 +416,10 @@ StylesheetEditorPrivate::setup(BookmarkArea* bookmarkArea,
   q_ptr->connect(
     parserThread, &QThread::finished, parserThread, &QThread::deleteLater);
   parserThread->start();
-  m_hoverWidget = new HoverWidget(q_ptr);
-  m_hoverWidget->setVisible(true);
-  m_hoverWidget->setPosition(QPoint(0, 0));
-  m_hoverWidget->hideHover();
+//  m_hoverWidget = new HoverWidget(q_ptr);
+//  m_hoverWidget->setVisible(true);
+//  m_hoverWidget->setPosition(QPoint(0, 0));
+//  m_hoverWidget->hideHover();
 
   //  q_ptr->setContextMenuPolicy(Qt::CustomContextMenu);
   //  q_ptr->connect(q_ptr,
@@ -535,6 +535,7 @@ void
 StylesheetEditor::setPlainText(const QString& text)
 {
   QPlainTextEdit::setPlainText(text);
+  calculateLineNumber(textCursor());
   d_ptr->setPlainText(text);
 }
 
@@ -568,7 +569,7 @@ StylesheetEditorPrivate::handleParseComplete()
   // TODO - handle the parse complete code.
   //  calculateLineNumber(QTextCursor(q_ptr->document()));
   m_highlighter->rehighlight();
-  setLineNumber(0);
+  setLineNumber(1);
   m_parseComplete = true;
   emit q_ptr->lineNumber(currentLineNumber());
 //  emit q_ptr->column(calculateColumn(cursor));
@@ -966,13 +967,13 @@ StylesheetEditorPrivate::setBraceMatchFormat(QColor color,
   m_highlighter->setBraceMatchFormat(color, back, weight);
 }
 
-void
-StylesheetEditor::resizeEvent(QResizeEvent* event)
-{
-  QPlainTextEdit::resizeEvent(event);
+//void
+//StylesheetEditor::resizeEvent(QResizeEvent* event)
+//{
+//  QPlainTextEdit::resizeEvent(event);
 
-  d_ptr->resizeEvent(contentsRect());
-}
+//  d_ptr->resizeEvent(contentsRect());
+//}
 
 // void
 // StylesheetEditor::mousePressEvent(QMouseEvent* event)
@@ -1010,22 +1011,22 @@ StylesheetEditor::resizeEvent(QResizeEvent* event)
 //  QPlainTextEdit::mouseDoubleClickEvent(event);
 //}
 
-void
-StylesheetEditor::leaveEvent(QEvent* /*event*/)
-{
-  d_ptr->handleLeaveEvent();
-}
+//void
+//StylesheetEditor::leaveEvent(QEvent* /*event*/)
+//{
+//  d_ptr->handleLeaveEvent();
+//}
 
-void
-StylesheetEditorPrivate::resizeEvent(QRect cr)
-{
-  //  m_bookmarkArea->setGeometry(
-  //    QRect(cr.left(), cr.top(), bookmarkAreaWidth(), cr.height()));
-  //  m_lineNumberArea->setGeometry(QRect(cr.left() + bookmarkAreaWidth(),
-  //                                      cr.top(),
-  //                                      lineNumberAreaWidth(),
-  //                                      cr.height()));
-}
+//void
+//StylesheetEditorPrivate::resizeEvent(QRect cr)
+//{
+//  //  m_bookmarkArea->setGeometry(
+//  //    QRect(cr.left(), cr.top(), bookmarkAreaWidth(), cr.height()));
+//  //  m_lineNumberArea->setGeometry(QRect(cr.left() + bookmarkAreaWidth(),
+//  //                                      cr.top(),
+//  //                                      lineNumberAreaWidth(),
+//  //                                      cr.height()));
+//}
 
 void
 StylesheetEditor::initActions()
@@ -1097,7 +1098,35 @@ StylesheetEditor::mousePressEvent(QMouseEvent* event)
 void
 StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
 {
-  QPlainTextEdit::mouseMoveEvent(event);
+    auto pos = event->pos();
+    NodeSection* section = nullptr;
+    d_ptr->m_parser->nodeForPoint(pos, &section);
+    if (section && section->node) {
+        auto node = section->node;
+        switch(node->type()) {
+        case NodeType::WidgetType:
+        case NodeType::FuzzyWidgetType: {
+
+        }
+        case NodeType::PropertyType:
+        case NodeType::FuzzyPropertyType: {
+
+        }
+    }
+//    auto tc = cursorForPosition(pos);
+//    auto lineNumber = calculateLineNumber(tc);
+//    setToolTip(QString());
+//    if (lineNumber > 0 && lineNumber <= getLineCount()) {
+//      auto bm = m_bookmarks->value(lineNumber);
+//      if (bm) {
+//        if (bm->text.isEmpty())
+//          setToolTip(tr("Line %1").arg(lineNumber));
+//        else
+//          setToolTip(tr("Line %1: %2")
+//                       .arg(lineNumber)
+//                       .arg(m_bookmarks->value(lineNumber)->text));
+//      }
+    }
 }
 
 void
@@ -1161,36 +1190,36 @@ StylesheetEditorPrivate::format()
   // TODO pretty print format
 }
 
-void
-StylesheetEditorPrivate::createHover()
-{
-  if (!m_hoverWidget) {
-    m_hoverWidget = new HoverWidget(q_ptr);
-    m_hoverWidget->setVisible(
-      true); // always showing just 0 size when not needed.
-    m_hoverWidget->setPosition(QPoint(0, 0));
-    m_hoverWidget->hideHover();
-  }
-}
+//void
+//StylesheetEditorPrivate::createHover()
+//{
+//  if (!m_hoverWidget) {
+//    m_hoverWidget = new HoverWidget(q_ptr);
+//    m_hoverWidget->setVisible(
+//      true); // always showing just 0 size when not needed.
+//    m_hoverWidget->setPosition(QPoint(0, 0));
+//    m_hoverWidget->hideHover();
+//  }
+//}
 
-void
-StylesheetEditorPrivate::handleLeaveEvent()
-{
-  if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hideHover();
-  }
-}
+//void
+//StylesheetEditorPrivate::handleLeaveEvent()
+//{
+//  if (m_hoverWidget && m_hoverWidget->isVisible()) {
+//    m_hoverWidget->hideHover();
+//  }
+//}
 
-void
-StylesheetEditorPrivate::displayBookmark(BookmarkData* data, QPoint pos)
-{
-  if (m_hoverWidget && m_hoverWidget->isVisible()) {
-    m_hoverWidget->hideHover();
-  }
+//void
+//StylesheetEditorPrivate::displayBookmark(BookmarkData* data, QPoint pos)
+//{
+//  if (m_hoverWidget && m_hoverWidget->isVisible()) {
+//    m_hoverWidget->hideHover();
+//  }
 
-  m_hoverWidget->setHoverText(data->text);
-  m_hoverWidget->setPosition(pos);
-}
+//  m_hoverWidget->setHoverText(data->text);
+//  m_hoverWidget->setPosition(pos);
+//}
 
 QString
 StylesheetEditorPrivate::getValueAtCursor(int pos, const QString& text)
@@ -1769,6 +1798,7 @@ StylesheetEditorPrivate::setLineNumber(int linenumber)
   cursor.movePosition(
     QTextCursor::Down, QTextCursor::MoveAnchor, linenumber - 1);
   q_ptr->setTextCursor(cursor);
+  q_ptr->setFocus(Qt::OtherFocusReason);
   setCurrentCursor(cursor);
   //  setLineData(cursor);
   m_lineNumberArea->setLineNumber(linenumber);

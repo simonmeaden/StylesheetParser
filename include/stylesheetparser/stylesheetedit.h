@@ -126,6 +126,9 @@ public:
   //! The bookmarks are stored in the key list of a map.
   QMap<int, BookmarkData*>* bookmarks();
   //! Sets the bookmarks with associated text, if any.
+  //! \note
+  //! Bookmarks will only be added for line numbers that actually exist.
+  //!
   void setBookmarks(QMap<int, BookmarkData*>* bookmarks);
   //! Inserts a new bookmark, with an optional text component. The current text
   //! is stored until the text is replaced again.

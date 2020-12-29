@@ -64,7 +64,7 @@ public:
   QString name() const;
   void setName(const QString& value);
 
-  virtual NodeSection *isIn(QPoint pos);
+  virtual NodeSection* isIn(QPoint pos);
 
   enum NodeType type() const;
   QString toString() const;
@@ -137,14 +137,14 @@ public:
 
   //  int end() const override;
   int length() const override;
-  int pointWidth() const override {return Node::pointWidth();}
-  int pointHeight() const override {return Node::pointHeight();}
+  int pointWidth() const override { return Node::pointWidth(); }
+  int pointHeight() const override { return Node::pointHeight(); }
 
   bool isWidgetValid() const;
   void setWidgetValid(bool widgetValid);
 
-  NodeSection *isIn(QPoint pos) override;
-//  bool isPropertyType()
+  NodeSection* isIn(QPoint pos) override;
+  //  bool isPropertyType()
 
   void setSubControlMarkerCursor(QTextCursor cursor);
   void setPseudoStateMarkerCursor(QTextCursor cursor);
@@ -180,6 +180,7 @@ public:
   void addProperty(PropertyNode* property);
   PropertyNode* property(int index) const;
   int propertyCount() const;
+  bool isFinalProperty(PropertyNode *property) const;
   //  QList<QTextCursor> propertyKeys();
 
 private:
@@ -242,8 +243,8 @@ public:
   int position(int index);
   //  void incrementOffsets(int increment = 1, int startIndex = 0);
 
-  int pointWidth() const override {return Node::pointWidth();}
-  int pointHeight() const override {return Node::pointHeight();}
+  int pointWidth() const override { return Node::pointWidth(); }
+  int pointHeight() const override { return Node::pointHeight(); }
 
   //! Returns the attribute types as a list.
   QList<AttributeType> attributeTypes() const;
@@ -268,7 +269,7 @@ public:
 
   bool isValidPropertyName() const;
   void setValidPropertyName(bool valid);
-  bool isValidProperty();
+  bool isValidProperty(WidgetNode *widget);
 
   bool hasPropertyMarker() const;
   void setPropertyMarker(bool exists);
@@ -284,7 +285,7 @@ public:
   void setPropertyEndMarkerCursor(QTextCursor position);
   //  void incrementEndMarkerOffset(int increment = 1);
 
-  NodeSection *isIn(QPoint pos) override;
+  NodeSection* isIn(QPoint pos) override;
   PropertyStatus isProperty(int offset) const;
 
 private:
@@ -376,7 +377,7 @@ public:
   QTextCursor endCommentCursor() const;
   void setEndCommentCursor(QTextCursor cursor);
 
-  NodeSection *isIn(QPoint pos) override;
+  NodeSection* isIn(QPoint pos) override;
 
 private:
   CommentNodeData* c_ptr;

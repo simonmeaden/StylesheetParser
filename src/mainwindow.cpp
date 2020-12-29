@@ -61,7 +61,8 @@ MainWindow::initGui()
     m_editor, &StylesheetEdit::lineNumber, this, &MainWindow::setLineNumber);
   connect(
     m_editor, &StylesheetEdit::lineCount, this, &MainWindow::setLineCount);
-  connect(m_editor, &StylesheetEdit::lineCount, m_lineBox, &QSpinBox::setMaximum);
+  connect(
+    m_editor, &StylesheetEdit::lineCount, m_lineBox, &QSpinBox::setMaximum);
   connect(m_editor, &StylesheetEdit::column, this, &MainWindow::setColumn);
 
   const QIcon leftIcon(":/icons/left");
@@ -112,24 +113,29 @@ MainWindow::initGui()
 
   QString text;
 
+  // No Errors
+  //  text = "color : red; \n"
+  //         "QTabWidget::branch {color: red}\n"
+  //         "QTabWidget::branch {color: red; background: green}\n"
+  //         "QTableWidget:active {}\n\n"
+  //         "QTableWidget::branch {\n\n"
+  //         "color: blue;\n"
+  //         "border: green solid 1px;\n"
+  //         " background-color: blue; \n"
+  //         "}\n";
   // Errors
-  text = "color : red; \n"
-         "QTabWidget::branch {color: red}\n"
-         "QTabWidget::branch {color: red; background: green}\n"
-         "QTableWidget:active {}\n\n"
-         "QTableWidget::branch {\n\n"
-         "color: blue;\n"
-         "border: green solid 1px;\n"
-         " background-color: blue; \n"
-         "}\n";
+  text = ""
+         "color: red\n"
+;
+  m_editor->setPlainText(text);
   QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
   bookmarks->insert(1, new BookmarkData());
   bookmarks->insert(5, new BookmarkData("Test string"));
   bookmarks->insert(8, new BookmarkData());
   bookmarks->insert(12, new BookmarkData());
+  bookmarks->insert(14, new BookmarkData());
   m_editor->setBookmarks(bookmarks);
   m_editor->setShowNewlineMarkers(true);
-  m_editor->setPlainText(text);
 
   //    "color: red;\n"
   //    "color: red; background: green\n"

@@ -141,9 +141,9 @@ protected:
   void paintEvent(QPaintEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
-  void mouseReleaseEvent(QMouseEvent* event) override;
+//  void mouseReleaseEvent(QMouseEvent* event) override;
   //  void contextMenuEvent(QContextMenuEvent* event);
-  void leaveEvent(QEvent* event) override;
+//  void leaveEvent(QEvent* event) override;
 
   void handleAddBookmark(bool);
   void handleRemoveBookmark(bool);
@@ -159,7 +159,7 @@ private:
   QMap<int, BookmarkData*>* m_bookmarks;
   QMap<int, QString> m_oldBookmarks;
   QRect m_rect;
-  HoverWidget* m_hoverWidget;
+//  HoverWidget* m_hoverWidget;
   int m_lineNumber;
 
   //  void drawHoverWidget(QPoint pos, QString text);

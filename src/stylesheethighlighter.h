@@ -33,7 +33,8 @@ class DataStore;
 class StylesheetHighlighter : public QSyntaxHighlighter
 {
 public:
-  explicit StylesheetHighlighter(StylesheetEditor* editor, DataStore *datastore);
+  explicit StylesheetHighlighter(StylesheetEditor* editor,
+                                 DataStore* datastore);
 
   void highlightBlock(const QString& text);
 
@@ -97,7 +98,7 @@ public:
 
 private:
   StylesheetEditor* m_editor;
-  DataStore *m_datastore;
+  DataStore* m_datastore;
   QTextCharFormat m_baseFormat;
   QTextCharFormat m_widgetFormat;
   QTextCharFormat m_badWidgetFormat;
@@ -126,7 +127,7 @@ private:
 
   int setNodeEnd(int nodeEnd, int blockEnd);
   int setNodeStart(int nodeStart, int blockStart);
-//  void formatProperty(PropertyNode* property);
+  //  void formatProperty(PropertyNode* property);
   //  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int&
   //  blockEnd,int &nodeStart);
   //  int getPositionRelToBlock(Node* node,
@@ -134,9 +135,10 @@ private:
   //                            int offset = 0);
   bool isInBlock(int position, int length, int blockStart, int blockEnd);
   void formatVisiblePart(int blockStart,
-                                    int blockEnd,
-                                    int position,
-                                    int length, QTextCharFormat format);
+                         int blockEnd,
+                         int position,
+                         int length,
+                         QTextCharFormat format);
   //  int getLengthRelToBlock(Node* node,
   //                          QTextBlock block,
   //                          int position = -1,
@@ -145,7 +147,10 @@ private:
                       int length,
                       int blockEnd,
                       QTextCharFormat format);
-  void formatProperty(PropertyNode *property, int blockStart, int blockEnd);
+  void formatProperty(PropertyNode* property,
+                      int blockStart,
+                      int blockEnd,
+                      WidgetNode* widget = nullptr);
 };
 
 #endif // STYLESHEETHIGHLIGHTER_H

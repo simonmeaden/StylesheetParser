@@ -23,8 +23,8 @@
 
 #include <QtDebug>
 
-#include "stylesheetparser/stylesheetedit.h"
 #include "stylesheetedit_p.h"
+#include "stylesheetparser/stylesheetedit.h"
 
 Node::Node(const QString& name,
            QTextCursor cursor,
@@ -561,6 +561,13 @@ WidgetNode::propertyCount() const
   return w_ptr->properties.size();
 }
 
+bool
+WidgetNode::isFinalProperty(PropertyNode* property) const
+{
+  auto index = w_ptr->properties.indexOf(property);
+  return (index == w_ptr->properties.size() - 1);
+}
+
 PropertyNode::PropertyNode(const QString& name,
                            QTextCursor start,
                            StylesheetEditor* editor,
@@ -771,8 +778,13 @@ PropertyNode::setValidPropertyName(bool valid)
 }
 
 bool
-PropertyNode::isValidProperty()
+PropertyNode::isValidProperty(WidgetNode* widget)
 {
+  if (widget) {
+    if (widget->isFinalProperty(this)) {
+      return isValidPropertyName() && hasPropertyMarker();
+    }
+  }
   return p_ptr->propertyState.testFlag(PropertyCheck::GoodPropertyCheck);
 }
 

@@ -132,12 +132,13 @@ StylesheetHighlighter::formatPosition(int position,
 void
 StylesheetHighlighter::formatProperty(PropertyNode* property,
                                       int blockStart,
-                                      int blockEnd)
+                                      int blockEnd,
+                                      WidgetNode*widget)
 {
   auto length = property->name().length();
   auto position = property->start();
   if (isInBlock(position, length, blockStart, blockEnd)) {
-    if (property->isValidProperty()) {
+    if (property->isValidProperty(widget)) {
       formatVisiblePart(
         blockStart, blockEnd, position, length, m_propertyFormat);
       position = property->propertyMarkerPosition();
@@ -145,12 +146,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
         formatVisiblePart(
           blockStart, blockEnd, position, 1, m_propertyMarkerFormat);
       }
-    } /* else if (!property->isValidPropertyName()) {
-       formatVisiblePart(
-         blockStart, blockEnd, position, length, m_badPropertyFormat);
-
-     }*/
-    else {
+    } else {
       formatVisiblePart(
         blockStart, blockEnd, position, length, m_badPropertyFormat);
     }
@@ -199,7 +195,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
   auto blockStart = block.position();
   auto blockEnd = blockStart + block.text().length();
 
-  for (auto key : nodes.keys()) {
+  for (auto &key : nodes.keys()) {
     auto node = nodes.value(key);
     auto type = node->type();
     int nodeStart = node->start();
@@ -310,7 +306,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         for (int i = 0; i < widget->propertyCount(); i++) {
           auto property = widget->property(i);
           if (property) {
-            formatProperty(property, blockStart, blockEnd);
+            formatProperty(property, blockStart, blockEnd, widget);
           }
         }
 

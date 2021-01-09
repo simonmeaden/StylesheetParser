@@ -85,7 +85,7 @@ public:
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
-  void handleMouseClicked(const QPoint& pos, QMenu** suggestionsMenu);
+  QMenu *handleMouseClicked(const QPoint& pos);
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
 
@@ -100,6 +100,7 @@ public:
 
   bool showLineMarkers() const;
   void setShowLineMarkers(bool showLineMarkers);
+
 
   //  QMenu* getContextMenu() const;
 
@@ -162,7 +163,12 @@ private:
                                            const QString& valueName,
                                            const QPoint& pos,
                                            QMenu** suggestionsMenu);
-  void updateInvalidPropertyValueContextMenu(
+  void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                           PropertyNode* property,
+                                           const QString& valueName,
+                                           const QPoint& pos,
+                                           QMenu** suggestionsMenu);
+  void updateInvalidNameAndPropertyValueContextMenu(
     QMultiMap<int, QPair<QString, QString>> matches,
     PropertyNode* nNode,
     const QString& valueName,
@@ -180,8 +186,9 @@ private:
                                  const PropertyStatus& status,
                                  const QString& newName);
   void stepBack(int& pos, const QString& block);
-  enum NodeType checkType(const QString& block) const;
+  enum NodeType checkType(const QString& block, PropertyNode *property=nullptr) const;
   QWidgetAction *getWidgetAction(const QIcon &icon, const QString &text, QMenu *suggestionsMenu);
+
 };
 
 #endif // PARSER_H

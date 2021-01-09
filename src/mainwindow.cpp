@@ -125,8 +125,16 @@ MainWindow::initGui()
   //         "}\n";
   // Errors
   text = ""
-         "color: red\n"
-;
+         // Good property.
+         "color : red; \n"
+         // bad property value
+         "color: rd;\n"
+         // no end marker on non-final property
+         "border: green solid 1px\n"
+         // bad property name
+         "bckground-color: blue; \n"
+         // GOOD final property does not need an end marker.
+         "background-color: blue\n";
   m_editor->setPlainText(text);
   QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
   bookmarks->insert(1, new BookmarkData());

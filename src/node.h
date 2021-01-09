@@ -180,7 +180,7 @@ public:
   void addProperty(PropertyNode* property);
   PropertyNode* property(int index) const;
   int propertyCount() const;
-  bool isFinalProperty(PropertyNode *property) const;
+  bool isFinalProperty(PropertyNode* property) const;
   //  QList<QTextCursor> propertyKeys();
 
 private:
@@ -202,6 +202,8 @@ class PropertyNode : public Node
     PropertyChecks propertyState = PropertyCheck::BadPropertyCheck;
     QTextCursor propertyMarkerCursor;
     QTextCursor endMarkerCursor;
+    WidgetNode* widget = nullptr;
+    bool isFinalProperty = false;
   };
 
 public:
@@ -212,6 +214,9 @@ public:
                         enum NodeType type = PropertyType);
   PropertyNode(const PropertyNode& other);
   ~PropertyNode();
+
+  void setWidget(WidgetNode* widget);
+  bool hasWidget();
 
   //! Returns the values as a list.
   QStringList values() const;
@@ -263,13 +268,13 @@ public:
   //! Returns the number of values in the property.
   int count();
   // indicates whether the value at index is a valid value.
-  PropertyValueCheck isValueValid(int index);
+  bool isValueValid(int index);
   int end() const override;
   int length() const override;
 
   bool isValidPropertyName() const;
   void setValidPropertyName(bool valid);
-  bool isValidProperty(WidgetNode *widget);
+  bool isValidProperty(bool finalProperty = false);
 
   bool hasPropertyMarker() const;
   void setPropertyMarker(bool exists);

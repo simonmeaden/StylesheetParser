@@ -149,8 +149,8 @@ private:
                       QTextCharFormat format);
   void formatProperty(PropertyNode* property,
                       int blockStart,
-                      int blockEnd,
-                      WidgetNode* widget = nullptr);
+                      int blockEnd, bool finalBlock=false);
+  bool checkForEmpty(const QString & text);
 };
 
 #endif // STYLESHEETHIGHLIGHTER_H

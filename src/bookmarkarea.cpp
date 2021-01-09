@@ -202,6 +202,8 @@ BookmarkArea::mousePressEvent(QMouseEvent* event)
   } else {
     if (lineNumber >= 0) {
       m_editor->goToLine(lineNumber);
+      emit m_editor->lineNumber(m_editor->currentLineNumber());
+      emit m_editor->lineCount(m_editor->getLineCount());
     } else
       QWidget::mousePressEvent(event);
   }

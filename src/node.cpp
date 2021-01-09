@@ -593,6 +593,18 @@ PropertyNode::~PropertyNode()
   delete p_ptr;
 }
 
+void
+PropertyNode::setWidget(WidgetNode* widget)
+{
+  p_ptr->widget = widget;
+}
+
+bool
+PropertyNode::hasWidget()
+{
+  return (p_ptr->widget);
+}
+
 QStringList
 PropertyNode::values() const
 {
@@ -716,15 +728,15 @@ PropertyNode::count()
   return p_ptr->cursors.size();
 }
 
-PropertyValueCheck
+bool
 PropertyNode::isValueValid(int index)
 {
-  if (index > 00 && index < count()) {
-    return p_ptr->checks.at(index);
+  if (index >= 0 && index < count()) {
+    return p_ptr->checks.at(index) != PropertyValueCheck::BadValue;
   }
 
   // default to bad.
-  return PropertyValueCheck::BadValue;
+  return false;
 }
 
 int
@@ -778,13 +790,18 @@ PropertyNode::setValidPropertyName(bool valid)
 }
 
 bool
-PropertyNode::isValidProperty(WidgetNode* widget)
+PropertyNode::isValidProperty(bool finalProperty)
 {
-  if (widget) {
-    if (widget->isFinalProperty(this)) {
+  if (p_ptr->widget) {
+    if (p_ptr->widget->isFinalProperty(this)) {
       return isValidPropertyName() && hasPropertyMarker();
     }
   }
+
+  if (!hasPropertyEndMarker() && finalProperty) {
+    return isValidPropertyName() && hasPropertyMarker();
+  }
+
   return p_ptr->propertyState.testFlag(PropertyCheck::GoodPropertyCheck);
 }
 

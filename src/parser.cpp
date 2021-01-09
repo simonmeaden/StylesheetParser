@@ -88,8 +88,13 @@ Parser::stepBack(int& pos, const QString& block)
 }
 
 enum NodeType
-Parser::checkType(const QString& block) const
+Parser::checkType(const QString& block, PropertyNode* property) const
 {
+  if (property) {
+    if (m_datastore->isValidPropertyValueForProperty(property->name(), block)) {
+      return NodeType::PropertyValueType;
+    }
+  }
   if (m_datastore->containsWidget(block)) {
     return NodeType::WidgetType;
   } else if (m_datastore->containsProperty(block)) {
@@ -111,12 +116,19 @@ Parser::checkType(const QString& block) const
   } else if (block == "\n") {
     return NodeType::NewlineType;
   } else {
-    auto possibilities = m_datastore->fuzzySearchWidgets(block);
-    if (possibilities.size() > 0)
-      return NodeType::FuzzyWidgetType;
+    QMultiMap<int, QString> possibilities;
+    if (property) {
+      possibilities =
+        m_datastore->fuzzySearchPropertyValue(property->name(), block);
+      if (possibilities.size() > 0)
+        return NodeType::FuzzyPropertyValueType;
+    }
     possibilities = m_datastore->fuzzySearchProperty(block);
     if (possibilities.size() > 0)
       return NodeType::FuzzyPropertyType;
+    possibilities = m_datastore->fuzzySearchWidgets(block);
+    if (possibilities.size() > 0)
+      return NodeType::FuzzyWidgetType;
     possibilities = m_datastore->fuzzySearchPseudoStates(block);
     if (possibilities.size() > 0)
       return NodeType::FuzzyPseudoStateType;
@@ -177,6 +189,7 @@ Parser::parseInitialText(const QString& text)
             case NodeType::FuzzyPropertyType: {
               PropertyNode* property =
                 new PropertyNode(block, cursor, m_editor);
+              property->setWidget(widget);
               if (type == NodeType::FuzzyPropertyType)
                 property->setValidPropertyName(false);
               else
@@ -221,7 +234,8 @@ Parser::parseInitialText(const QString& text)
         }
         continue;
       }
-      case NodeType::PropertyType: {
+      case NodeType::PropertyType:
+      case NodeType::FuzzyPropertyType: {
         cursor = getCursorForPosition(start);
         PropertyNode* property =
           new PropertyNode(block, cursor, m_editor, this);
@@ -370,7 +384,7 @@ Parser::parsePropertyWithValues(PropertyNode* property,
       } else {
         if (attributeType == NoAttributeValue) {
           // not a valid value for any property
-          auto type = checkType(block);
+          auto type = checkType(block, property);
           switch (type) {
             case NodeType::WidgetType:
             case NodeType::FuzzyWidgetType:
@@ -826,7 +840,34 @@ Parser::updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
 }
 
 void
-Parser::updateInvalidPropertyValueContextMenu(
+Parser::updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                              PropertyNode* property,
+                                              const QString& valueName,
+                                              const QPoint& pos,
+                                              QMenu** suggestionsMenu)
+{
+  (*suggestionsMenu)->clear();
+
+  auto keys = matches.keys(valueName);
+  for (auto key : keys) {
+    matches.remove(key, valueName);
+  }
+
+  auto act = getWidgetAction(
+    m_datastore->validIcon(),
+    m_editor
+      ->tr("%1 is an invalid value for %2.<br>Possible suggestions are : ")
+      .arg(valueName)
+      .arg(property->name()),
+    *suggestionsMenu);
+  (*suggestionsMenu)->addAction(act);
+  (*suggestionsMenu)->addSeparator();
+
+  updateMenu(matches, property, pos, suggestionsMenu);
+}
+
+void
+Parser::updateInvalidNameAndPropertyValueContextMenu(
   QMultiMap<int, QPair<QString, QString>> matches,
   PropertyNode* nNode,
   const QString& valueName,
@@ -1112,9 +1153,11 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
   emit rehighlight();
 }
 
-void
-Parser::handleMouseClicked(const QPoint& pos, QMenu** suggestionsMenu)
+QMenu*
+Parser::handleMouseClicked(const QPoint& pos)
 {
+  QMenu* suggestionsMenu = new QMenu(tr("&Suggestions"));
+//  suggestionsMenu->setEnabled(false);
   NodeSection* section = nullptr;
   nodeForPoint(pos, &section);
 
@@ -1128,16 +1171,14 @@ Parser::handleMouseClicked(const QPoint& pos, QMenu** suggestionsMenu)
           if (widget != m_datastore->currentNode()) {
             auto matches =
               m_datastore->fuzzySearchWidgets(section->node->name());
-            updateContextMenu(matches, widget, pos, suggestionsMenu);
-            (*suggestionsMenu)->setEnabled(true);
+            updateContextMenu(matches, widget, pos, &suggestionsMenu);
+//            suggestionsMenu->setEnabled(true);
           }
         }
-        (*suggestionsMenu)
-          ->setTitle(m_editor->tr("%1 is appears to be a valid QWidget name")
-                       .arg(widget->name()));
-        //        m_editor->setStyleSheet("QMenu::item{font-weight: bold; color:
-        //        green;}");
-        return;
+        suggestionsMenu->setTitle(
+          m_editor->tr("%1 is appears to be a valid QWidget name")
+            .arg(widget->name()));
+        break;
       } // end WidgetType
 
       case NodeType::PropertyType: {
@@ -1145,35 +1186,45 @@ Parser::handleMouseClicked(const QPoint& pos, QMenu** suggestionsMenu)
         switch (section->type) {
           case NodeSection::WidgetName: {
             if (m_datastore->containsProperty(property->name())) {
-              updatePropertyContextMenu(property, pos, suggestionsMenu);
+              updatePropertyContextMenu(property, pos, &suggestionsMenu);
             } else {
               auto matches = m_datastore->fuzzySearchProperty(property->name());
               updatePropertyContextMenu(
-                property, pos, suggestionsMenu, matches);
+                property, pos, &suggestionsMenu, matches);
             }
-            (*suggestionsMenu)->setEnabled(true);
+//            suggestionsMenu->setEnabled(true);
             break;
           }
           case NodeSection::PropertyName: {
             if (property->isValidPropertyName()) {
-              updatePropertyContextMenu(property, pos, suggestionsMenu);
+              updatePropertyContextMenu(property, pos, &suggestionsMenu);
             } else {
               auto matches = m_datastore->fuzzySearchProperty(property->name());
               updatePropertyContextMenu(
-                property, pos, suggestionsMenu, matches);
+                property, pos, &suggestionsMenu, matches);
             }
-            (*suggestionsMenu)->setEnabled(true);
+//            suggestionsMenu->setEnabled(true);
             break;
           }
           case NodeSection::PropertyValue: {
             auto valName = property->value(section->position);
             if (property->isValidPropertyName()) {
-              // must have a valid property to check value types.
-              auto matches = m_datastore->fuzzySearchPropertyValue(
-                property->name(), valName);
-              updateValidPropertyValueContextMenu(
-                matches, property, valName, pos, suggestionsMenu);
-              (*suggestionsMenu)->setEnabled(true);
+              if (property->isValueValid(section->position)) {
+                // must have a valid property to check value types.
+                auto matches = m_datastore->fuzzySearchPropertyValue(
+                  property->name(), valName);
+                updateValidPropertyValueContextMenu(
+                  matches, property, valName, pos, &suggestionsMenu);
+//                suggestionsMenu->setEnabled(true);
+              } else {
+                auto matches = m_datastore->fuzzySearchPropertyValue(
+                  property->name(), valName);
+                QMultiMap<int, QPair<QString, QString>> propValMatches;
+                updateInvalidPropertyValueContextMenu(
+                  matches, property, valName, pos, &suggestionsMenu);
+//                suggestionsMenu->setEnabled(true);
+                // TODO
+              }
             } else {
               auto matches = m_datastore->fuzzySearchProperty(property->name());
               QMultiMap<int, QPair<QString, QString>> propValMatches;
@@ -1186,9 +1237,9 @@ Parser::handleMouseClicked(const QPoint& pos, QMenu** suggestionsMenu)
                     qMakePair<QString, QString>(name, vMatches.value(key)));
                 }
               }
-              updateInvalidPropertyValueContextMenu(
-                propValMatches, property, valName, pos, suggestionsMenu);
-              (*suggestionsMenu)->setEnabled(true);
+              updateInvalidNameAndPropertyValueContextMenu(
+                propValMatches, property, valName, pos, &suggestionsMenu);
+//              suggestionsMenu->setEnabled(true);
             }
             break;
           }
@@ -1217,20 +1268,20 @@ Parser::handleMouseClicked(const QPoint& pos, QMenu** suggestionsMenu)
             //            break;
             //          }
         } // end switch type
-        return;
+        break;
       } // end PropertyType
 
       case NodeType::BadNodeType: {
         // TODO probably remove this.
-        return;
+        break;
       } // end case Node::BadNodeType
 
       default: {
-        //            m_hoverWidget->hideHover();
-        return;
+        break;
       }
     }
   }
+  return suggestionsMenu;
 }
 
 QTextCursor

@@ -189,6 +189,7 @@ public:
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
+
 signals:
   void lineNumber(int);
   void lineCount(int);

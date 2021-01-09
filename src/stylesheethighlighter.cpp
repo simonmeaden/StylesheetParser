@@ -133,12 +133,12 @@ void
 StylesheetHighlighter::formatProperty(PropertyNode* property,
                                       int blockStart,
                                       int blockEnd,
-                                      WidgetNode*widget)
+                                      bool finalBlock)
 {
   auto length = property->name().length();
   auto position = property->start();
   if (isInBlock(position, length, blockStart, blockEnd)) {
-    if (property->isValidProperty(widget)) {
+    if (property->isValidProperty(finalBlock)) {
       formatVisiblePart(
         blockStart, blockEnd, position, length, m_propertyFormat);
       position = property->propertyMarkerPosition();
@@ -180,6 +180,14 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
         blockStart, blockEnd, position, 1, m_propertyEndMarkerFormat);
     }
   }
+}
+
+bool StylesheetHighlighter::checkForEmpty(const QString &text)
+{
+    if (text.isEmpty() || text.trimmed().isEmpty()) {
+        return true;
+    }
+    return false;
 }
 
 void
@@ -306,7 +314,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         for (int i = 0; i < widget->propertyCount(); i++) {
           auto property = widget->property(i);
           if (property) {
-            formatProperty(property, blockStart, blockEnd, widget);
+            formatProperty(property, blockStart, blockEnd);
           }
         }
 
@@ -345,7 +353,9 @@ StylesheetHighlighter::highlightBlock(const QString& text)
 
       case NodeType::PropertyType: {
         PropertyNode* property = qobject_cast<PropertyNode*>(node);
-        formatProperty(property, blockStart, blockEnd);
+        auto t = m_editor->toPlainText();
+        bool finalBlock = checkForEmpty(t.mid(property->end()));
+        formatProperty(property, blockStart, blockEnd, finalBlock);
         break;
       }
 

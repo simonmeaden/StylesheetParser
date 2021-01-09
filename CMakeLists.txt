@@ -58,8 +58,8 @@ target_sources(tst_parser
       src/bookmarkarea.cpp
       src/linenumberarea.h
       src/linenumberarea.cpp
-      src/hoverwidget.h
-      src/hoverwidget.cpp
+#      src/hoverwidget.h
+#      src/hoverwidget.cpp
       src/stylesheethighlighter.h
       src/stylesheethighlighter.cpp
       src/mainwindow.cpp

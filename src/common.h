@@ -99,6 +99,13 @@ struct NodeSection
         return false;
     }
   }
+  void clear()
+  {
+    type = None;
+    position = -1;
+    propertyIndex - 1;
+    node = nullptr;
+  }
   bool isCommentType()
   {
     switch (type) {
@@ -108,11 +115,18 @@ struct NodeSection
         return false;
     }
   }
+  friend bool operator==(NodeSection& left, NodeSection& right);
+  friend bool operator!=(NodeSection& left, NodeSection& right);
   Type type;
   int position;
   Node* node;
   int propertyIndex;
 };
+
+bool
+operator==(NodeSection& left, NodeSection& right);
+bool
+operator!=(NodeSection& left, NodeSection& right);
 
 enum NodeType
 {
@@ -133,6 +147,8 @@ enum NodeType
   PropertyType,
   FuzzyPropertyType,
   PropertyMarkerType,
+  PropertyValueType,
+  FuzzyPropertyValueType,
   BadNodeType,
   CommentType,
   CommentStartMarkerType,

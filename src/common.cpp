@@ -32,8 +32,7 @@ PropertyStatus::name() const
   return m_name;
 }
 
-bool
-PropertyStatus::status() const
+SectionType PropertyStatus::status() const
 {
   return m_status;
 }

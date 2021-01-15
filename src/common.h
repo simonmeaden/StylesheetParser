@@ -39,30 +39,31 @@ public:
   QList<QTextCharFormat::UnderlineStyle> underline;
 };
 
+enum SectionType
+{
+  None,
+  Name,
+  PropertyName,
+  PropertyValue, // only valid for propety nodes.
+  PropertyMarker,
+  PropertyEndMarker,
+  WidgetName,
+  WidgetPseudoState,
+  WidgetSubControl,
+  WidgetPropertyName,
+  WidgetPropertyMarker,
+  WidgetPropertyValue,
+  WidgetPropertyEndMarker,
+  WidgetPseudoStateMarker,
+  WidgetSubControlMarker,
+  WidgetStartBrace,
+  WidgetEndBrace,
+  Comment,
+};
+
 struct NodeSection
 {
-  enum Type
-  {
-    None,
-    Name,
-    PropertyName,
-    PropertyValue, // only valid for propety nodes.
-    PropertyMarker,
-    PropertyEndMarker,
-    WidgetName,
-    WidgetPseudoState,
-    WidgetSubControl,
-    WidgetPropertyName,
-    WidgetPropertyMarker,
-    WidgetPropertyValue,
-    WidgetPropertyEndMarker,
-    WidgetPseudoStateMarker,
-    WidgetSubControlMarker,
-    WidgetStartBrace,
-    WidgetEndBrace,
-    Comment,
-  };
-  NodeSection(Type t = None, int p = -1, int i = -1)
+  NodeSection(SectionType t = None, int p = -1, int i = -1)
     : type(t)
     , position(p)
     , node(nullptr)
@@ -117,7 +118,7 @@ struct NodeSection
   }
   friend bool operator==(NodeSection& left, NodeSection& right);
   friend bool operator!=(NodeSection& left, NodeSection& right);
-  Type type;
+  SectionType type;
   int position;
   Node* node;
   int propertyIndex;
@@ -159,13 +160,6 @@ struct NodeStateData
 {
   bool stateValid;
 };
-
-// enum WidgetExtension
-//{
-//  NoExtension,
-//  SubControlExtension,
-//  PseudoStateExtension,
-//};
 
 enum AttributeType
 {
@@ -237,12 +231,20 @@ struct CursorData
   QTextCursor cursor;
   Node* node = nullptr;
   Node* prevNode = nullptr;
-  //  int start;
 };
+
+struct MenuData
+{
+  Node* node;
+  QPoint pos;
+  SectionType type;
+  QString oldName = QString();
+};
+Q_DECLARE_METATYPE(MenuData);
 
 struct PropertyStatus
 {
-  PropertyStatus(bool status = false,
+  PropertyStatus(SectionType status = SectionType::None,
                  const QString& name = QString(),
                  int offset = -1)
     : m_status(status)
@@ -250,12 +252,12 @@ struct PropertyStatus
     , m_name(name)
   {}
 
-  bool m_status;
+  SectionType m_status;
   int m_offset;
   QString m_name;
 
 public:
-  bool status() const;
+  SectionType status() const;
   int offset() const;
   QString name() const;
 };

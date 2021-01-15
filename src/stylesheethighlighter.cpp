@@ -158,7 +158,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   for (int i = 0; i < property->count(); i++) {
     value = property->value(i);
     check = property->check(i);
-    position = property->position(i);
+    position = property->valuePosition(i);
     length = value.length();
 
     if (isInBlock(position, length, blockStart, blockEnd)) {
@@ -182,12 +182,13 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   }
 }
 
-bool StylesheetHighlighter::checkForEmpty(const QString &text)
+bool
+StylesheetHighlighter::checkForEmpty(const QString& text)
 {
-    if (text.isEmpty() || text.trimmed().isEmpty()) {
-        return true;
-    }
-    return false;
+  if (text.isEmpty() || text.trimmed().isEmpty()) {
+    return true;
+  }
+  return false;
 }
 
 void
@@ -203,7 +204,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
   auto blockStart = block.position();
   auto blockEnd = blockStart + block.text().length();
 
-  for (auto &key : nodes.keys()) {
+  for (auto& key : nodes.keys()) {
     auto node = nodes.value(key);
     auto type = node->type();
     int nodeStart = node->start();
@@ -338,18 +339,10 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         setFormat(nodeStart, node->length(), m_badValueFormat);
         break;
 
-        //      case NodeType::CommentStartMarkerType:
-        //        setFormat(nodeStart, node->length(), m_commentFormat);
-        //        break;
-
       case NodeType::CommentType:
         formatVisiblePart(
           blockStart, blockEnd, node->start(), node->length(), m_commentFormat);
         break;
-
-        //      case NodeType::CommentEndMarkerType:
-        //        setFormat(nodeStart, node->length(), m_commentFormat);
-        //        break;
 
       case NodeType::PropertyType: {
         PropertyNode* property = qobject_cast<PropertyNode*>(node);
@@ -358,10 +351,6 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         formatProperty(property, blockStart, blockEnd, finalBlock);
         break;
       }
-
-        //      case NodeType::PropertyEndMarkerType:
-        //        setFormat(nodeStart, length, m_propertyEndMarkerFormat);
-        //        break;
 
       case NodeType::StartBraceType: {
         StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);

@@ -56,6 +56,7 @@ public:
   void moveStart(int count);
   virtual int end() const;
   QTextCursor cursor() const;
+  void setCursor(QTextCursor podition);
   virtual int start() const;
   virtual int length() const;
   virtual int pointWidth() const;
@@ -64,13 +65,18 @@ public:
   QString name() const;
   void setName(const QString& value);
 
+  virtual PropertyStatus partAtOffset(int offset) const
+  {
+    return PropertyStatus(SectionType::None, QString(), -1);
+  }
+
   virtual NodeSection* isIn(QPoint pos);
 
   enum NodeType type() const;
   QString toString() const;
 
 protected:
-  NodeData* d_ptr;
+  NodeData* node_ptr;
 };
 
 struct NameNodeData
@@ -117,6 +123,7 @@ class WidgetNode : public Node
     bool widgetValid = false;
     enum NodeType extensionType = NoType;
     QTextCursor markerPosition;
+    enum NodeType markerType = NoType;
     QTextCursor extensionPosition;
     QString extensionName;
     bool startBrace = false;
@@ -124,6 +131,7 @@ class WidgetNode : public Node
     bool endBrace = false;
     QTextCursor endBracePosition;
     QList<PropertyNode*> properties;
+    bool extensionMarkerCorrect = true;
   };
 
 public:
@@ -145,6 +153,7 @@ public:
 
   NodeSection* isIn(QPoint pos) override;
   //  bool isPropertyType()
+  PropertyStatus partAtOffset(int pos) const;
 
   void setSubControlMarkerCursor(QTextCursor cursor);
   void setPseudoStateMarkerCursor(QTextCursor cursor);
@@ -177,6 +186,10 @@ public:
   void removeEndBrace();
   bool offsetsMatch() const;
 
+  bool doesMarkerMatch(enum NodeType type) const;
+  bool isExtensionMarkerCorrect();
+  void setExtensionMarkerCorrect(bool correct);
+
   void addProperty(PropertyNode* property);
   PropertyNode* property(int index) const;
   int propertyCount() const;
@@ -184,7 +197,7 @@ public:
   //  QList<QTextCursor> propertyKeys();
 
 private:
-  WidgetNodeData* w_ptr;
+  WidgetNodeData* widget_ptr;
 };
 
 class PropertyNode : public Node
@@ -240,12 +253,12 @@ public:
   PropertyValueCheck check(int index);
 
   //! Returns the positions as a list.
-  QList<QTextCursor> positionCursors() const;
+  QList<QTextCursor> valueCursors() const;
   //! Sets the position at index if index is valid.
-  void setCursor(int index, QTextCursor position);
+  void setValueCursor(int index, QTextCursor position);
   //! Sets the positions to the supplied QTextCursor positions.
-  void setCursors(const QList<QTextCursor>& positions);
-  int position(int index);
+  void setValueCursors(const QList<QTextCursor>& positions);
+  int valuePosition(int index);
   //  void incrementOffsets(int increment = 1, int startIndex = 0);
 
   int pointWidth() const override { return Node::pointWidth(); }
@@ -281,20 +294,18 @@ public:
   QTextCursor propertyMarkerCursor() const;
   int propertyMarkerPosition() const;
   void setPropertyMarkerCursor(QTextCursor position);
-  //  void incrementPropertyMarker(int increment = 1);
 
-  bool hasPropertyEndMarker();
+  bool hasPropertyEndMarker() const;
   void setPropertyEndMarker(bool exists);
-  QTextCursor propertyEndMarkerCursor();
-  int propertyEndMarkerPosition();
+  QTextCursor propertyEndMarkerCursor() const;
+  int propertyEndMarkerPosition() const;
   void setPropertyEndMarkerCursor(QTextCursor position);
-  //  void incrementEndMarkerOffset(int increment = 1);
 
   NodeSection* isIn(QPoint pos) override;
-  PropertyStatus isProperty(int offset) const;
+  PropertyStatus partAtOffset(int offset) const;
 
 private:
-  PropertyNodeData* p_ptr;
+  PropertyNodeData* property_ptr;
 };
 
 class NewlineNode : public WidgetNode

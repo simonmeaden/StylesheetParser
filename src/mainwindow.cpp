@@ -113,48 +113,50 @@ MainWindow::initGui()
 
   QString text;
 
-  // No Errors
-  //  text = "color : red; \n"
-  //         "QTabWidget::branch {color: red}\n"
-  //         "QTabWidget::branch {color: red; background: green}\n"
-  //         "QTableWidget:active {}\n\n"
-  //         "QTableWidget::branch {\n\n"
-  //         "color: blue;\n"
-  //         "border: green solid 1px;\n"
-  //         " background-color: blue; \n"
-  //         "}\n";
-  // Errors
   text = ""
-         // Good property.
-         "color : red; \n"
-         // bad property value
-         "color: rd;\n"
-         // no end marker on non-final property
-         "border: green solid 1px\n"
-         // bad property name
-         "bckground-color: blue; \n"
-         // GOOD final property does not need an end marker.
-         "background-color: blue\n";
-  m_editor->setPlainText(text);
-  QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
-  bookmarks->insert(1, new BookmarkData());
-  bookmarks->insert(5, new BookmarkData("Test string"));
-  bookmarks->insert(8, new BookmarkData());
-  bookmarks->insert(12, new BookmarkData());
-  bookmarks->insert(14, new BookmarkData());
-  m_editor->setBookmarks(bookmarks);
-  m_editor->setShowNewlineMarkers(true);
-
-  //    "color: red;\n"
-  //    "color: red; background: green\n"
-  //    "color: red; background: green;\n"
-  //    "color: red; border: green solid 1px\n"
-  //    "color: red\n"
-  //    "border: green solid 1px;\n"
-  //    "\n"
-  //    "{}\n"
-  //    "QTabWidget::branch {color: red}\n"
-  //    "QTabWidget::branch {color: red; background: green}\n"
+         // No Errors
+         //  text = "color : red; \n"
+         //         "QTabWidget::branch {color: red}\n"
+         //         "QTabWidget::branch {color: red; background: green}\n"
+         //         "QTableWidget:active {}\n\n"
+         //         "QTableWidget::branch {\n\n"
+         //         "color: blue;\n"
+         //         "border: green solid 1px;\n"
+         //         " background-color: blue; \n"
+         //         "}\n";
+         // Errors
+                  // Good property.
+//                  "color : red; \n"
+//                  // bad property value
+//                  "color: rd;\n"
+//                  "color: blu;\n"
+                  // no property marker
+                  "color blue;\n"
+//                  // no end marker on non-final property
+//                  "border: green solid 1px\n"
+//                  // bad property name
+//                  "bckground-color: blue; \n"
+//                  // GOOD final property does not need an end marker.
+//                  "background-color: blue\n";
+         // Widget GOOD
+//         "QTabWidget::branch {color: red}\n"
+//         "QTabWidget::branch {color: red; background: green}\n"
+//         "QTabWidget::branch {color: red; background: green;}\n"
+//         "QTabWidget:active {color: red}\n"
+//         "QTabWidget:active {color: red; background: green}\n"
+//         "QTabWidget:active {color: red; background: green;}\n"
+//         "QTabWidget {color: red}\n"
+//         "QTabWidget {color: red; background: green}\n"
+//         "QTabWidget {color: red; background: green;}\n"
+         // Widget Errors.
+//         "QTabWidget:branch {color: red}\n" //
+//         "QTabWidget:branch {color: red; background: green}\n"
+//         "QTabWidget:branch {color: red; background: green;}\n"
+//         "QTabWidget::active {color: red}\n"
+//         "QTabWidget::active {color: red; background: green}\n"
+//         "QTabWidget::active {color: red; background: green;}\n"
+    // End of errors
+    ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
   //    MISSING END
   //                                                                 // BRACE
@@ -178,6 +180,25 @@ MainWindow::initGui()
   //         color: red; /* comment3 */ /*" " A multiline comment \n"
   //         "*/ }"
   //         "\n"
+
+  m_editor->setPlainText(text);
+  QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
+  bookmarks->insert(1, new BookmarkData());
+  bookmarks->insert(5, new BookmarkData("Test string"));
+  bookmarks->insert(8, new BookmarkData());
+  bookmarks->insert(12, new BookmarkData());
+  bookmarks->insert(14, new BookmarkData());
+  m_editor->setBookmarks(bookmarks);
+  m_editor->setShowNewlineMarkers(true);
+
+  //    "color: red;\n"
+  //    "color: red; background: green\n"
+  //    "color: red; background: green;\n"
+  //    "color: red; border: green solid 1px\n"
+  //    "color: red\n"
+  //    "border: green solid 1px;\n"
+  //    "\n"
+  //    "{}\n"
 
   //    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
   ////    pseudostate    -    WORKING

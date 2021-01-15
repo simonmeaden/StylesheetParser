@@ -194,17 +194,12 @@ signals:
   void lineNumber(int);
   void lineCount(int);
   void column(int);
-  void parseInitialText(const QString&);
   void handleMouseClicked(const QPoint&);
   void handleCursorPositionChanged(QTextCursor);
   void handleSuggestion(QAction*);
   void handleDocumentChanged(int, int, int);
 
 protected:
-//  void mousePressEvent(QMouseEvent* event) override;
-//  void mouseMoveEvent(QMouseEvent* event) override;
-//  void mouseReleaseEvent(QMouseEvent* event) override;
-//  void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private:
   StylesheetEditor *m_editor;

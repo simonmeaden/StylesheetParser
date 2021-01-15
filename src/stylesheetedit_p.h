@@ -66,21 +66,17 @@ struct StylesheetEditorPrivate
   StylesheetHighlighter* m_highlighter;
   PropertyNode* m_propertynode = nullptr;
   QString m_stylesheet;
-  //  HoverWidget* m_hoverWidget;
-  //  WidgetNode* m_currentHover;
   bool m_parseComplete;
 
   QMenu *m_contextMenu, *m_suggestionsMenu;
   NodeSection *m_oldSection;
 
-  void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
-  void initActions();
-  void initMenus();
-  //  void createBookmarkMenu();
+  void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);  void initActions();
   void handleCustomMenuRequested(QPoint pos);
 
   void setPlainText(const QString& text);
   void handleRehighlight();
+  void handleRehighlightBlock(const QTextBlock& block);
   void handleParseComplete();
 
   bool handleMousePress(QMouseEvent*event);
@@ -89,8 +85,6 @@ struct StylesheetEditorPrivate
   void setBadPropertyEndMarker(QString &hover, const PropertyNode *property);
 
   void format();
-
-  //  QMap<QTextCursor, Node*> nodes();
 
   void setShowNewlineMarkers(bool show);
   bool showLineMarkers();
@@ -129,7 +123,7 @@ struct StylesheetEditorPrivate
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
   void handleGotoBookmark(bool);
-  void handleContextMenuEvent(QPoint pos);
+//  void handleContextMenuEvent(QPoint pos);
   //  void handleBookmarkMenuEvent(QPoint pos);
 
   QString styleSheet() const;
@@ -184,15 +178,10 @@ struct StylesheetEditorPrivate
   int calculateColumn(QTextCursor textCursor);
   void updateLineNumberArea(int linenumber);
 
-  //  void resizeEvent(QRect cr);
-  //  void handleMouseClicked(QMouseEvent* event);
-  //  void handleLeaveEvent();
-  //  void displayBookmark(BookmarkData* data, QPoint pos);
-
   void cursorPositionChanged(QTextCursor textCursor);
-  void suggestion(QAction* act);
+  void suggestionMade(QAction* act);
 
-  void onDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
 
   //  CursorData getNodeAtCursor(QTextCursor cursor);
@@ -305,6 +294,7 @@ public:
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
   void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event);
 
   //  void handleMouseClicked(QMouseEvent* event);
   //  void handleMousePressEvent(QMouseEvent* event);
@@ -331,13 +321,8 @@ signals:
   void lineNumber(int);
   void lineCount(int);
   void column(int);
-  void parseInitialText(const QString&);
-  void handleCursorPositionChanged(QTextCursor);
-  void handleSuggestion(QAction*);
-  void handleDocumentChanged(int, int, int);
 
 protected:
-  //  void contextMenuEvent(QContextMenuEvent* event);
 
   //  void resizeEvent(QResizeEvent* event) override;
   //  void mousePressEvent(QMouseEvent* event) override;
@@ -347,18 +332,17 @@ protected:
   //  void leaveEvent(QEvent* event) override;
 
   void setLineNumber(int lineNumber);
-  void suggestion(bool);
-  //  void setContextMenu(QMenu* menu);
-  void customMenuRequested(QPoint pos);
+  void suggestionMade(bool);
   void bookmarkMenuRequested(QPoint pos);
   void linenumberMenuRequested(QPoint pos);
 
 private:
   StylesheetEditorPrivate* d_ptr;
   void initActions();
-  void initMenus();
+//  void initMenus();
   void handleParseComplete();
   void handleRehighlight();
+  void handleRehighlightBlock(const QTextBlock &block);
   void handleAddBookmark(bool);
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
@@ -368,7 +352,7 @@ private:
   void documentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
 
-  void updateLeftArea(const QRect& rect, int dy);
+//  void updateLeftArea(const QRect& rect, int dy);
   void updateLineNumberArea();
 
 

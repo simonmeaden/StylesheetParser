@@ -40,10 +40,10 @@ class EndBraceNode;
 class WidgetNode;
 class NewlineNode;
 
-
-class IconLabel : public QWidget {
+class IconLabel : public QWidget
+{
 public:
-  IconLabel(const QIcon &icon, const QString &text, QWidget*parent);
+  IconLabel(const QIcon& icon, const QString& text, QWidget* parent);
 };
 
 struct ParserData
@@ -74,53 +74,48 @@ public:
   explicit Parser(DataStore* datastore,
                   StylesheetEditor* editor,
                   QObject* parent = nullptr);
-  Parser(const Parser& other);
+  Parser(const Parser&);
 
   ~Parser();
 
-  Parser& operator=(const Parser& other);
+  Parser& operator=(const Parser&);
 
   void parseInitialText(const QString& text);
 
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
-  QMenu *handleMouseClicked(const QPoint& pos);
+  QMenu* handleMouseClicked(const QPoint& pos);
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
 
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
-  //  QMenu* contextMenu() const;
-
-  void handleSuggestion(QAction* act);
+  void handleSuggestions(QAction* act);
 
   void nodeForPoint(const QPoint& pos, NodeSection** nodeSection);
 
   bool showLineMarkers() const;
   void setShowLineMarkers(bool showLineMarkers);
 
-
-  //  QMenu* getContextMenu() const;
-
-  //  QMenu* getSuggestionsMenu() const;
+  void setInitialisingFlag(bool initialising);
 
 signals:
   void finished();
-  void parseComplete();
+  void parseComplete(bool initialsed = false);
   void rehighlight();
-//  void sendContextMenu(QMenu*);
+  void rehighlightBlock(const QTextBlock& block);
 
   void setBraceCount(int);
 
 private:
   StylesheetEditor* m_editor;
   DataStore* m_datastore;
-  //  QMenu *m_contextMenu, *m_suggestionsMenu;
-  QAction *m_addPropertyMarkerAct,
-    *m_addPropertyEndMarkerAct /*, *m_formatAct*/;
+  //  QAction *m_addPropertyMarkerAct,
+  //    *m_addPropertyEndMarkerAct;
   bool m_showLineMarkers;
+  bool m_initialising;
 
   void parsePropertyWithValues(PropertyNode* property,
                                const QString& text,
@@ -136,8 +131,6 @@ private:
   CursorData getNodeAtCursor(QTextCursor cursor);
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
-  //  Node *nextNode(QTextCursor cursor);
-  //  Node* previousNode(QTextCursor cursor);
 
   WidgetNode* stashWidget(int position,
                           const QString& block,
@@ -149,7 +142,6 @@ private:
   void stashEndBrace(int position);
   void stashStartBrace(int position);
 
-  //  QMenu* createContextMenu();
   void updateContextMenu(QMap<int, QString> matches,
                          WidgetNode* node,
                          const QPoint& pos,
@@ -164,10 +156,10 @@ private:
                                            const QPoint& pos,
                                            QMenu** suggestionsMenu);
   void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
-                                           PropertyNode* property,
-                                           const QString& valueName,
-                                           const QPoint& pos,
-                                           QMenu** suggestionsMenu);
+                                             PropertyNode* property,
+                                             const QString& valueName,
+                                             const QPoint& pos,
+                                             QMenu** suggestionsMenu);
   void updateInvalidNameAndPropertyValueContextMenu(
     QMultiMap<int, QPair<QString, QString>> matches,
     PropertyNode* nNode,
@@ -177,18 +169,33 @@ private:
   void updateMenu(QMap<int, QString> matches,
                   Node* nNode,
                   const QPoint& pos,
-                  QMenu** suggestionsMenu);
+                  QMenu** suggestionsMenu,
+                  SectionType type,
+                  const QString& oldName = QString());
   QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
   QList<QPair<QString, QString>> sortLastNValues(
     QMultiMap<int, QPair<QString, QString>> matches);
   void actionPropertyNameChange(PropertyNode* property, const QString& newName);
   void actionPropertyValueChange(PropertyNode* property,
-                                 const PropertyStatus& status,
+                                 const QString& oldName,
                                  const QString& newName);
+  void actionPropertyMarker(PropertyNode* property);
+  void actionPropertyEndMarker(PropertyNode* property);
   void stepBack(int& pos, const QString& block);
-  enum NodeType checkType(const QString& block, PropertyNode *property=nullptr) const;
-  QWidgetAction *getWidgetAction(const QIcon &icon, const QString &text, QMenu *suggestionsMenu);
+  enum NodeType checkType(const QString& block,
+                          PropertyNode* property = nullptr) const;
+  QWidgetAction* getWidgetAction(const QIcon& icon,
+                                 const QString& text,
+                                 QMenu* suggestionsMenu);
 
+  void updateTextChange(QTextCursor& cursor,
+                        const QString& oldName,
+                        const QString& newName);
+  void setMenuData(QAction* act,
+                   Node* property,
+                   QPoint pos,
+                   SectionType type,
+                   const QString& oldName = QString());
 };
 
 #endif // PARSER_H

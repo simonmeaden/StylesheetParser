@@ -50,20 +50,12 @@ Parser::Parser(DataStore* datastore, StylesheetEditor* editor, QObject* parent)
   , m_editor(editor)
   , m_datastore(datastore)
   , m_showLineMarkers(false)
+  , m_initialising(true)
 {
-  //  d_ptr = new ParserData;
-  //  m_formatAct = new QAction(m_editor->tr("&Format"));
-  //  m_formatAct->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
-  //  m_formatAct->setStatusTip(m_editor->tr("Prettyfy the stylesheet"));
-  //  m_editor->connect(
-  //    m_formatAct, &QAction::triggered, m_editor, &StylesheetEdit::format);
-
   connect(this, &Parser::setBraceCount, m_datastore, &DataStore::setBraceCount);
-
-  //  m_contextMenu = createContextMenu();
 }
 
-Parser::Parser(const Parser& other)
+Parser::Parser(const Parser& /*other*/)
 {
   //  d_ptr = new ParserData(*other.d_ptr);
 }
@@ -75,7 +67,7 @@ Parser::~Parser()
 }
 
 Parser&
-Parser::operator=(const Parser& other)
+Parser::operator=(const Parser& /*other*/)
 {
   //  *d_ptr = *other.d_ptr;
   return *this;
@@ -142,6 +134,7 @@ Parser::checkType(const QString& block, PropertyNode* property) const
 void
 Parser::parseInitialText(const QString& text)
 {
+  m_initialising = true;
   m_datastore->setBraceCount(0);
   QString block;
   int start;
@@ -205,6 +198,11 @@ Parser::parseInitialText(const QString& text)
               widget->setExtensionName(block);
               widget->setExtensionCursor(cursor);
               widget->setExtensionType(type);
+              if (widget->doesMarkerMatch(type)) {
+                widget->setExtensionMarkerCorrect(true);
+              } else {
+                widget->setExtensionMarkerCorrect(false);
+              }
               continue;
             case NodeType::CommentType:
               parseComment(text, start, pos);
@@ -571,7 +569,7 @@ Parser::nodeForPoint(const QPoint& pos, NodeSection** nodeSection)
   for (auto& n : values) {
     auto section = n->isIn(pos);
 
-    if (section->type != NodeSection::Type::None) {
+    if (section->type != SectionType::None) {
       section->node = n;
       *nodeSection = section;
       return;
@@ -591,17 +589,11 @@ Parser::setShowLineMarkers(bool showLineMarkers)
   m_showLineMarkers = showLineMarkers;
 }
 
-// QMenu*
-// Parser::getContextMenu() const
-//{
-//  return m_contextMenu;
-//}
-
-// QMenu*
-// Parser::getSuggestionsMenu() const
-//{
-//  return m_suggestionsMenu;
-//}
+void
+Parser::setInitialisingFlag(bool initialising)
+{
+  m_initialising = initialising;
+}
 
 CursorData
 Parser::getNodeAtCursor(QTextCursor cursor)
@@ -734,7 +726,7 @@ Parser::updateContextMenu(QMap<int, QString> matches,
   act->setData(pos);
   (*suggestionsMenu)->addSeparator();
 
-  updateMenu(matches, node, pos, suggestionsMenu);
+  updateMenu(matches, node, pos, suggestionsMenu, SectionType::WidgetName);
 }
 
 void
@@ -755,43 +747,35 @@ Parser::updatePropertyContextMenu(
                            .arg(property->name()));
     act->setData(pos);
     (*suggestionsMenu)->addSeparator();
-    updateMenu(matches, property, pos, suggestionsMenu);
+    updateMenu(
+      matches, property, pos, suggestionsMenu, SectionType::PropertyName);
   } else if (!property->hasPropertyMarker()) {
     act = new QAction(m_datastore->invalidIcon(),
                       m_editor->tr("%1 is missing a property marker (:)")
                         .arg(property->name()));
-    act->setData(pos);
+    //    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     (*suggestionsMenu)->addSeparator();
-    m_addPropertyMarkerAct = new QAction(
-      m_datastore->addColonIcon(), m_editor->tr("Add property marker (:)"));
-    (*suggestionsMenu)->addAction(m_addPropertyMarkerAct);
-    QVariant v;
-    v.setValue(qMakePair<Node*, QPoint>(property, pos));
-    m_addPropertyMarkerAct->setData(v);
-    m_editor->connect(m_addPropertyMarkerAct,
-                      &QAction::triggered,
-                      m_editor,
-                      &StylesheetEditor::suggestion);
+    act = new QAction(m_datastore->addColonIcon(),
+                      m_editor->tr("Add property marker (:)"));
+    (*suggestionsMenu)->addAction(act);
+    setMenuData(act, property, pos, SectionType::PropertyMarker);
+    m_editor->connect(
+      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
     (*suggestionsMenu)->setEnabled(true);
   } else if (!property->hasPropertyEndMarker()) {
     act = new QAction(
       m_datastore->badSColonIcon(),
       m_editor->tr("%1 is missing an end marker (;)").arg(property->name()));
-    act->setData(pos);
+    //    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     (*suggestionsMenu)->addSeparator();
-    m_addPropertyEndMarkerAct =
-      new QAction(m_datastore->addSColonIcon(),
-                  m_editor->tr("Add property end marker (;)"));
-    (*suggestionsMenu)->addAction(m_addPropertyEndMarkerAct);
-    QVariant v;
-    v.setValue(qMakePair<Node*, QPoint>(property, pos));
-    m_addPropertyEndMarkerAct->setData(v);
-    m_editor->connect(m_addPropertyEndMarkerAct,
-                      &QAction::triggered,
-                      m_editor,
-                      &StylesheetEditor::suggestion);
+    act = new QAction(m_datastore->addSColonIcon(),
+                      m_editor->tr("Add property end marker (;)"));
+    (*suggestionsMenu)->addAction(act);
+    setMenuData(act, property, pos, SectionType::PropertyEndMarker);
+    m_editor->connect(
+      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
     (*suggestionsMenu)->setEnabled(true);
   } else {
     act = new QAction(
@@ -836,7 +820,24 @@ Parser::updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
   (*suggestionsMenu)->addAction(act);
   (*suggestionsMenu)->addSeparator();
 
-  updateMenu(matches, property, pos, suggestionsMenu);
+  updateMenu(matches, property, pos, suggestionsMenu, SectionType::None);
+}
+
+void
+Parser::setMenuData(QAction* act,
+                    Node* node,
+                    QPoint pos,
+                    SectionType type,
+                    const QString& oldName)
+{
+  MenuData data;
+  data.node = node;
+  data.type = type;
+  data.pos = pos;
+  data.oldName = oldName;
+  QVariant v;
+  v.setValue<MenuData>(data);
+  act->setData(v);
 }
 
 void
@@ -854,7 +855,7 @@ Parser::updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
   }
 
   auto act = getWidgetAction(
-    m_datastore->validIcon(),
+    m_datastore->invalidIcon(),
     m_editor
       ->tr("%1 is an invalid value for %2.<br>Possible suggestions are : ")
       .arg(valueName)
@@ -863,7 +864,12 @@ Parser::updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
   (*suggestionsMenu)->addAction(act);
   (*suggestionsMenu)->addSeparator();
 
-  updateMenu(matches, property, pos, suggestionsMenu);
+  updateMenu(matches,
+             property,
+             pos,
+             suggestionsMenu,
+             SectionType::PropertyValue,
+             valueName);
 }
 
 void
@@ -898,7 +904,7 @@ Parser::updateInvalidNameAndPropertyValueContextMenu(
     v.setValue(qMakePair<Node*, QPoint>(nNode, pos));
     act->setData(v);
     m_editor->connect(
-      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestion);
+      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
   }
 
   if (reversed.size() > 0) {
@@ -910,7 +916,9 @@ void
 Parser::updateMenu(QMap<int, QString> matches,
                    Node* nNode,
                    const QPoint& pos,
-                   QMenu** suggestionsMenu)
+                   QMenu** suggestionsMenu,
+                   SectionType type,
+                   const QString& oldName)
 {
   QAction* act;
 
@@ -926,11 +934,9 @@ Parser::updateMenu(QMap<int, QString> matches,
   for (auto key : reversed) {
     act = new QAction(matches.value(key));
     (*suggestionsMenu)->addAction(act);
-    QVariant v;
-    v.setValue(qMakePair<Node*, QPoint>(nNode, pos));
-    act->setData(v);
+    setMenuData(act, nNode, pos, type, oldName);
     m_editor->connect(
-      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestion);
+      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
   }
 
   if (reversed.size() > 0) {
@@ -1025,17 +1031,26 @@ Parser::getStylesheetProperty(const QString& sheet, int& pos)
 }
 
 void
-Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
+Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
 {
+  // If the text is changed due to a suggestion then ignore
+  // it as is is handled elsewhere.
   if (m_datastore->hasSuggestion()) {
     m_datastore->setHasSuggestion(false);
     return;
   }
 
-  auto charChange = charsAdded - charsRemoved;
-  if (m_datastore->isNodesEmpty()) {
-    // initial text has not yet been parsed.
+  if (m_initialising) {
     return;
+  }
+
+  //  auto charChange = charsAdded - charsRemoved;
+  if (m_datastore->isNodesEmpty()) {
+    // If no text has been loaded but text has been added then asssume modifying
+    // a clean new stylesheet and handle changes normally.
+    if (charsAdded == 0)
+      // initial text has not yet been parsed.
+      return;
   }
 
   QString text = m_editor->toPlainText();
@@ -1044,58 +1059,44 @@ Parser::handleDocumentChanged(int pos, int charsRemoved, int charsAdded)
     return;
   }
 
-  CursorData data = getNodeAtCursor(pos);
+  CursorData data = getNodeAtCursor(offset);
   Node* node = data.node;
 
   if (node) {
-    QString value;
-    //    PropertyNode* newNode = nullptr;
+    //    QString value;
 
     switch (node->type()) {
       case NodeType::PropertyType: {
         auto property = qobject_cast<PropertyNode*>(node);
-        auto length = property->length() + charChange;
-        value = text.mid(node->start(), length);
-        auto pos = 0;
 
-        QString block = findNext(value, pos), name;
-        if (m_datastore->containsProperty(block)) {
-          if (!m_datastore->containsProperty(property->name())) {
-            property->setName(block);
-            property->setValidPropertyName(true);
-          } else {
-            name = block;
-            while (!(block = findNext(value, pos)).isEmpty()) {
-              if (block == ":") {
-                if (!property->hasPropertyMarker()) {
-                  property->setPropertyMarker(true);
-                  property->setPropertyMarkerCursor(
-                    getCursorForPosition(pos - 1));
-                } else {
-                  // TODO handle error?
-                  // what happens if the : is after or in the middle of a
-                  // value? m_values.size() > 0? or if there are two? maybe
-                  // remove them?
-                }
-              } else if (m_datastore->isValidPropertyValueForProperty(name,
-                                                                      block)) {
-                property->addValue(block,
-                                   PropertyValueCheck::GoodValue,
-                                   getCursorForPosition(pos - block.length()),
-                                   m_datastore->propertyValueAttribute(block));
-              } else {
-                property->addValue(block,
-                                   PropertyValueCheck::BadValue,
-                                   getCursorForPosition(pos - block.length()),
-                                   m_datastore->propertyValueAttribute(block));
-              }
+        if (property) {
+          auto status = property->partAtOffset(offset);
+          if (status.status() == SectionType::PropertyName) {
+            int length = property->name().length() + charsAdded - charsRemoved;
+            auto newName = text.mid(property->start(), length);
+            property->setName(newName);
+            if (m_datastore->containsProperty(newName)) {
+              property->setValidPropertyName(true);
+            } else {
+              property->setValidPropertyName(false);
             }
+            emit rehighlightBlock(data.cursor.block());
+          } else if (status.status() == SectionType::PropertyValue) {
+            int index = property->values().indexOf(status.name());
+            int length = status.name().length() + charsAdded - charsRemoved;
+            auto newName = text.mid(property->valuePosition(index), length);
+            property->setValue(index, newName);
+            if (m_datastore->isValidPropertyValueForProperty(property->name(),
+                                                             newName)) {
+              property->setCheck(index, PropertyValueCheck::GoodValue);
+            } else {
+              property->setCheck(index, PropertyValueCheck::BadValue);
+            }
+            emit rehighlightBlock(data.cursor.block());
           }
         }
       }
     }
-
-    emit rehighlight();
   }
 }
 
@@ -1156,10 +1157,10 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
 QMenu*
 Parser::handleMouseClicked(const QPoint& pos)
 {
-  QMenu* suggestionsMenu = new QMenu(tr("&Suggestions"));
-//  suggestionsMenu->setEnabled(false);
   NodeSection* section = nullptr;
   nodeForPoint(pos, &section);
+
+  QMenu* suggestionsMenu = new QMenu(tr("&Suggestions"));
 
   if (section && section->node && section->node != m_datastore->currentNode()) {
     switch (section->node->type()) {
@@ -1167,12 +1168,29 @@ Parser::handleMouseClicked(const QPoint& pos)
       case NodeType::WidgetType: {
         auto widget = qobject_cast<WidgetNode*>(section->node);
         if (!widget->isWidgetValid()) {
-          // not a valid node
-          if (widget != m_datastore->currentNode()) {
-            auto matches =
-              m_datastore->fuzzySearchWidgets(section->node->name());
-            updateContextMenu(matches, widget, pos, &suggestionsMenu);
-//            suggestionsMenu->setEnabled(true);
+          //          // not a valid node
+          //          if (widget != m_datastore->currentNode()) {
+          //            auto matches =
+          //              m_datastore->fuzzySearchWidgets(section->node->name());
+          //            updateContextMenu(matches, widget, pos,
+          //            &suggestionsMenu);
+          //          }
+          switch (section->type) {
+            case SectionType::WidgetPropertyMarker: {
+              qWarning();
+              // TODO marker errors? maybe :: or ;
+              break;
+            }
+            case SectionType::WidgetPseudoStateMarker: {
+              qWarning();
+              // TODO marker errors? maybe :: or ;
+              break;
+            }
+            case SectionType::WidgetSubControlMarker: {
+              qWarning();
+              // TODO marker errors? maybe :: or ;
+              break;
+            }
           }
         }
         suggestionsMenu->setTitle(
@@ -1184,7 +1202,7 @@ Parser::handleMouseClicked(const QPoint& pos)
       case NodeType::PropertyType: {
         auto property = qobject_cast<PropertyNode*>(section->node);
         switch (section->type) {
-          case NodeSection::WidgetName: {
+          case SectionType::WidgetName: {
             if (m_datastore->containsProperty(property->name())) {
               updatePropertyContextMenu(property, pos, &suggestionsMenu);
             } else {
@@ -1192,10 +1210,9 @@ Parser::handleMouseClicked(const QPoint& pos)
               updatePropertyContextMenu(
                 property, pos, &suggestionsMenu, matches);
             }
-//            suggestionsMenu->setEnabled(true);
             break;
           }
-          case NodeSection::PropertyName: {
+          case SectionType::PropertyName: {
             if (property->isValidPropertyName()) {
               updatePropertyContextMenu(property, pos, &suggestionsMenu);
             } else {
@@ -1203,10 +1220,9 @@ Parser::handleMouseClicked(const QPoint& pos)
               updatePropertyContextMenu(
                 property, pos, &suggestionsMenu, matches);
             }
-//            suggestionsMenu->setEnabled(true);
             break;
           }
-          case NodeSection::PropertyValue: {
+          case SectionType::PropertyValue: {
             auto valName = property->value(section->position);
             if (property->isValidPropertyName()) {
               if (property->isValueValid(section->position)) {
@@ -1214,15 +1230,17 @@ Parser::handleMouseClicked(const QPoint& pos)
                 auto matches = m_datastore->fuzzySearchPropertyValue(
                   property->name(), valName);
                 updateValidPropertyValueContextMenu(
-                  matches, property, valName, pos, &suggestionsMenu);
-//                suggestionsMenu->setEnabled(true);
+                  matches,
+                  property,
+                  valName,
+                  pos,
+                  &suggestionsMenu); //                suggestionsMenu->setEnabled(true);
               } else {
                 auto matches = m_datastore->fuzzySearchPropertyValue(
                   property->name(), valName);
                 QMultiMap<int, QPair<QString, QString>> propValMatches;
                 updateInvalidPropertyValueContextMenu(
                   matches, property, valName, pos, &suggestionsMenu);
-//                suggestionsMenu->setEnabled(true);
                 // TODO
               }
             } else {
@@ -1239,34 +1257,18 @@ Parser::handleMouseClicked(const QPoint& pos)
               }
               updateInvalidNameAndPropertyValueContextMenu(
                 propValMatches, property, valName, pos, &suggestionsMenu);
-//              suggestionsMenu->setEnabled(true);
             }
             break;
           }
-          case NodeSection::Comment: {
+          case SectionType::Comment: {
             qWarning();
             break;
           }
-          case NodeSection::PropertyMarker: {
+          case SectionType::PropertyMarker: {
             qWarning();
             // TODO marker errors? maybe :: or ;
             break;
           }
-            //          case NodeSection::WidgetPropertyMarker: {
-            //            qWarning();
-            //            // TODO marker errors? maybe :: or ;
-            //            break;
-            //          }
-            //          case NodeSection::WidgetPseudoStateMarker: {
-            //            qWarning();
-            //            // TODO marker errors? maybe :: or ;
-            //            break;
-            //          }
-            //          case NodeSection::WidgetSubControlMarker: {
-            //            qWarning();
-            //            // TODO marker errors? maybe :: or ;
-            //            break;
-            //          }
         } // end switch type
         break;
       } // end PropertyType
@@ -1302,172 +1304,129 @@ Parser::setMaxSuggestionCount(int maxSuggestionCount)
   m_datastore->setMaxSuggestionCount(maxSuggestionCount);
 }
 
-// bool
-// Parser::manualMove() const
-//{
-//  return m_datastore->isManualMove();
-//}
-
-// void
-// Parser::setManualMove(bool manualMove)
-//{
-//  m_datastore->setManualMove(manualMove);
-//}
-
-// QMenu*
-// Parser::contextMenu() const
-//{
-//  return m_contextMenu;
-//}
+void
+Parser::updateTextChange(QTextCursor& cursor,
+                         const QString& oldName,
+                         const QString& newName)
+{
+  cursor.movePosition(QTextCursor::Right,
+                      QTextCursor::KeepAnchor,
+                      oldName.length()); // selection
+  cursor.insertText(newName);
+  cursor.movePosition(
+    QTextCursor::Left, QTextCursor::MoveAnchor, newName.length());
+}
 
 void
 Parser::actionPropertyNameChange(PropertyNode* property, const QString& newName)
 {
-  auto anchor = property->cursor().anchor();
+  auto cursor = property->cursor();
   auto oldName = property->name();
-  //  auto diff = newName.length() - oldName.length();
+
+  updateTextChange(cursor, oldName, newName);
 
   property->setValidPropertyName(true);
-  //  if (property->hasPropertyMarker()) {
-  //    property->incrementPropertyMarker(diff);
-  //  }
-  //  if (property->hasEndMarker()) {
-  //    property->incrementEndMarkerOffset(diff);
-  //  }
-  //  property->incrementOffsets(diff);
   property->setName(newName);
-
-  QTextCursor cursor(m_editor->document());
-  cursor.movePosition(QTextCursor::Start,
-                      QTextCursor::MoveAnchor); // to start
-  cursor.movePosition(
-    QTextCursor::Right, QTextCursor::MoveAnchor, anchor); // to node
-  cursor.movePosition(QTextCursor::Right,
-                      QTextCursor::KeepAnchor,
-                      oldName.length()); // selection
-  cursor.removeSelectedText();
-  cursor.insertText(newName);
-  property->setStart(anchor); // need to reset start pos.
+  property->setCursor(cursor);
+  emit rehighlightBlock(cursor.block());
 }
 
 void
 Parser::actionPropertyValueChange(PropertyNode* property,
-                                  const PropertyStatus& status,
+                                  const QString& oldName,
                                   const QString& newName)
 {
-  auto oldName = status.name();
   auto index = property->values().indexOf(oldName);
-  auto offset = property->cursor().anchor() +
-                property->positionCursors().at(index).anchor();
-  //  auto diff = newName.length() - oldName.length();
+  auto cursor = property->valueCursors().at(index);
+
+  updateTextChange(cursor, oldName, newName);
 
   property->setValue(index, newName);
-  property->setCheck(index, GoodValue);
-  //  if (property->hasEndMarker()) {
-  //    property->incrementEndMarkerOffset(diff);
-  //  }
-  //  property->incrementOffsets(diff, index + 1);
-
-  QTextCursor cursor(m_editor->document());
-  cursor.movePosition(QTextCursor::Start,
-                      QTextCursor::MoveAnchor); // to start
-  cursor.movePosition(
-    QTextCursor::Right, QTextCursor::MoveAnchor, offset); // to node
-  cursor.movePosition(QTextCursor::Right,
-                      QTextCursor::KeepAnchor,
-                      oldName.length()); // selection
-  cursor.removeSelectedText();
-  cursor.insertText(newName);
+  property->setCheck(index, PropertyValueCheck::GoodValue);
+  property->setValueCursor(index, cursor);
+  emit rehighlightBlock(property->cursor().block());
 }
 
 void
-Parser::handleSuggestion(QAction* act)
+Parser::actionPropertyMarker(PropertyNode* property)
+{
+  QTextCursor cursor = property->cursor();
+  cursor.movePosition(QTextCursor::Right,
+                      QTextCursor::MoveAnchor,
+                      property->name().length()); // selection
+  cursor.insertText(":");
+  property->setPropertyMarkerCursor(cursor);
+  property->setPropertyMarker(true);
+  emit rehighlightBlock(cursor.block());
+}
+
+void
+Parser::actionPropertyEndMarker(PropertyNode* property)
+{
+  QTextCursor cursor = property->cursor();
+  cursor.movePosition(QTextCursor::Right,
+                      QTextCursor::MoveAnchor,
+                      property->length()); // selection
+  cursor.insertText(";");
+  property->setPropertyEndMarkerCursor(cursor);
+  property->setPropertyEndMarker(true);
+  emit rehighlightBlock(cursor.block());
+}
+
+void
+Parser::handleSuggestions(QAction* act)
 {
   QVariant v = act->data();
-  auto pair = v.value<QPair<WidgetNode*, QPoint>>();
-  auto nNode = pair.first;
-  auto pos = pair.second;
+  auto menuData = v.value<MenuData>();
+  auto nNode = menuData.node;
+  auto pos = menuData.pos;
+  auto type = menuData.type;
+  auto oldName = menuData.oldName;
 
-  if (act == m_addPropertyMarkerAct) {
-    PropertyNode* property = qobject_cast<PropertyNode*>(nNode);
+  if (nNode) {
+    auto newName = act->text();
 
-    if (property) {
-      m_datastore->setHasSuggestion(true);
-      property->setPropertyMarker(true);
-      auto cursor = getCursorForPosition(property->name().length());
-      property->setPropertyMarkerCursor(cursor);
-      cursor.insertText(":");
-    }
+    switch (type) {
+      case WidgetName:
+      case WidgetPseudoState:
+      case WidgetPseudoStateMarker:
+      case WidgetSubControl:
+      case WidgetSubControlMarker:
+      case WidgetPropertyName:
+      case WidgetPropertyValue:
+      case WidgetPropertyMarker:
+      case WidgetPropertyEndMarker:
+      case WidgetStartBrace:
+      case WidgetEndBrace:
+        break;
 
-  } else if (act == m_addPropertyEndMarkerAct) {
-    PropertyNode* property = qobject_cast<PropertyNode*>(nNode);
+      case Comment:
+        break;
 
-    if (property) {
-      m_datastore->setHasSuggestion(true);
-      property->setPropertyEndMarker(true);
-      auto cursor =
-        getCursorForPosition(property->start() + property->length());
-      property->setPropertyMarkerCursor(cursor);
-      cursor.insertText(";");
-    }
-
-  } else {
-
-    if (nNode) {
-      auto name = act->text();
-
-      switch (nNode->type()) {
-        case NodeType::WidgetType: {
-          auto widget = qobject_cast<WidgetNode*>(nNode);
-
-          if (widget) {
-            m_datastore->setHasSuggestion(true);
-            auto cursor(widget->cursor());
-            widget->setWidgetValid(true);
-            cursor.movePosition(
-              QTextCursor::Right, QTextCursor::KeepAnchor, widget->length());
-            cursor.removeSelectedText();
-            cursor.insertText(name);
-            widget->setName(name);
-          }
-
-          break;
-        }
-
-        case NodeType::PropertyType: {
-          auto property = qobject_cast<PropertyNode*>(nNode);
-
-          if (property) {
-            auto offset = m_editor->cursorForPosition(pos).anchor() -
-                          property->cursor().anchor();
-            auto status = property->isProperty(offset);
-
-            if (status.status()) {
-              m_datastore->setHasSuggestion(true);
-              actionPropertyNameChange(property, name);
-            } else {
-              if (name.contains(':')) {
-                m_datastore->setHasSuggestion(true);
-                auto splits = name.split(':');
-                auto pName = splits[0].trimmed();
-                auto vName = splits[1].trimmed();
-
-                actionPropertyNameChange(property, pName);
-                actionPropertyValueChange(property, status, vName);
-
-              } else {
-                m_datastore->setHasSuggestion(true);
-                actionPropertyValueChange(property, status, name);
-              }
-            }
-          }
-
-          break;
-        }
+      case SectionType::PropertyName: {
+        m_datastore->setHasSuggestion(true);
+        actionPropertyNameChange(qobject_cast<PropertyNode*>(nNode), newName);
+        break;
       }
-
-      emit rehighlight();
+      case SectionType::PropertyValue: {
+        m_datastore->setHasSuggestion(true);
+        actionPropertyValueChange(
+          qobject_cast<PropertyNode*>(nNode), oldName, newName);
+        break;
+      }
+      case SectionType::PropertyMarker: {
+        m_datastore->setHasSuggestion(true);
+        actionPropertyMarker(qobject_cast<PropertyNode*>(nNode));
+        break;
+      }
+      case SectionType::PropertyEndMarker: {
+        m_datastore->setHasSuggestion(true);
+        actionPropertyEndMarker(qobject_cast<PropertyNode*>(nNode));
+        break;
+      }
     }
+
+    emit rehighlight();
   }
 }
 
@@ -1476,32 +1435,3 @@ Parser::maxSuggestionCount() const
 {
   return m_datastore->maxSuggestionCount();
 }
-
-// Node*
-// Parser::nextNode(QTextCursor cursor)
-//{
-//  auto nodes = m_datastore->nodes();
-//  QList<QTextCursor> keys = nodes.keys();
-//  int index = keys.indexOf(cursor) + 1; // next index
-
-//  if (index < keys.size()) {
-//    QTextCursor cursor = keys.value(index);
-//    return nodes.value(cursor);
-//  }
-
-//  return nullptr;
-//}
-
-// Node *Parser::previousNode(QTextCursor cursor)
-//{
-//  auto nodes = m_datastore->nodes();
-//  QList<QTextCursor> keys = nodes.keys();
-//  int index = keys.indexOf(cursor) - 1; // previous index
-
-//  if (index >= 0) {
-//    QTextCursor cursor = keys.value(index);
-//    return nodes.value(cursor);
-//  }
-
-//  return nullptr;
-//}

@@ -99,8 +99,6 @@ public:
   bool showLineMarkers() const;
   void setShowLineMarkers(bool showLineMarkers);
 
-  void setInitialisingFlag(bool initialising);
-
 signals:
   void finished();
   void parseComplete(bool initialsed = false);
@@ -115,7 +113,6 @@ private:
   //  QAction *m_addPropertyMarkerAct,
   //    *m_addPropertyEndMarkerAct;
   bool m_showLineMarkers;
-  bool m_initialising;
 
   void parsePropertyWithValues(PropertyNode* property,
                                const QString& text,

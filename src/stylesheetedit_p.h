@@ -69,9 +69,10 @@ struct StylesheetEditorPrivate
   bool m_parseComplete;
 
   QMenu *m_contextMenu, *m_suggestionsMenu;
-  NodeSection *m_oldSection;
+  NodeSection* m_oldSection;
 
-  void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);  void initActions();
+  void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
+  void initActions();
   void handleCustomMenuRequested(QPoint pos);
 
   void setPlainText(const QString& text);
@@ -79,10 +80,10 @@ struct StylesheetEditorPrivate
   void handleRehighlightBlock(const QTextBlock& block);
   void handleParseComplete();
 
-  bool handleMousePress(QMouseEvent*event);
-  void handleMouseMove(QMouseEvent*event);
-  void setHoverBadPropertyMarker(QString &hover);
-  void setBadPropertyEndMarker(QString &hover, const PropertyNode *property);
+  bool handleMousePress(QMouseEvent* event);
+  void handleMouseMove(QMouseEvent* event);
+  void setHoverBadPropertyMarker(QString& hover);
+  void setBadPropertyEndMarker(QString& hover, const PropertyNode* property);
 
   void format();
 
@@ -123,7 +124,7 @@ struct StylesheetEditorPrivate
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
   void handleGotoBookmark(bool);
-//  void handleContextMenuEvent(QPoint pos);
+  //  void handleContextMenuEvent(QPoint pos);
   //  void handleBookmarkMenuEvent(QPoint pos);
 
   QString styleSheet() const;
@@ -290,11 +291,12 @@ public:
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
+//  void keyPressEvent(QKeyEvent *event);
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
   void mouseDoubleClickEvent(QMouseEvent* event) override;
-    void contextMenuEvent(QContextMenuEvent* event);
+  void contextMenuEvent(QContextMenuEvent* event);
 
   //  void handleMouseClicked(QMouseEvent* event);
   //  void handleMousePressEvent(QMouseEvent* event);
@@ -323,7 +325,6 @@ signals:
   void column(int);
 
 protected:
-
   //  void resizeEvent(QResizeEvent* event) override;
   //  void mousePressEvent(QMouseEvent* event) override;
   //  void mouseMoveEvent(QMouseEvent* event) override;
@@ -339,10 +340,10 @@ protected:
 private:
   StylesheetEditorPrivate* d_ptr;
   void initActions();
-//  void initMenus();
+  //  void initMenus();
   void handleParseComplete();
   void handleRehighlight();
-  void handleRehighlightBlock(const QTextBlock &block);
+  void handleRehighlightBlock(const QTextBlock& block);
   void handleAddBookmark(bool);
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);
@@ -352,9 +353,8 @@ private:
   void documentChanged(int pos, int charsRemoved, int charsAdded);
   void handleTextChanged();
 
-//  void updateLeftArea(const QRect& rect, int dy);
+  //  void updateLeftArea(const QRect& rect, int dy);
   void updateLineNumberArea();
-
 
 public:
   static const QChar m_arrow;

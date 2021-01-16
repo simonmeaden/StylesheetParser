@@ -125,38 +125,39 @@ MainWindow::initGui()
          //         " background-color: blue; \n"
          //         "}\n";
          // Errors
-                  // Good property.
-//                  "color : red; \n"
-//                  // bad property value
-//                  "color: rd;\n"
-//                  "color: blu;\n"
-                  // no property marker
-                  "color blue;\n"
-//                  // no end marker on non-final property
-//                  "border: green solid 1px\n"
-//                  // bad property name
-//                  "bckground-color: blue; \n"
-//                  // GOOD final property does not need an end marker.
-//                  "background-color: blue\n";
-         // Widget GOOD
-//         "QTabWidget::branch {color: red}\n"
-//         "QTabWidget::branch {color: red; background: green}\n"
-//         "QTabWidget::branch {color: red; background: green;}\n"
-//         "QTabWidget:active {color: red}\n"
-//         "QTabWidget:active {color: red; background: green}\n"
-//         "QTabWidget:active {color: red; background: green;}\n"
-//         "QTabWidget {color: red}\n"
-//         "QTabWidget {color: red; background: green}\n"
-//         "QTabWidget {color: red; background: green;}\n"
-         // Widget Errors.
-//         "QTabWidget:branch {color: red}\n" //
-//         "QTabWidget:branch {color: red; background: green}\n"
-//         "QTabWidget:branch {color: red; background: green;}\n"
-//         "QTabWidget::active {color: red}\n"
-//         "QTabWidget::active {color: red; background: green}\n"
-//         "QTabWidget::active {color: red; background: green;}\n"
-    // End of errors
-    ;
+         // Good property.
+         "color : red; \n"
+         // bad property value
+         "color: rd;\n"
+         "color: blu;\n"
+         // no property marker
+         "color blue;\n"
+         // no end marker on non-final property
+         "border: green solid 1px\n"
+         // bad property name
+         "bckground-color: green; \n"
+         // GOOD final property does not need an end marker.
+         "background-color: blue;\n"
+         "background-color: red\n";
+  // Widget GOOD
+  //         "QTabWidget::branch {color: red}\n"
+  //         "QTabWidget::branch {color: red; background: green}\n"
+  //         "QTabWidget::branch {color: red; background: green;}\n"
+  //         "QTabWidget:active {color: red}\n"
+  //         "QTabWidget:active {color: red; background: green}\n"
+  //         "QTabWidget:active {color: red; background: green;}\n"
+  //         "QTabWidget {color: red}\n"
+  //         "QTabWidget {color: red; background: green}\n"
+  //         "QTabWidget {color: red; background: green;}\n"
+  // Widget Errors.
+  //         "QTabWidget:branch {color: red}\n" //
+  //         "QTabWidget:branch {color: red; background: green}\n"
+  //         "QTabWidget:branch {color: red; background: green;}\n"
+  //         "QTabWidget::active {color: red}\n"
+  //         "QTabWidget::active {color: red; background: green}\n"
+  //         "QTabWidget::active {color: red; background: green;}\n"
+  // End of errors
+  ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
   //    MISSING END
   //                                                                 // BRACE

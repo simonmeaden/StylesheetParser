@@ -367,7 +367,7 @@ WidgetNode::isIn(QPoint pos)
 }
 
 PropertyStatus
-WidgetNode::partAtOffset(int pos) const
+WidgetNode::sectionAtOffset(int pos) const
 {
   if (pos >= node_ptr->cursor.anchor() &&
       pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
@@ -892,7 +892,6 @@ PropertyNode::hasPropertyEndMarker() const
 {
   return property_ptr->propertyState.testFlag(
     PropertyCheck::PropertyEndMarkerCheck);
-  ;
 }
 
 void
@@ -987,37 +986,47 @@ PropertyNode::isIn(QPoint pos)
 }
 
 PropertyStatus
-PropertyNode::partAtOffset(int pos) const
+PropertyNode::sectionAtOffset(int pos, QString textChanged) const
 {
   if (pos >= node_ptr->cursor.anchor() &&
       pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
     return PropertyStatus(SectionType::PropertyName, node_ptr->name);
-
   }
 
   if (hasPropertyMarker()) {
-      auto markerPos = propertyEndMarkerPosition();
-      if (pos >= markerPos && pos < markerPos + 1) {
-          return PropertyStatus(SectionType::PropertyMarker);
-      }
+    auto markerPos = propertyMarkerPosition();
+    if (pos >= markerPos && pos < markerPos + 1) {
+      return PropertyStatus(SectionType::PropertyMarker);
+    }
   }
 
   if (!values().isEmpty()) {
+    if (pos < valueCursors().constFirst().anchor()) {
+      return PropertyStatus(SectionType::PropertyMarker);
+    }
     for (int i = 0; i < property_ptr->values.size(); i++) {
       auto value = property_ptr->values.at(i);
       auto offset = property_ptr->cursors.at(i).anchor();
 
       if (pos >= offset && pos <= offset + value.length()) {
-        return PropertyStatus(SectionType::PropertyValue, value, offset);
+        if (textChanged.trimmed() == ";") {
+          return PropertyStatus(SectionType::PropertyEndMarker);
+        } else {
+          return PropertyStatus(SectionType::PropertyValue, value, offset);
+        }
       }
     }
   }
 
-  if (hasPropertyEndMarker()) {
-      auto markerPos = propertyEndMarkerPosition();
-      if (pos >= markerPos && pos < markerPos + 1) {
-          return PropertyStatus(SectionType::PropertyEndMarker);
-      }
+  if (!hasPropertyEndMarker()) {
+    if (!values().isEmpty()) {
+      return PropertyStatus(SectionType::PropertyEndMarker);
+    }
+  } else {
+    auto markerPos = propertyEndMarkerPosition();
+    if (pos >= markerPos && pos < markerPos + 1) {
+      return PropertyStatus(SectionType::PropertyEndMarker);
+    }
   }
 
   return PropertyStatus();
@@ -1133,7 +1142,7 @@ CommentNode::isIn(QPoint pos)
   auto y = pos.y();
   int left, right;
   auto fm = node_ptr->editor->fontMetrics();
-  int top, bottom, l;
+  int top, bottom;
   NodeSection* isin = new NodeSection();
 
   // check marker;

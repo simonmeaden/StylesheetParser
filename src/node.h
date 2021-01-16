@@ -65,7 +65,7 @@ public:
   QString name() const;
   void setName(const QString& value);
 
-  virtual PropertyStatus partAtOffset(int offset) const
+  virtual PropertyStatus sectionAtOffset(int offset) const
   {
     return PropertyStatus(SectionType::None, QString(), -1);
   }
@@ -153,7 +153,7 @@ public:
 
   NodeSection* isIn(QPoint pos) override;
   //  bool isPropertyType()
-  PropertyStatus partAtOffset(int pos) const;
+  PropertyStatus sectionAtOffset(int pos) const;
 
   void setSubControlMarkerCursor(QTextCursor cursor);
   void setPseudoStateMarkerCursor(QTextCursor cursor);
@@ -302,7 +302,7 @@ public:
   void setPropertyEndMarkerCursor(QTextCursor position);
 
   NodeSection* isIn(QPoint pos) override;
-  PropertyStatus partAtOffset(int offset) const;
+  PropertyStatus sectionAtOffset(int offset, QString textChanged=QString()) const;
 
 private:
   PropertyNodeData* property_ptr;

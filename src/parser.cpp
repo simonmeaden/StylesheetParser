@@ -50,7 +50,6 @@ Parser::Parser(DataStore* datastore, StylesheetEditor* editor, QObject* parent)
   , m_editor(editor)
   , m_datastore(datastore)
   , m_showLineMarkers(false)
-  , m_initialising(true)
 {
   connect(this, &Parser::setBraceCount, m_datastore, &DataStore::setBraceCount);
 }
@@ -134,7 +133,6 @@ Parser::checkType(const QString& block, PropertyNode* property) const
 void
 Parser::parseInitialText(const QString& text)
 {
-  m_initialising = true;
   m_datastore->setBraceCount(0);
   QString block;
   int start;
@@ -589,12 +587,6 @@ Parser::setShowLineMarkers(bool showLineMarkers)
   m_showLineMarkers = showLineMarkers;
 }
 
-void
-Parser::setInitialisingFlag(bool initialising)
-{
-  m_initialising = initialising;
-}
-
 CursorData
 Parser::getNodeAtCursor(QTextCursor cursor)
 {
@@ -1033,6 +1025,11 @@ Parser::getStylesheetProperty(const QString& sheet, int& pos)
 void
 Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
 {
+  // If there is no text then nothing to be done.
+  if (m_editor->toPlainText().trimmed().isEmpty()) {
+    return;
+  }
+
   // If the text is changed due to a suggestion then ignore
   // it as is is handled elsewhere.
   if (m_datastore->hasSuggestion()) {
@@ -1040,24 +1037,12 @@ Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
     return;
   }
 
-  if (m_initialising) {
+  QString text;
+  if ((text = m_editor->toPlainText()).isEmpty()) {
     return;
   }
-
-  //  auto charChange = charsAdded - charsRemoved;
-  if (m_datastore->isNodesEmpty()) {
-    // If no text has been loaded but text has been added then asssume modifying
-    // a clean new stylesheet and handle changes normally.
-    if (charsAdded == 0)
-      // initial text has not yet been parsed.
-      return;
-  }
-
-  QString text = m_editor->toPlainText();
-
-  if (text.isEmpty()) {
-    return;
-  }
+  auto count = charsAdded - charsRemoved;
+  auto textChanged = text.mid(offset, count);
 
   CursorData data = getNodeAtCursor(offset);
   Node* node = data.node;
@@ -1070,29 +1055,58 @@ Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
         auto property = qobject_cast<PropertyNode*>(node);
 
         if (property) {
-          auto status = property->partAtOffset(offset);
-          if (status.status() == SectionType::PropertyName) {
-            int length = property->name().length() + charsAdded - charsRemoved;
-            auto newName = text.mid(property->start(), length);
-            property->setName(newName);
-            if (m_datastore->containsProperty(newName)) {
-              property->setValidPropertyName(true);
-            } else {
-              property->setValidPropertyName(false);
+          auto status = property->sectionAtOffset(offset, textChanged);
+          switch (status.status()) {
+            case SectionType::PropertyName: {
+              int length = property->name().length() + count;
+              auto newName = text.mid(property->start(), length);
+              property->setName(newName);
+              if (m_datastore->containsProperty(newName)) {
+                property->setValidPropertyName(true);
+              } else {
+                property->setValidPropertyName(false);
+              }
+              emit rehighlightBlock(data.cursor.block());
+              break;
             }
-            emit rehighlightBlock(data.cursor.block());
-          } else if (status.status() == SectionType::PropertyValue) {
-            int index = property->values().indexOf(status.name());
-            int length = status.name().length() + charsAdded - charsRemoved;
-            auto newName = text.mid(property->valuePosition(index), length);
-            property->setValue(index, newName);
-            if (m_datastore->isValidPropertyValueForProperty(property->name(),
-                                                             newName)) {
-              property->setCheck(index, PropertyValueCheck::GoodValue);
-            } else {
-              property->setCheck(index, PropertyValueCheck::BadValue);
+            case SectionType::PropertyValue: {
+              int index = property->values().indexOf(status.name());
+              int length = status.name().length() + count;
+              auto newName = text.mid(property->valuePosition(index), length);
+              property->setValue(index, newName);
+              if (m_datastore->isValidPropertyValueForProperty(property->name(),
+                                                               newName)) {
+                property->setCheck(index, PropertyValueCheck::GoodValue);
+              } else {
+                property->setCheck(index, PropertyValueCheck::BadValue);
+              }
+              emit rehighlightBlock(data.cursor.block());
+              break;
             }
-            emit rehighlightBlock(data.cursor.block());
+            case SectionType::PropertyMarker: {
+              if (!property->hasPropertyMarker()) {
+                int length = property->name().length();
+                QTextCursor cursor = property->cursor();
+                cursor.movePosition(
+                  QTextCursor::Right, QTextCursor::MoveAnchor, length);
+                property->setPropertyMarkerCursor(cursor);
+                property->setPropertyMarker(true);
+              }
+              emit rehighlightBlock(data.cursor.block());
+              break;
+            }
+            case SectionType::PropertyEndMarker: {
+              if (!property->hasPropertyEndMarker()) {
+                int length = property->length();
+                QTextCursor cursor = property->cursor();
+                cursor.movePosition(
+                  QTextCursor::Right, QTextCursor::MoveAnchor, length);
+                property->setPropertyEndMarkerCursor(cursor);
+                property->setPropertyEndMarker(true);
+              }
+              emit rehighlightBlock(data.cursor.block());
+              break;
+            }
           }
         }
       }

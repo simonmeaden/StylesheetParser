@@ -21,13 +21,13 @@
 */
 #include "stylesheetparser/stylesheetedit.h"
 #include "bookmarkarea.h"
+#include "common.h"
 #include "datastore.h"
 #include "hoverwidget.h"
 #include "linenumberarea.h"
 #include "parser.h"
 #include "stylesheetedit_p.h"
 #include "stylesheethighlighter.h"
-#include "common.h"
 
 #include <QtDebug>
 
@@ -379,10 +379,6 @@ StylesheetEditorPrivate::setup(BookmarkArea* bookmarkArea,
                  q_ptr,
                  &StylesheetEditor::handleParseComplete);
   q_ptr->connect(m_parser,
-                 &Parser::parseComplete,
-                 m_parser,
-                 &Parser::setInitialisingFlag);
-  q_ptr->connect(m_parser,
                  &Parser::rehighlight,
                  q_ptr,
                  &StylesheetEditor::handleRehighlight);
@@ -395,7 +391,6 @@ StylesheetEditorPrivate::setup(BookmarkArea* bookmarkArea,
                  &QPlainTextEdit::cursorPositionChanged,
                  q_ptr,
                  &StylesheetEditor::updateLineNumberArea);
-
   q_ptr->connect(q_ptr,
                  &QPlainTextEdit::cursorPositionChanged,
                  q_ptr,
@@ -403,7 +398,8 @@ StylesheetEditorPrivate::setup(BookmarkArea* bookmarkArea,
   q_ptr->connect(q_ptr->document(),
                  &QTextDocument::contentsChange,
                  q_ptr,
-                 &StylesheetEditor::documentChanged);
+                 &StylesheetEditor::documentChanged,
+                 Qt::UniqueConnection);
 }
 
 int
@@ -436,12 +432,16 @@ StylesheetEditor::setPlainText(const QString& text)
   QPlainTextEdit::setPlainText(text);
   calculateLineNumber(textCursor());
   d_ptr->setPlainText(text);
+  connect(document(),
+          &QTextDocument::contentsChange,
+          this,
+          &StylesheetEditor::documentChanged,
+          Qt::UniqueConnection);
 }
 
 void
 StylesheetEditorPrivate::setPlainText(const QString& text)
 {
-  m_parser->setInitialisingFlag(true);
   m_parser->parseInitialText(text);
 }
 
@@ -463,7 +463,8 @@ StylesheetEditorPrivate::handleRehighlight()
   m_highlighter->rehighlight();
 }
 
-void StylesheetEditorPrivate::handleRehighlightBlock(const QTextBlock &block)
+void
+StylesheetEditorPrivate::handleRehighlightBlock(const QTextBlock& block)
 {
   m_highlighter->rehighlightBlock(block);
 }
@@ -477,7 +478,6 @@ StylesheetEditor::handleParseComplete()
 void
 StylesheetEditorPrivate::handleParseComplete()
 {
-  m_parser->setInitialisingFlag(false);
   m_highlighter->rehighlight();
   setLineNumber(1);
   m_parseComplete = true;
@@ -894,29 +894,40 @@ StylesheetEditor::setMaxSuggestionCount(int maxSuggestionCount)
   d_ptr->setMaxSuggestionCount(maxSuggestionCount);
 }
 
+// void
+// StylesheetEditor::keyPressEvent(QKeyEvent* event)
+//{
+//  QPlainTextEdit::keyPressEvent(event);
+//  if (!toPlainText().trimmed().isEmpty()) {
+//    connect(document(),
+//            &QTextDocument::contentsChange,
+//            this,
+//            &StylesheetEditor::documentChanged,
+//            Qt::UniqueConnection);
+//  } else {
+//    disconnect(document(),
+//               &QTextDocument::contentsChange,
+//               this,
+//               &StylesheetEditor::documentChanged);
+//  }
+//}
+
 void
 StylesheetEditor::mousePressEvent(QMouseEvent* event)
 {
-  /*if (*/ d_ptr->handleMousePress(event) /*)*/; /* {*/
-                                                 //    return;
-                                                 //  }
+  d_ptr->handleMousePress(event);
   QPlainTextEdit::mousePressEvent(event);
 }
 
 bool
 StylesheetEditorPrivate::handleMousePress(QMouseEvent* event)
 {
-  //  if (event->button() != Qt::RightButton) {
-  //    handleCustomMenuRequested(event->pos());
-  //    return true;
-  //  } else {
   auto tc = q_ptr->cursorForPosition(event->pos());
   auto lineNumber = calculateLineNumber(tc);
   if (lineNumber >= 1) {
     setLineNumber(lineNumber);
     q_ptr->update();
   }
-  //  }
   return false;
 }
 
@@ -1273,8 +1284,8 @@ StylesheetEditor::handleTextChanged()
 
 void
 StylesheetEditorPrivate::handleDocumentChanged(int pos,
-                                           int charsRemoved,
-                                           int charsAdded)
+                                               int charsRemoved,
+                                               int charsAdded)
 {
   m_parser->handleDocumentChanged(pos, charsRemoved, charsAdded);
 }

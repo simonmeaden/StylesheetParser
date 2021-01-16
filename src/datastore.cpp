@@ -25,7 +25,6 @@
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
 
-
 DataStore::DataStore(QObject* parent)
   : QObject(parent)
   , m_invalidIcon(":/icons/invalid")
@@ -1260,6 +1259,20 @@ DataStore::isNodesEmpty()
   return m_nodes.isEmpty();
 }
 
+void
+DataStore::clearNodes()
+{
+  QMutexLocker locker(&m_mutex);
+  m_nodes.clear();
+}
+
+void
+DataStore::setNodes(QMap<QTextCursor, Node*> nodes)
+{
+  QMutexLocker locker(&m_mutex);
+  m_nodes = nodes;
+}
+
 int
 DataStore::maxSuggestionCount()
 {
@@ -1337,32 +1350,38 @@ DataStore::setCurrentCursor(const QTextCursor& currentCursor)
   m_currentCursor = currentCursor;
 }
 
-QIcon DataStore::invalidIcon() const
+QIcon
+DataStore::invalidIcon() const
 {
   return m_invalidIcon;
 }
 
-QIcon DataStore::validIcon() const
+QIcon
+DataStore::validIcon() const
 {
   return m_validIcon;
 }
 
-QIcon DataStore::addSColonIcon() const
+QIcon
+DataStore::addSColonIcon() const
 {
   return m_addSColonIcon;
 }
 
-QIcon DataStore::addColonIcon() const
+QIcon
+DataStore::addColonIcon() const
 {
   return m_addColonIcon;
 }
 
-QIcon DataStore::badSColonIcon() const
+QIcon
+DataStore::badSColonIcon() const
 {
   return m_badSColonIcon;
 }
 
-QIcon DataStore::noIcon() const
+QIcon
+DataStore::noIcon() const
 {
   return m_noIcon;
 }

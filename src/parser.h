@@ -83,7 +83,7 @@ public:
   void parseInitialText(const QString& text);
 
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
-  void handleDocumentChanged(int pos, int charsRemoved, int charsAdded);
+  void handleDocumentChanged(int, int, int);
   void handleCursorPositionChanged(QTextCursor textCursor);
   QMenu* handleMouseClicked(const QPoint& pos);
   QTextCursor currentCursor() const;
@@ -114,12 +114,13 @@ private:
   //    *m_addPropertyEndMarkerAct;
   bool m_showLineMarkers;
 
-  void parsePropertyWithValues(PropertyNode* property,
+  void parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
+                               PropertyNode* property,
                                const QString& text,
                                int start,
                                int& pos,
                                QString& block);
-  void parseComment(const QString& text, int start, int& pos);
+  void parseComment(QMap<QTextCursor, Node *> *nodes, const QString& text, int start, int& pos);
 
   QString findNext(const QString& text, int& pos);
   void skipBlanks(const QString& text, int& pos);
@@ -129,15 +130,17 @@ private:
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
 
-  WidgetNode* stashWidget(int position,
+  WidgetNode* stashWidget(QMap<QTextCursor, Node*>* nodes,
+                          int position,
                           const QString& block,
                           bool valid = true);
-  void stashBadNode(int position,
+  void stashBadNode(QMap<QTextCursor, Node*>* nodes,
+                    int position,
                     const QString& block,
                     ParserState::Error error);
-  void stashNewline(int position);
-  void stashEndBrace(int position);
-  void stashStartBrace(int position);
+  void stashNewline(QMap<QTextCursor, Node*>* nodes, int position);
+  void stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position);
+  void stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position);
 
   void updateContextMenu(QMap<int, QString> matches,
                          WidgetNode* node,
@@ -193,6 +196,7 @@ private:
                    QPoint pos,
                    SectionType type,
                    const QString& oldName = QString());
+  QMap<QTextCursor, Node*> parseText(const QString& text);
 };
 
 #endif // PARSER_H

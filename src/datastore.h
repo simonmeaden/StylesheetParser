@@ -84,6 +84,8 @@ public:
   QMap<QTextCursor, Node*> nodes();
   void insertNode(QTextCursor cursor, Node* node);
   bool isNodesEmpty();
+  void clearNodes();
+  void setNodes(QMap<QTextCursor, Node*> nodes);
 
   int braceCount();
   void setBraceCount(int value);
@@ -117,7 +119,8 @@ signals:
   void finished();
 
 private:
-  const QIcon m_invalidIcon, m_validIcon, m_addSColonIcon, m_addColonIcon, m_badSColonIcon, m_noIcon;
+  const QIcon m_invalidIcon, m_validIcon, m_addSColonIcon, m_addColonIcon,
+    m_badSColonIcon, m_noIcon;
   QMutex m_mutex;
   QStringList m_widgets;
   QStringList m_colors;

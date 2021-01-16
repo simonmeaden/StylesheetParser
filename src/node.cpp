@@ -366,27 +366,27 @@ WidgetNode::isIn(QPoint pos)
   return isin;
 }
 
-PropertyStatus
-WidgetNode::sectionAtOffset(int pos) const
-{
-  if (pos >= node_ptr->cursor.anchor() &&
-      pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
-    return PropertyStatus(SectionType::WidgetPropertyName, node_ptr->name);
+//PropertyStatus
+//WidgetNode::sectionAtOffset(int pos) const
+//{
+//  if (pos >= node_ptr->cursor.anchor() &&
+//      pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
+//    return PropertyStatus(SectionType::WidgetPropertyName, node_ptr->name);
 
-  } else {
-    //    for (int i = 0; i < p_ptr->values.size(); i++) {
-    //      auto value = p_ptr->values.at(i);
-    //      auto offset = p_ptr->cursors.at(i).anchor();
+//  } else {
+//    //    for (int i = 0; i < p_ptr->values.size(); i++) {
+//    //      auto value = p_ptr->values.at(i);
+//    //      auto offset = p_ptr->cursors.at(i).anchor();
 
-    //      if (pos >= offset && pos < offset + value.length()) {
-    //        return PropertyStatus(SectionType::WidgetPropertyValue, value,
-    //        offset);
-    //      }
-    //    }
-  }
+//    //      if (pos >= offset && pos < offset + value.length()) {
+//    //        return PropertyStatus(SectionType::WidgetPropertyValue, value,
+//    //        offset);
+//    //      }
+//    //    }
+//  }
 
-  return PropertyStatus();
-}
+//  return PropertyStatus();
+//}
 
 void
 WidgetNode::setSubControlMarkerCursor(QTextCursor cursor)
@@ -985,52 +985,52 @@ PropertyNode::isIn(QPoint pos)
   return isin;
 }
 
-PropertyStatus
-PropertyNode::sectionAtOffset(int pos, QString textChanged) const
-{
-  if (pos >= node_ptr->cursor.anchor() &&
-      pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
-    return PropertyStatus(SectionType::PropertyName, node_ptr->name);
-  }
+//PropertyStatus
+//PropertyNode::sectionAtOffset(int pos, QString textChanged) const
+//{
+//  if (pos >= node_ptr->cursor.anchor() &&
+//      pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
+//    return PropertyStatus(SectionType::PropertyName, node_ptr->name);
+//  }
 
-  if (hasPropertyMarker()) {
-    auto markerPos = propertyMarkerPosition();
-    if (pos >= markerPos && pos < markerPos + 1) {
-      return PropertyStatus(SectionType::PropertyMarker);
-    }
-  }
+//  if (hasPropertyMarker()) {
+//    auto markerPos = propertyMarkerPosition();
+//    if (pos >= markerPos && pos < markerPos + 1) {
+//      return PropertyStatus(SectionType::PropertyMarker);
+//    }
+//  }
 
-  if (!values().isEmpty()) {
-    if (pos < valueCursors().constFirst().anchor()) {
-      return PropertyStatus(SectionType::PropertyMarker);
-    }
-    for (int i = 0; i < property_ptr->values.size(); i++) {
-      auto value = property_ptr->values.at(i);
-      auto offset = property_ptr->cursors.at(i).anchor();
+//  if (!values().isEmpty()) {
+//    if (pos < valueCursors().constFirst().anchor()) {
+//      return PropertyStatus(SectionType::PropertyMarker);
+//    }
+//    for (int i = 0; i < property_ptr->values.size(); i++) {
+//      auto value = property_ptr->values.at(i);
+//      auto offset = property_ptr->cursors.at(i).anchor();
 
-      if (pos >= offset && pos <= offset + value.length()) {
-        if (textChanged.trimmed() == ";") {
-          return PropertyStatus(SectionType::PropertyEndMarker);
-        } else {
-          return PropertyStatus(SectionType::PropertyValue, value, offset);
-        }
-      }
-    }
-  }
+//      if (pos >= offset && pos <= offset + value.length()) {
+//        if (textChanged.trimmed() == ";") {
+//          return PropertyStatus(SectionType::PropertyEndMarker);
+//        } else {
+//          return PropertyStatus(SectionType::PropertyValue, value, offset);
+//        }
+//      }
+//    }
+//  }
 
-  if (!hasPropertyEndMarker()) {
-    if (!values().isEmpty()) {
-      return PropertyStatus(SectionType::PropertyEndMarker);
-    }
-  } else {
-    auto markerPos = propertyEndMarkerPosition();
-    if (pos >= markerPos && pos < markerPos + 1) {
-      return PropertyStatus(SectionType::PropertyEndMarker);
-    }
-  }
+//  if (!hasPropertyEndMarker()) {
+//    if (!values().isEmpty()) {
+//      return PropertyStatus(SectionType::PropertyEndMarker);
+//    }
+//  } else {
+//    auto markerPos = propertyEndMarkerPosition();
+//    if (pos >= markerPos && pos < markerPos + 1) {
+//      return PropertyStatus(SectionType::PropertyEndMarker);
+//    }
+//  }
 
-  return PropertyStatus();
-}
+//  return PropertyStatus();
+//}
 
 void
 PropertyNode::setAttributeTypes(const QList<AttributeType>& attributeTypes)

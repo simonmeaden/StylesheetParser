@@ -29,9 +29,12 @@ DataStore::DataStore(QObject* parent)
   : QObject(parent)
   , m_invalidIcon(":/icons/invalid")
   , m_validIcon(":/icons/valid")
-  , m_addSColonIcon(":/icons/add-scolon")
+  , m_addSemiColonIcon(":/icons/add-scolon")
+  , m_addDColonIcon(":/icons/add-dcolon")
   , m_addColonIcon(":/icons/add-colon")
   , m_badSColonIcon(":/icons/bad-scolon")
+  , m_badColonIcon(":/icons/bad-colon")
+  , m_badDColonIcon(":/icons/bad-dcolon")
   , m_noIcon(":/icons/no")
   , m_widgets(initialiseWidgetList())
   , m_colors(initialiseColorList())
@@ -1359,13 +1362,18 @@ DataStore::invalidIcon() const
 QIcon
 DataStore::validIcon() const
 {
-  return m_validIcon;
+    return m_validIcon;
+}
+
+QIcon DataStore::addDColonIcon() const
+{
+    return m_addDColonIcon;
 }
 
 QIcon
-DataStore::addSColonIcon() const
+DataStore::addSemiColonIcon() const
 {
-  return m_addSColonIcon;
+  return m_addSemiColonIcon;
 }
 
 QIcon
@@ -1375,9 +1383,19 @@ DataStore::addColonIcon() const
 }
 
 QIcon
-DataStore::badSColonIcon() const
+DataStore::badSemiColonIcon() const
 {
-  return m_badSColonIcon;
+    return m_badSColonIcon;
+}
+
+QIcon DataStore::badColonIcon() const
+{
+    return m_badColonIcon;
+}
+
+QIcon DataStore::badDColonIcon() const
+{
+    return m_badDColonIcon;
 }
 
 QIcon

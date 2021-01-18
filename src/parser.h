@@ -120,7 +120,10 @@ private:
                                int start,
                                int& pos,
                                QString& block);
-  void parseComment(QMap<QTextCursor, Node *> *nodes, const QString& text, int start, int& pos);
+  void parseComment(QMap<QTextCursor, Node*>* nodes,
+                    const QString& text,
+                    int start,
+                    int& pos);
 
   QString findNext(const QString& text, int& pos);
   void skipBlanks(const QString& text, int& pos);
@@ -132,8 +135,7 @@ private:
 
   WidgetNode* stashWidget(QMap<QTextCursor, Node*>* nodes,
                           int position,
-                          const QString& block,
-                          bool valid = true);
+                          const QString& block);
   void stashBadNode(QMap<QTextCursor, Node*>* nodes,
                     int position,
                     const QString& block,
@@ -153,12 +155,10 @@ private:
   void updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
                                            PropertyNode* property,
                                            const QString& valueName,
-                                           const QPoint& pos,
                                            QMenu** suggestionsMenu);
   void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
                                              PropertyNode* property,
                                              const QString& valueName,
-                                             const QPoint& pos,
                                              QMenu** suggestionsMenu);
   void updateInvalidNameAndPropertyValueContextMenu(
     QMultiMap<int, QPair<QString, QString>> matches,
@@ -168,7 +168,6 @@ private:
     QMenu** suggestionsMenu);
   void updateMenu(QMap<int, QString> matches,
                   Node* nNode,
-                  const QPoint& pos,
                   QMenu** suggestionsMenu,
                   SectionType type,
                   const QString& oldName = QString());
@@ -193,10 +192,11 @@ private:
                         const QString& newName);
   void setMenuData(QAction* act,
                    Node* property,
-                   QPoint pos,
                    SectionType type,
                    const QString& oldName = QString());
   QMap<QTextCursor, Node*> parseText(const QString& text);
+  void updatePseudoStateMarkerMenu(WidgetNode* widget, QMenu** suggestionsMenu);
+  void updateSubControlMarkerMenu(WidgetNode* widget, QMenu** suggestionsMenu);
 };
 
 #endif // PARSER_H

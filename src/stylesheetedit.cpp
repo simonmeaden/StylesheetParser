@@ -1186,18 +1186,6 @@ StylesheetEditor::suggestionMade(bool)
   }
 }
 
-// void
-// StylesheetEdit::setContextMenu(QMenu* menu)
-//{
-//  d_ptr->setContextMenu(menu);
-//}
-
-// void
-// StylesheetEditor::customMenuRequested(QPoint pos)
-//{
-//  d_ptr->handleCustomMenuRequested(pos);
-//}
-
 void
 StylesheetEditor::bookmarkMenuRequested(QPoint pos)
 {

@@ -110,17 +110,20 @@ public:
 
   QIcon invalidIcon() const;
   QIcon validIcon() const;
-  QIcon addSColonIcon() const;
+  QIcon addDColonIcon() const;
+  QIcon addSemiColonIcon() const;
   QIcon addColonIcon() const;
-  QIcon badSColonIcon() const;
+  QIcon badSemiColonIcon() const;
+  QIcon badColonIcon() const;
+  QIcon badDColonIcon() const;
   QIcon noIcon() const;
 
 signals:
   void finished();
 
 private:
-  const QIcon m_invalidIcon, m_validIcon, m_addSColonIcon, m_addColonIcon,
-    m_badSColonIcon, m_noIcon;
+  const QIcon m_invalidIcon, m_validIcon, m_addSemiColonIcon, m_addDColonIcon, m_addColonIcon,
+    m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon;
   QMutex m_mutex;
   QStringList m_widgets;
   QStringList m_colors;

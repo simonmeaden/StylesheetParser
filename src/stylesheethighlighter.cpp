@@ -32,22 +32,23 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
   //  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
   setWidgetFormat(QColor("olive"), m_back, QFont::Light);
   setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
-  //  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
-  //  setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
-  setSubControlFormat(QColor("pink"), m_back, QFont::Light);
-  //  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
+  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
+  setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
+  //  setSubControlFormat(QColor("pink"), m_back, QFont::Light);
+  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
   setPropertyFormat(QColor("darkblue"), m_back, QFont::Light);
-  //  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  //  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPropertyMarkerFormat(QColor("darkcyan"), m_back, QFont::Light);
-  setPropertyEndMarkerFormat(QColor("mediumseagreen"), m_back, QFont::Light);
+  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setPropertyMarkerFormat(QColor("darkcyan"), m_back, QFont::Light);
+  //  setPropertyEndMarkerFormat(QColor("mediumseagreen"), m_back,
+  //  QFont::Light);
   setValueFormat(QColor("orangered"), m_back, QFont::Light);
   //  setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   //  setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   setStartBraceFormat(QColor("blue"), m_back, QFont::Light);
-  setEndBraceFormat(QColor("cornflowerblue"), m_back, QFont::Light);
+  setEndBraceFormat(QColor("blue"), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
   setCommentFormat(QColor("darkmagenta"), m_back, QFont::Light);
 }
@@ -138,7 +139,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   auto length = property->name().length();
   auto position = property->start();
   if (isInBlock(position, length, blockStart, blockEnd)) {
-    if (property->isValidProperty(finalBlock)) {
+    if (property->isValid(finalBlock)) {
       formatVisiblePart(
         blockStart, blockEnd, position, length, m_propertyFormat);
       position = property->propertyMarkerPosition();
@@ -229,7 +230,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         position = widget->start();
         length = widget->name().length();
         if (isInBlock(position, length, blockStart, blockEnd)) {
-          if (widget->isWidgetValid()) {
+          if (widget->isNameValid()) {
             formatVisiblePart(
               blockStart, blockEnd, position, length, m_widgetFormat);
           } else {
@@ -245,18 +246,23 @@ StylesheetHighlighter::highlightBlock(const QString& text)
           if (widget->isSubControl()) {
             position = widget->markerPosition();
             if (isInBlock(position, 2, blockStart, blockEnd)) {
-              formatVisiblePart(
-                blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
+              if (widget->doesMarkerMatch(NodeCheck::SubControlCheck)) {
+                formatVisiblePart(
+                  blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
+              } else {
+                formatVisiblePart(blockStart,
+                                  blockEnd,
+                                  position,
+                                  2,
+                                  m_badSubControlMarkerFormat);
+              }
             }
             position = widget->extensionPosition();
             length = widget->extensionLength();
             if (isInBlock(position, length, blockStart, blockEnd)) {
               if (widget->isExtensionValid()) {
-                formatVisiblePart(blockStart,
-                                  blockEnd,
-                                  position,
-                                  length,
-                                  m_subControlMarkerFormat);
+                formatVisiblePart(
+                  blockStart, blockEnd, position, length, m_subControlFormat);
               } else {
                 formatVisiblePart(blockStart,
                                   blockEnd,
@@ -265,11 +271,19 @@ StylesheetHighlighter::highlightBlock(const QString& text)
                                   m_badSubControlFormat);
               }
             }
-          } else if (widget->isPseudoState()) {
+          } else if (widget->isPseudoState() && widget->doMarkersMatch()) {
             position = widget->markerPosition();
             if (isInBlock(position, 1, blockStart, blockEnd)) {
-              formatVisiblePart(
-                blockStart, blockEnd, position, 1, m_pseudoStateMarkerFormat);
+              if (widget->doesMarkerMatch(NodeCheck::PseudoStateCheck)) {
+                formatVisiblePart(
+                  blockStart, blockEnd, position, 1, m_pseudoStateMarkerFormat);
+              } else {
+                formatVisiblePart(blockStart,
+                                  blockEnd,
+                                  position,
+                                  2,
+                                  m_badPseudoStateMarkerFormat);
+              }
             }
             position = widget->extensionPosition();
             length = widget->extensionLength();
@@ -289,7 +303,11 @@ StylesheetHighlighter::highlightBlock(const QString& text)
               }
             }
           } else {
-            // TODO error has extension but wrong type?
+            formatVisiblePart(blockStart,
+                              blockEnd,
+                              widget->extensionPosition(),
+                              widget->extensionLength(),
+                              m_badSubControlFormat);
           }
         }
 
@@ -428,6 +446,12 @@ StylesheetHighlighter::setPseudoStateMarkerFormat(QBrush color,
   m_pseudoStateMarkerFormat.setFontWeight(weight);
   m_pseudoStateMarkerFormat.setForeground(color);
   m_pseudoStateMarkerFormat.setBackground(back);
+  m_badPseudoStateMarkerFormat.setFontWeight(weight);
+  m_badPseudoStateMarkerFormat.setForeground(color);
+  m_badPseudoStateMarkerFormat.setBackground(back);
+  m_badPseudoStateMarkerFormat.setUnderlineColor(QColor(Qt::red));
+  m_badPseudoStateMarkerFormat.setUnderlineStyle(
+    QTextCharFormat::WaveUnderline);
 }
 
 void
@@ -451,6 +475,11 @@ StylesheetHighlighter::setSubControlMarkerFormat(QBrush color,
   m_subControlMarkerFormat.setFontWeight(weight);
   m_subControlMarkerFormat.setForeground(color);
   m_subControlMarkerFormat.setBackground(back);
+  m_badSubControlMarkerFormat.setFontWeight(weight);
+  m_badSubControlMarkerFormat.setForeground(color);
+  m_badSubControlMarkerFormat.setBackground(back);
+  m_badSubControlMarkerFormat.setUnderlineColor(QColor(Qt::red));
+  m_badSubControlMarkerFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
 void

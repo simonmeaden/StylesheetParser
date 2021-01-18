@@ -28,6 +28,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QTextCharFormat>
 #include <QTextCursor>
 
+template <typename T>
+class asKeyValueRange
+{
+public:
+    asKeyValueRange(T &data) : m_data{data} {}
+
+    auto begin() { return m_data.keyValueBegin(); }
+
+    auto end() { return m_data.keyValueEnd(); }
+
+private:
+    T &m_data;
+};
+
 class Node;
 
 class StylesheetData
@@ -200,16 +214,33 @@ enum AttributeType
   StylesheetEditGood,
   StylesheetEditBad,
 };
-enum PropertyCheck
+enum NodeCheck
 {
-  BadPropertyCheck = 0,
+  BadNodeCheck = 0,
   PropertyMarkerCheck = 0x1,
   PropertyEndMarkerCheck = 0x2,
   ValidNameCheck = 0x4,
   GoodPropertyCheck = 0x7,
+  //
+//  WidgetExtensionCheck = 0x10,
+  //
+  SubControlCheck = 0x100,
+  FuzzySubControlCheck = 0x200,
+  SubControlMarkerCheck = 0x400,
+  //
+  PseudoStateCheck = 0x1000,
+  FuzzyPseudoStateCheck = 0x2000,
+  PseudoStateMarkerCheck = 0x4000,
+  //
+  StartBraceCheck = 0x10000,
+  EndBraceCheck = 0x20000,
+  //
+  WidgetCheck = 0x100000,
+  FuzzyWidgetCheck = 0x200000,
+
 };
-Q_DECLARE_FLAGS(PropertyChecks, PropertyCheck);
-Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyChecks)
+Q_DECLARE_FLAGS(NodeChecks, NodeCheck);
+Q_DECLARE_OPERATORS_FOR_FLAGS(NodeChecks)
 
 enum PropertyValueCheck
 {
@@ -236,7 +267,7 @@ struct CursorData
 struct MenuData
 {
   Node* node;
-  QPoint pos;
+//  QPoint pos;
   SectionType type;
   QString oldName = QString();
 };

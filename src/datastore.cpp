@@ -36,6 +36,7 @@ DataStore::DataStore(QObject* parent)
   , m_badColonIcon(":/icons/bad-colon")
   , m_badDColonIcon(":/icons/bad-dcolon")
   , m_noIcon(":/icons/no")
+  , m_fuzzyIcon(":/icons/fuzzy")
   , m_widgets(initialiseWidgetList())
   , m_colors(initialiseColorList())
   , m_properties(initialisePropertyList())
@@ -1210,29 +1211,29 @@ DataStore::decrementBraceCount()
   return false;
 }
 
-bool
-DataStore::isBraceCountZero()
-{
-  return m_braceStack.isEmpty();
-}
+//bool
+//DataStore::isBraceCountZero()
+//{
+//  return m_braceStack.isEmpty();
+//}
 
-void
-DataStore::pushStartBrace(StartBraceNode* startbrace)
-{
-  m_startbraces.append(startbrace);
-  m_braceStack.push(startbrace);
-}
+//void
+//DataStore::pushStartBrace(StartBraceNode* startbrace)
+//{
+//  m_startbraces.append(startbrace);
+//  m_braceStack.push(startbrace);
+//}
 
-void
-DataStore::pushEndBrace(EndBraceNode* endbrace)
-{
-  m_endbraces.append(endbrace);
-  if (!isBraceCountZero()) {
-    auto startbrace = m_braceStack.pop();
-    endbrace->setStartNode(startbrace);
-    startbrace->setEndBrace(endbrace);
-  }
-}
+//void
+//DataStore::pushEndBrace(EndBraceNode* endbrace)
+//{
+//  m_endbraces.append(endbrace);
+//  if (!isBraceCountZero()) {
+//    auto startbrace = m_braceStack.pop();
+//    endbrace->setStartNode(startbrace);
+//    startbrace->setEndBrace(endbrace);
+//  }
+//}
 
 QMap<QTextCursor, Node*>
 DataStore::nodes()
@@ -1246,13 +1247,13 @@ DataStore::insertNode(QTextCursor cursor, Node* node)
 {
   QMutexLocker locker(&m_mutex);
   m_nodes.insert(cursor, node);
-  switch (node->type()) {
-    case StartBraceType:
-      pushStartBrace(qobject_cast<StartBraceNode*>(node));
-      break;
-    case EndBraceType:
-      pushEndBrace(qobject_cast<EndBraceNode*>(node));
-  }
+//  switch (node->type()) {
+//    case StartBraceType:
+//      pushStartBrace(qobject_cast<StartBraceNode*>(node));
+//      break;
+//    case EndBraceType:
+//      pushEndBrace(qobject_cast<EndBraceNode*>(node));
+//  }
 }
 
 bool
@@ -1401,7 +1402,12 @@ QIcon DataStore::badDColonIcon() const
 QIcon
 DataStore::noIcon() const
 {
-  return m_noIcon;
+    return m_noIcon;
+}
+
+QIcon DataStore::fuzzyIcon() const
+{
+    return m_fuzzyIcon;
 }
 
 AttributeType

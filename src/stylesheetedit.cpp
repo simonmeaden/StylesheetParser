@@ -39,6 +39,8 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
 {
   qRegisterMetaType<QTextCursor>("QTextCursor");
   qRegisterMetaType<MenuData>("MenuData");
+  qRegisterMetaType<NodeType>("NodeType");
+  qRegisterMetaType<NodeCheck>("NodeCheck");
 
   m_editor->setup(m_bookmarkArea, m_linenumberArea);
 

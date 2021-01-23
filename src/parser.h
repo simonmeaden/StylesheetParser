@@ -135,14 +135,15 @@ private:
 
   WidgetNode* stashWidget(QMap<QTextCursor, Node*>* nodes,
                           int position,
-                          const QString& block);
+                          const QString& block,
+                          NodeCheck check = NodeCheck::WidgetCheck);
   void stashBadNode(QMap<QTextCursor, Node*>* nodes,
                     int position,
                     const QString& block,
                     ParserState::Error error);
   void stashNewline(QMap<QTextCursor, Node*>* nodes, int position);
-  void stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position);
-  void stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position);
+//  void stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position);
+//  void stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position);
 
   void updateContextMenu(QMap<int, QString> matches,
                          WidgetNode* node,
@@ -166,6 +167,8 @@ private:
     const QString& valueName,
     const QPoint& pos,
     QMenu** suggestionsMenu);
+  void updatePseudoStateMenu(WidgetNode* widget, QMenu** suggestionsMenu);
+  void updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu);
   void updateMenu(QMap<int, QString> matches,
                   Node* nNode,
                   QMenu** suggestionsMenu,
@@ -181,7 +184,7 @@ private:
   void actionPropertyMarker(PropertyNode* property);
   void actionPropertyEndMarker(PropertyNode* property);
   void stepBack(int& pos, const QString& block);
-  enum NodeType checkType(const QString& block,
+  QPair<NodeType, NodeCheck> checkType(const QString& block,
                           PropertyNode* property = nullptr) const;
   QWidgetAction* getWidgetAction(const QIcon& icon,
                                  const QString& text,
@@ -195,8 +198,6 @@ private:
                    SectionType type,
                    const QString& oldName = QString());
   QMap<QTextCursor, Node*> parseText(const QString& text);
-  void updatePseudoStateMarkerMenu(WidgetNode* widget, QMenu** suggestionsMenu);
-  void updateSubControlMarkerMenu(WidgetNode* widget, QMenu** suggestionsMenu);
 };
 
 #endif // PARSER_H

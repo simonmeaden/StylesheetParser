@@ -224,6 +224,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
       case NodeType::NewlineType:
         break;
 
+//      case NodeType::FuzzyWidgetType:
       case NodeType::WidgetType: {
         WidgetNode* widget = qobject_cast<WidgetNode*>(node);
 
@@ -246,7 +247,8 @@ StylesheetHighlighter::highlightBlock(const QString& text)
           if (widget->isSubControl()) {
             position = widget->markerPosition();
             if (isInBlock(position, 2, blockStart, blockEnd)) {
-              if (widget->doesMarkerMatch(NodeCheck::SubControlCheck)) {
+              if (!widget->isExtensionFuzzy() &&
+                  widget->doesMarkerMatch(NodeCheck::SubControlCheck)) {
                 formatVisiblePart(
                   blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
               } else {
@@ -274,7 +276,8 @@ StylesheetHighlighter::highlightBlock(const QString& text)
           } else if (widget->isPseudoState() && widget->doMarkersMatch()) {
             position = widget->markerPosition();
             if (isInBlock(position, 1, blockStart, blockEnd)) {
-              if (widget->doesMarkerMatch(NodeCheck::PseudoStateCheck)) {
+              if (!widget->isExtensionFuzzy() &&
+                  widget->doesMarkerMatch(NodeCheck::PseudoStateCheck)) {
                 formatVisiblePart(
                   blockStart, blockEnd, position, 1, m_pseudoStateMarkerFormat);
               } else {
@@ -370,41 +373,41 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         break;
       }
 
-      case NodeType::StartBraceType: {
-        StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
-        if (startbrace->isBraceAtCursor()) {
-          if (startbrace->hasEndBrace()) {
-            setFormat(nodeStart, node->length(), m_braceMatchFormat);
-          } else {
-            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
-          }
-        } else {
-          if (startbrace->hasEndBrace()) {
-            setFormat(nodeStart, node->length(), m_startBraceFormat);
-          } else {
-            setFormat(nodeStart, node->length(), m_badStartBraceFormat);
-          }
-        }
-        break;
-      }
+//      case NodeType::StartBraceType: {
+//        StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
+//        if (startbrace->isBraceAtCursor()) {
+//          if (startbrace->hasEndBrace()) {
+//            setFormat(nodeStart, node->length(), m_braceMatchFormat);
+//          } else {
+//            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
+//          }
+//        } else {
+//          if (startbrace->hasEndBrace()) {
+//            setFormat(nodeStart, node->length(), m_startBraceFormat);
+//          } else {
+//            setFormat(nodeStart, node->length(), m_badStartBraceFormat);
+//          }
+//        }
+//        break;
+//      }
 
-      case NodeType::EndBraceType: {
-        EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
-        if (endbrace->isBraceAtCursor()) {
-          if (endbrace->hasStartBrace()) {
-            setFormat(nodeStart, node->length(), m_braceMatchFormat);
-          } else {
-            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
-          }
-        } else {
-          if (endbrace->hasStartBrace()) {
-            setFormat(nodeStart, node->length(), m_endBraceFormat);
-          } else {
-            setFormat(nodeStart, node->length(), m_badEndBraceFormat);
-          }
-        }
-        break;
-      }
+//      case NodeType::EndBraceType: {
+//        EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
+//        if (endbrace->isBraceAtCursor()) {
+//          if (endbrace->hasStartBrace()) {
+//            setFormat(nodeStart, node->length(), m_braceMatchFormat);
+//          } else {
+//            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
+//          }
+//        } else {
+//          if (endbrace->hasStartBrace()) {
+//            setFormat(nodeStart, node->length(), m_endBraceFormat);
+//          } else {
+//            setFormat(nodeStart, node->length(), m_badEndBraceFormat);
+//          }
+//        }
+//        break;
+//      }
 
       default:
         break;

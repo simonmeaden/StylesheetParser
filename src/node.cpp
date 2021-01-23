@@ -114,14 +114,12 @@ QString
 Node::toString() const
 {
   switch (node_ptr->type) {
-    case NodeType:
-      return node_ptr->name;
     case WidgetType:
       return node_ptr->name;
-    case StartBraceType:
-      return "{";
-    case EndBraceType:
-      return "}";
+//    case StartBraceType:
+//      return "{";
+//    case EndBraceType:
+//      return "}";
     case NewlineType:
       return "\n";
     case PropertyType:
@@ -208,16 +206,13 @@ BadNode::setError(const ParserState::Errors& errors)
 WidgetNode::WidgetNode(const QString& name,
                        QTextCursor start,
                        StylesheetEditor* editor,
+                       enum NodeCheck check,
                        QObject* parent,
                        enum NodeType type)
   : Node(name, start, editor, parent, type)
 {
   widget_ptr = new WidgetNodeData;
-  if (type == NodeType::FuzzyWidgetType) {
-    setWidgetType(NodeCheck::FuzzyWidgetCheck, true);
-  } else if (type == NodeType::WidgetType) {
-    setWidgetType(NodeCheck::WidgetCheck, true);
-  }
+  setWidgetCheck(check);
 }
 
 WidgetNode::WidgetNode(const WidgetNode& other)
@@ -265,11 +260,19 @@ WidgetNode::isNameValid() const
   return (widget_ptr->state.testFlag(NodeCheck::WidgetCheck));
 }
 
-void
-WidgetNode::setWidgetType(NodeCheck type, bool check)
+bool
+WidgetNode::isNameFuzzy() const
 {
-  if (type == NodeCheck::WidgetCheck || type == NodeCheck::FuzzyWidgetCheck)
-    widget_ptr->state.setFlag(type, check);
+  return (widget_ptr->state.testFlag(NodeCheck::FuzzyWidgetCheck));
+}
+
+void
+WidgetNode::setWidgetCheck(NodeCheck check)
+{
+  if (check == NodeCheck::WidgetCheck || check == NodeCheck::FuzzyWidgetCheck)
+    widget_ptr->state.setFlag(check, true);
+  else
+    widget_ptr->state.setFlag(check, false);
 }
 
 NodeSection*
@@ -417,11 +420,13 @@ WidgetNode::setPseudoStateMarkerCursor(QTextCursor cursor)
 bool
 WidgetNode::doesMarkerMatch(enum NodeCheck type) const
 {
-  if (type == NodeCheck::PseudoStateCheck) {
+  if (type == NodeCheck::PseudoStateCheck ||
+      type == NodeCheck::FuzzyPseudoStateCheck) {
     if (widget_ptr->state.testFlag(NodeCheck::PseudoStateMarkerCheck)) {
       return true;
     }
-  } else if (type == NodeCheck::SubControlCheck) {
+  } else if (type == NodeCheck::SubControlCheck ||
+             type == NodeCheck::FuzzySubControlCheck) {
     if (widget_ptr->state.testFlag(NodeCheck::SubControlMarkerCheck)) {
       return true;
     }
@@ -508,6 +513,13 @@ WidgetNode::isExtensionValid() const
 }
 
 bool
+WidgetNode::isExtensionFuzzy() const
+{
+  return (widget_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck) ||
+          widget_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
+}
+
+bool
 WidgetNode::isSubControl() const
 {
   return (widget_ptr->state.testFlag(NodeCheck::SubControlCheck) ||
@@ -522,20 +534,30 @@ WidgetNode::isPseudoState() const
 }
 
 void
-WidgetNode::setExtensionType(enum NodeType type)
+WidgetNode::setExtensionType(enum NodeType type, enum NodeCheck check)
 {
   switch (type) {
     case NodeType::SubControlType:
-      widget_ptr->state.setFlag(NodeCheck::SubControlCheck, true);
-      break;
-    case NodeType::FuzzySubControlType:
-      widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, true);
+      if (check == NodeCheck::SubControlCheck) {
+        widget_ptr->state.setFlag(NodeCheck::SubControlCheck, true);
+        widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
+      } else if (check == NodeCheck::FuzzyPropertyCheck) {
+        widget_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+        widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, true);
+      }
+      widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+      widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
       break;
     case NodeType::PseudoStateType:
-      widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, true);
-      break;
-    case NodeType::FuzzyPseudoStateType:
-      widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, true);
+      if (check == NodeCheck::SubControlCheck) {
+        widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, true);
+        widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
+      } else if (check == NodeCheck::FuzzyPropertyCheck) {
+        widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+        widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, true);
+      }
+      widget_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+      widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
       break;
   }
 }
@@ -544,7 +566,9 @@ bool
 WidgetNode::hasExtension() const
 {
   return (widget_ptr->state.testFlag(NodeCheck::SubControlCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::PseudoStateCheck));
+          widget_ptr->state.testFlag(NodeCheck::PseudoStateCheck) ||
+          widget_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck) ||
+          widget_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
 }
 
 int
@@ -671,11 +695,13 @@ WidgetNode::arePropertiesValid() const
 PropertyNode::PropertyNode(const QString& name,
                            QTextCursor start,
                            StylesheetEditor* editor,
+                           NodeCheck check,
                            QObject* parent,
                            enum NodeType type)
   : Node(name, start, editor, parent, type)
 {
   property_ptr = new PropertyNodeData;
+  setPropertyNameCheck(check);
 }
 
 PropertyNode::PropertyNode(const PropertyNode& other)
@@ -866,6 +892,21 @@ PropertyNode::length() const
   return 0;
 }
 
+void
+PropertyNode::setPropertyNameCheck(NodeCheck check)
+{
+  if (check == NodeCheck::ValidNameCheck) {
+    property_ptr->state.setFlag(check, true);
+    property_ptr->state.setFlag(NodeCheck::FuzzyPropertyCheck, false);
+  } else if (check == FuzzyPropertyCheck) {
+    property_ptr->state.setFlag(NodeCheck::ValidNameCheck, false);
+    property_ptr->state.setFlag(check, true);
+  } else if (check == NodeCheck::InvalidNameCheck) {
+    property_ptr->state.setFlag(NodeCheck::ValidNameCheck, false);
+    property_ptr->state.setFlag(NodeCheck::FuzzyPropertyCheck, false);
+  }
+}
+
 bool
 PropertyNode::hasPropertyMarker() const
 {
@@ -881,13 +922,13 @@ PropertyNode::setPropertyMarker(bool exists)
 bool
 PropertyNode::isValidPropertyName() const
 {
-  return property_ptr->state.testFlag(NodeCheck::ValidNameCheck);
+  return (property_ptr->state.testFlag(NodeCheck::ValidNameCheck));
 }
 
-void
-PropertyNode::setValidPropertyName(bool valid)
+bool
+PropertyNode::isFuzzyName() const
 {
-  property_ptr->state.setFlag(NodeCheck::ValidNameCheck, valid);
+  return (property_ptr->state.testFlag(NodeCheck::FuzzyPropertyCheck));
 }
 
 bool
@@ -1020,53 +1061,6 @@ PropertyNode::isIn(QPoint pos)
   return isin;
 }
 
-// PropertyStatus
-// PropertyNode::sectionAtOffset(int pos, QString textChanged) const
-//{
-//  if (pos >= node_ptr->cursor.anchor() &&
-//      pos < node_ptr->cursor.anchor() + node_ptr->name.length()) {
-//    return PropertyStatus(SectionType::PropertyName, node_ptr->name);
-//  }
-
-//  if (hasPropertyMarker()) {
-//    auto markerPos = propertyMarkerPosition();
-//    if (pos >= markerPos && pos < markerPos + 1) {
-//      return PropertyStatus(SectionType::PropertyMarker);
-//    }
-//  }
-
-//  if (!values().isEmpty()) {
-//    if (pos < valueCursors().constFirst().anchor()) {
-//      return PropertyStatus(SectionType::PropertyMarker);
-//    }
-//    for (int i = 0; i < property_ptr->values.size(); i++) {
-//      auto value = property_ptr->values.at(i);
-//      auto offset = property_ptr->cursors.at(i).anchor();
-
-//      if (pos >= offset && pos <= offset + value.length()) {
-//        if (textChanged.trimmed() == ";") {
-//          return PropertyStatus(SectionType::PropertyEndMarker);
-//        } else {
-//          return PropertyStatus(SectionType::PropertyValue, value, offset);
-//        }
-//      }
-//    }
-//  }
-
-//  if (!hasPropertyEndMarker()) {
-//    if (!values().isEmpty()) {
-//      return PropertyStatus(SectionType::PropertyEndMarker);
-//    }
-//  } else {
-//    auto markerPos = propertyEndMarkerPosition();
-//    if (pos >= markerPos && pos < markerPos + 1) {
-//      return PropertyStatus(SectionType::PropertyEndMarker);
-//    }
-//  }
-
-//  return PropertyStatus();
-//}
-
 void
 PropertyNode::setAttributeTypes(const QList<AttributeType>& attributeTypes)
 {
@@ -1077,24 +1071,26 @@ CommentNode::CommentNode(QTextCursor start,
                          StylesheetEditor* editor,
                          QObject* parent,
                          enum NodeType type)
-  : WidgetNode(QString(), start, editor, parent, type)
+  : WidgetNode(QString(), start, editor, NodeCheck::CommentCheck, parent, type)
+// TODO set actual comment check value
 {
-  c_ptr = new CommentNodeData;
+  comment_ptr = new CommentNodeData;
 }
 
 CommentNode::CommentNode(const CommentNode& other)
   : WidgetNode(other.name(),
                other.cursor(),
                other.node_ptr->editor,
+               NodeCheck::CommentCheck, // TODO set actual comment check value
                other.parent(),
                other.type())
 {
-  c_ptr = new CommentNodeData(*other.c_ptr);
+  comment_ptr = new CommentNodeData(*other.comment_ptr);
 }
 
 CommentNode::~CommentNode()
 {
-  delete c_ptr;
+  delete comment_ptr;
 }
 
 void
@@ -1121,7 +1117,7 @@ CommentNode::length() const
   if (hasEndComment()) {
     return endCommentCursor().anchor() - start() + 2;
   } else if (node_ptr->name.length() > 0) {
-    return c_ptr->cursor.anchor() + node_ptr->name.length() - start();
+    return comment_ptr->cursor.anchor() + node_ptr->name.length() - start();
   } else {
     return 2; // length of start comment
   }
@@ -1130,43 +1126,43 @@ CommentNode::length() const
 QTextCursor
 CommentNode::textCursor() const
 {
-  return c_ptr->cursor;
+  return comment_ptr->cursor;
 }
 
 void
 CommentNode::setTextCursor(QTextCursor cursor)
 {
-  c_ptr->cursor = cursor;
+  comment_ptr->cursor = cursor;
 }
 
 int
 CommentNode::textPosition() const
 {
-  return c_ptr->cursor.anchor();
+  return comment_ptr->cursor.anchor();
 }
 
 bool
 CommentNode::hasEndComment() const
 {
-  return c_ptr->endCommentExists;
+  return comment_ptr->endCommentExists;
 }
 
 void
 CommentNode::setEndCommentExists(bool exists)
 {
-  c_ptr->endCommentExists = exists;
+  comment_ptr->endCommentExists = exists;
 }
 
 QTextCursor
 CommentNode::endCommentCursor() const
 {
-  return c_ptr->endCursor;
+  return comment_ptr->endCursor;
 }
 
 void
 CommentNode::setEndCommentCursor(QTextCursor cursor)
 {
-  c_ptr->endCursor = cursor;
+  comment_ptr->endCursor = cursor;
 }
 
 NodeSection*
@@ -1202,93 +1198,93 @@ NewlineNode::NewlineNode(QTextCursor start,
                          StylesheetEditor* editor,
                          QObject* parent,
                          enum NodeType type)
-  : WidgetNode("\n", start, editor, parent, type)
+  : WidgetNode("\n", start, editor, NodeCheck::NewLineCheck, parent, type)
 {}
 
-StartBraceNode::StartBraceNode(QTextCursor start,
-                               StylesheetEditor* editor,
-                               QObject* parent,
-                               enum NodeType type)
-  : WidgetNode("{", start, editor, parent, type)
-  , m_isBraceAtCursor(false)
-  , m_endBrace(nullptr)
-{}
+//StartBraceNode::StartBraceNode(QTextCursor start,
+//                               StylesheetEditor* editor,
+//                               QObject* parent,
+//                               enum NodeType type)
+//  : WidgetNode("{", start, editor, NodeCheck::NewLineCheck, parent, type)
+//  , m_isBraceAtCursor(false)
+//  , m_endBrace(nullptr)
+//{}
 
-bool
-StartBraceNode::isBraceAtCursor() const
-{
-  return m_isBraceAtCursor;
-}
+//bool
+//StartBraceNode::isBraceAtCursor() const
+//{
+//  return m_isBraceAtCursor;
+//}
 
-void
-StartBraceNode::setBraceAtCursor(bool isFlagBrace)
-{
-  m_isBraceAtCursor = isFlagBrace;
-}
+//void
+//StartBraceNode::setBraceAtCursor(bool isFlagBrace)
+//{
+//  m_isBraceAtCursor = isFlagBrace;
+//}
 
-void
-StartBraceNode::setEndBrace(EndBraceNode* endBrace)
-{
-  m_endBrace = endBrace;
-}
+//void
+//StartBraceNode::setEndBrace(EndBraceNode* endBrace)
+//{
+//  m_endBrace = endBrace;
+//}
 
-bool
-StartBraceNode::hasEndBrace()
-{
-  return (m_endBrace != nullptr);
-}
+//bool
+//StartBraceNode::hasEndBrace()
+//{
+//  return (m_endBrace != nullptr);
+//}
 
-EndBraceNode*
-StartBraceNode::endBrace() const
-{
-  return m_endBrace;
-}
+//EndBraceNode*
+//StartBraceNode::endBrace() const
+//{
+//  return m_endBrace;
+//}
 
-EndBraceNode::EndBraceNode(QTextCursor start,
-                           StylesheetEditor* editor,
-                           QObject* parent,
-                           enum NodeType type)
-  : WidgetNode("}", start, editor, parent, type)
-  , m_isBraceAtCursor(false)
-  , m_startBrace(nullptr)
-{}
+//EndBraceNode::EndBraceNode(QTextCursor start,
+//                           StylesheetEditor* editor,
+//                           QObject* parent,
+//                           enum NodeType type)
+//  : WidgetNode("}", start, editor, parent, type)
+//  , m_isBraceAtCursor(false)
+//  , m_startBrace(nullptr)
+//{}
 
-bool
-EndBraceNode::isBraceAtCursor() const
-{
-  return m_isBraceAtCursor;
-}
+//bool
+//EndBraceNode::isBraceAtCursor() const
+//{
+//  return m_isBraceAtCursor;
+//}
 
-void
-EndBraceNode::setBraceAtCursor(bool isFlagBrace)
-{
-  m_isBraceAtCursor = isFlagBrace;
-}
+//void
+//EndBraceNode::setBraceAtCursor(bool isFlagBrace)
+//{
+//  m_isBraceAtCursor = isFlagBrace;
+//}
 
-void
-EndBraceNode::setStartNode(StartBraceNode* startNode)
-{
-  m_startBrace = startNode;
-}
+//void
+//EndBraceNode::setStartNode(StartBraceNode* startNode)
+//{
+//  m_startBrace = startNode;
+//}
 
-bool
-EndBraceNode::hasStartBrace()
-{
-  return (m_startBrace != nullptr);
-}
+//bool
+//EndBraceNode::hasStartBrace()
+//{
+//  return (m_startBrace != nullptr);
+//}
 
-StartBraceNode*
-EndBraceNode::startBrace() const
-{
-  return m_startBrace;
-}
+//StartBraceNode*
+//EndBraceNode::startBrace() const
+//{
+//  return m_startBrace;
+//}
 
 BadStartCommentNode::BadStartCommentNode(QTextCursor start,
                                          ParserState::Errors errors,
                                          StylesheetEditor* editor,
                                          QObject* parent,
                                          enum NodeType type)
-  : WidgetNode("/*", start, editor, parent, type)
+  : WidgetNode("/*", start, editor, NodeCheck::CommentCheck, parent, type)
   , BadNode(errors)
 {}
 
@@ -1303,7 +1299,7 @@ BadEndCommentNode::BadEndCommentNode(QTextCursor start,
                                      StylesheetEditor* editor,
                                      QObject* parent,
                                      enum NodeType type)
-  : WidgetNode("*/", start, editor, parent, type)
+  : WidgetNode("*/", start, editor, NodeCheck::CommentCheck, parent, type)
   , BadNode(errors)
 {}
 

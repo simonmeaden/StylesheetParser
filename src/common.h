@@ -28,18 +28,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QTextCharFormat>
 #include <QTextCursor>
 
-template <typename T>
+template<typename T>
 class asKeyValueRange
 {
 public:
-    asKeyValueRange(T &data) : m_data{data} {}
+  asKeyValueRange(T& data)
+    : m_data{ data }
+  {}
 
-    auto begin() { return m_data.keyValueBegin(); }
+  auto begin() { return m_data.keyValueBegin(); }
 
-    auto end() { return m_data.keyValueEnd(); }
+  auto end() { return m_data.keyValueEnd(); }
 
 private:
-    T &m_data;
+  T& m_data;
 };
 
 class Node;
@@ -63,7 +65,9 @@ enum SectionType
   PropertyEndMarker,
   WidgetName,
   WidgetPseudoState,
+  FuzzyWidgetPseudoState,
   WidgetSubControl,
+  FuzzyWidgetSubControl,
   WidgetPropertyName,
   WidgetPropertyMarker,
   WidgetPropertyValue,
@@ -146,24 +150,24 @@ operator!=(NodeSection& left, NodeSection& right);
 enum NodeType
 {
   NoType,
-  NodeType,
+  //  NodeType,
   WidgetType,
-  FuzzyWidgetType,
+  //  FuzzyWidgetType,
   PseudoStateType,
-  FuzzyPseudoStateType,
+  //  FuzzyPseudoStateType,
   PseudoStateMarkerType,
   SubControlType,
-  FuzzySubControlType,
+  //  FuzzySubControlType,
   SubControlMarkerType,
   ColonType, //! Either a PropertyMarkerType or a PseudoStateMarkerType
-  StartBraceType,
-  EndBraceType,
+//  StartBraceType,
+//  EndBraceType,
   NewlineType,
   PropertyType,
-  FuzzyPropertyType,
+  //  FuzzyPropertyType,
   PropertyMarkerType,
   PropertyValueType,
-  FuzzyPropertyValueType,
+  //  FuzzyPropertyValueType,
   BadNodeType,
   CommentType,
   CommentStartMarkerType,
@@ -220,9 +224,11 @@ enum NodeCheck
   PropertyMarkerCheck = 0x1,
   PropertyEndMarkerCheck = 0x2,
   ValidNameCheck = 0x4,
+  FuzzyPropertyCheck = 0x8,
+  InvalidNameCheck = 0x10,
   GoodPropertyCheck = 0x7,
   //
-//  WidgetExtensionCheck = 0x10,
+  //  WidgetExtensionCheck = 0x10,
   //
   SubControlCheck = 0x100,
   FuzzySubControlCheck = 0x200,
@@ -237,6 +243,10 @@ enum NodeCheck
   //
   WidgetCheck = 0x100000,
   FuzzyWidgetCheck = 0x200000,
+  //
+  CommentCheck = 0x1000000,
+  //
+  NewLineCheck = 0x10000000,
 
 };
 Q_DECLARE_FLAGS(NodeChecks, NodeCheck);
@@ -267,7 +277,7 @@ struct CursorData
 struct MenuData
 {
   Node* node;
-//  QPoint pos;
+  //  QPoint pos;
   SectionType type;
   QString oldName = QString();
 };

@@ -20,5 +20,6 @@
         <file alias="bad-scolon">bad-semicolon.png</file>
         <file alias="no">no.png</file>
         <file alias="ok">ok.png</file>
+        <file alias="fuzzy">fuzzy.png</file>
     </qresource>
 </RCC>

@@ -120,7 +120,7 @@ MainWindow::initGui()
          // Good property.
          //         "color : red; \n"
          //         // bad property value
-         //                  "color: rd;\n"
+         //         "color: rd;\n"
          //         "color: blu;\n"
          //         // no property marker
          //         "color blue;\n"
@@ -142,23 +142,23 @@ MainWindow::initGui()
          //         "QTabWidget {color: red; background: green}\n"
          //         "QTabWidget {color: red; background: green;}\n"
          // Widget Errors.
-         "QTabWidget:branch {color: red}\n" //
-         "QTabWidget:branch {color: red; background: green}\n"
-         "QTabWidget:branch {color: red; background: green;}\n"
-         "QTabWidget::active {color: red}\n"
-         "QTabWidget::active {color: red; background: green}\n"
-         "QTabWidget::active {color: red; background: green;}\n"
+//         "QTabWidget:branch {color: red}\n"                      // Bad marker
+//         "QTabWidget:branch {color: red; background: green}\n"   // Bad marker
+//         "QTabWidget:branch {color: red; background: green;}\n"  // Bad marker
+//         "QTabWidget::active {color: red}\n"                     // Bad marker
+//         "QTabWidget::active {color: red; background: green}\n"  // Bad marker
+//         "QTabWidget::active {color: red; background: green;}\n" // Bad marker
+//         "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
+         "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
+         "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
+         "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
+//         "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
+         "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
     // End of errors
     ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
   //    MISSING END
   //                                                                 // BRACE
-  //    "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
-  //    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
-  //    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
-  //    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
-  //    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
-  //    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
   //    "  /* comment1 \n"
   //    "*/ /*   \n"
   //    "comment2  */"

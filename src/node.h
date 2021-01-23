@@ -49,7 +49,7 @@ public:
                 QTextCursor cursor,
                 StylesheetEditor* editor,
                 QObject* parent = nullptr,
-                enum NodeType type = NodeType);
+                enum NodeType type = NodeType::NoType);
   Node(const Node& other);
   ~Node();
 
@@ -132,6 +132,7 @@ public:
   explicit WidgetNode(const QString& name,
                       QTextCursor start,
                       StylesheetEditor* editor,
+                      NodeCheck check,
                       QObject* parent = nullptr,
                       enum NodeType type = WidgetType);
   WidgetNode(const WidgetNode& other);
@@ -143,7 +144,8 @@ public:
 
   bool isValid() const;
   bool isNameValid() const;
-  void setWidgetType(NodeCheck type, bool check);
+  bool isNameFuzzy() const;
+  void setWidgetCheck(NodeCheck type);
 
   NodeSection* isIn(QPoint pos) override;
 
@@ -160,9 +162,10 @@ public:
   QString extensionName() const;
   void setExtensionName(const QString& name);
   bool isExtensionValid() const;
+  bool isExtensionFuzzy() const;
   bool isSubControl() const;
   bool isPseudoState() const;
-  void setExtensionType(enum NodeType type);
+  void setExtensionType(enum NodeType type, NodeCheck check);
   bool hasExtension() const;
   int extensionLength() const;
 
@@ -215,6 +218,7 @@ public:
   explicit PropertyNode(const QString& name,
                         QTextCursor start,
                         StylesheetEditor* editor,
+                        enum NodeCheck check,
                         QObject* parent = nullptr,
                         enum NodeType type = PropertyType);
   PropertyNode(const PropertyNode& other);
@@ -275,8 +279,10 @@ public:
   int end() const override;
   int length() const override;
 
+  void setPropertyNameCheck(enum NodeCheck check);
   bool isValidPropertyName() const;
-  void setValidPropertyName(bool valid);
+  bool isFuzzyName() const;
+//  void setValidPropertyName(bool valid);
   bool isValid(bool finalProperty = false);
 
   bool hasPropertyMarker() const;
@@ -307,48 +313,48 @@ public:
                        enum NodeType type = NewlineType);
 };
 
-class EndBraceNode;
-class StartBraceNode : public WidgetNode
-{
-  Q_OBJECT
-public:
-  explicit StartBraceNode(QTextCursor start,
-                          StylesheetEditor* editor,
-                          QObject* parent = nullptr,
-                          enum NodeType type = StartBraceType);
+//class EndBraceNode;
+//class StartBraceNode : public WidgetNode
+//{
+//  Q_OBJECT
+//public:
+//  explicit StartBraceNode(QTextCursor start,
+//                          StylesheetEditor* editor,
+//                          QObject* parent = nullptr,
+//                          enum NodeType type = StartBraceType);
 
-  bool isBraceAtCursor() const;
-  void setBraceAtCursor(bool isFlagBrace);
+//  bool isBraceAtCursor() const;
+//  void setBraceAtCursor(bool isFlagBrace);
 
-  EndBraceNode* endBrace() const;
-  void setEndBrace(EndBraceNode* endBrace);
-  bool hasEndBrace();
+//  EndBraceNode* endBrace() const;
+//  void setEndBrace(EndBraceNode* endBrace);
+//  bool hasEndBrace();
 
-private:
-  bool m_isBraceAtCursor;
-  EndBraceNode* m_endBrace;
-};
+//private:
+//  bool m_isBraceAtCursor;
+//  EndBraceNode* m_endBrace;
+//};
 
-class EndBraceNode : public WidgetNode
-{
-  Q_OBJECT
-public:
-  explicit EndBraceNode(QTextCursor start,
-                        StylesheetEditor* editor,
-                        QObject* parent = nullptr,
-                        enum NodeType type = EndBraceType);
+//class EndBraceNode : public WidgetNode
+//{
+//  Q_OBJECT
+//public:
+//  explicit EndBraceNode(QTextCursor start,
+//                        StylesheetEditor* editor,
+//                        QObject* parent = nullptr,
+//                        enum NodeType type = EndBraceType);
 
-  bool isBraceAtCursor() const;
-  void setBraceAtCursor(bool isFlagBrace);
+//  bool isBraceAtCursor() const;
+//  void setBraceAtCursor(bool isFlagBrace);
 
-  StartBraceNode* startBrace() const;
-  void setStartNode(StartBraceNode* startNode);
-  bool hasStartBrace();
+//  StartBraceNode* startBrace() const;
+//  void setStartNode(StartBraceNode* startNode);
+//  bool hasStartBrace();
 
-private:
-  bool m_isBraceAtCursor;
-  StartBraceNode* m_startBrace;
-};
+//private:
+//  bool m_isBraceAtCursor;
+//  StartBraceNode* m_startBrace;
+//};
 
 struct CommentNodeData
 {
@@ -385,7 +391,7 @@ public:
   NodeSection* isIn(QPoint pos) override;
 
 private:
-  CommentNodeData* c_ptr;
+  CommentNodeData* comment_ptr;
 };
 
 class BadStartCommentNode

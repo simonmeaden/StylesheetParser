@@ -41,8 +41,8 @@ class StylesheetEditor;
 class StylesheetData;
 class Node;
 class WidgetNode;
-class StartBraceNode;
-class EndBraceNode;
+//class StartBraceNode;
+//class EndBraceNode;
 
 class DataStore : public QObject
 {
@@ -117,13 +117,14 @@ public:
   QIcon badColonIcon() const;
   QIcon badDColonIcon() const;
   QIcon noIcon() const;
+  QIcon fuzzyIcon() const;
 
 signals:
   void finished();
 
 private:
   const QIcon m_invalidIcon, m_validIcon, m_addSemiColonIcon, m_addDColonIcon, m_addColonIcon,
-    m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon;
+    m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon, m_fuzzyIcon;
   QMutex m_mutex;
   QStringList m_widgets;
   QStringList m_colors;
@@ -143,18 +144,18 @@ private:
   QMap<QString, AttributeType> m_stylesheetAttributes;
 
   QMap<QTextCursor, Node*> m_nodes;
-  QList<StartBraceNode*> m_startbraces;
-  QList<EndBraceNode*> m_endbraces;
+//  QList<StartBraceNode*> m_startbraces;
+//  QList<EndBraceNode*> m_endbraces;
   int m_braceCount;
   bool m_manualMove, m_hasSuggestion;
   QTextCursor m_currentCursor;
   Node* m_currentNode;
   int m_maxSuggestionCount;
-  QStack<StartBraceNode*> m_braceStack;
+//  QStack<StartBraceNode*> m_braceStack;
 
   bool isBraceCountZero();
-  void pushStartBrace(StartBraceNode* startbrace);
-  void pushEndBrace(EndBraceNode* endbrace);
+//  void pushStartBrace(StartBraceNode* startbrace);
+//  void pushEndBrace(EndBraceNode* endbrace);
 
   bool checkPropertyValue(AttributeType propertyAttribute,
                           const QString& valuename,

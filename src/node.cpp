@@ -116,10 +116,10 @@ Node::toString() const
   switch (node_ptr->type) {
     case WidgetType:
       return node_ptr->name;
-//    case StartBraceType:
-//      return "{";
-//    case EndBraceType:
-//      return "}";
+      //    case StartBraceType:
+      //      return "{";
+      //    case EndBraceType:
+      //      return "}";
     case NewlineType:
       return "\n";
     case PropertyType:
@@ -203,6 +203,11 @@ BadNode::setError(const ParserState::Errors& errors)
   m_errors = errors;
 }
 
+// WidgetNode::WidgetNodeData::WidgetNodeData(NodeCheck check)
+//{
+//  state.setFlag(check, true);
+//}
+
 WidgetNode::WidgetNode(const QString& name,
                        QTextCursor start,
                        StylesheetEditor* editor,
@@ -211,7 +216,7 @@ WidgetNode::WidgetNode(const QString& name,
                        enum NodeType type)
   : Node(name, start, editor, parent, type)
 {
-  widget_ptr = new WidgetNodeData;
+  widget_ptr = new WidgetNodeData();
   setWidgetCheck(check);
 }
 
@@ -249,7 +254,7 @@ WidgetNode::length() const
 bool
 WidgetNode::isValid() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::WidgetCheck) &&
+  return (node_ptr->state.testFlag(NodeCheck::WidgetCheck) &&
           (!hasExtension() || (hasExtension() && doMarkersMatch())) &&
           arePropertiesValid() && hasStartBrace() && hasEndBrace());
 }
@@ -257,22 +262,58 @@ WidgetNode::isValid() const
 bool
 WidgetNode::isNameValid() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::WidgetCheck));
+  return (node_ptr->state.testFlag(NodeCheck::WidgetCheck));
 }
 
 bool
 WidgetNode::isNameFuzzy() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::FuzzyWidgetCheck));
+  return (node_ptr->state.testFlag(NodeCheck::FuzzyWidgetCheck));
 }
 
 void
 WidgetNode::setWidgetCheck(NodeCheck check)
 {
-  if (check == NodeCheck::WidgetCheck || check == NodeCheck::FuzzyWidgetCheck)
-    widget_ptr->state.setFlag(check, true);
-  else
-    widget_ptr->state.setFlag(check, false);
+  switch (check) {
+    case NodeCheck::WidgetCheck: {
+      node_ptr->state.setFlag(NodeCheck::WidgetCheck, true);
+      node_ptr->state.setFlag(NodeCheck::FuzzyWidgetCheck, false);
+      break;
+    }
+    case NodeCheck::FuzzyWidgetCheck: {
+      node_ptr->state.setFlag(NodeCheck::FuzzyWidgetCheck, true);
+      node_ptr->state.setFlag(NodeCheck::WidgetCheck, false);
+      break;
+    }
+    case NodeCheck::SubControlCheck: {
+      node_ptr->state.setFlag(NodeCheck::SubControlCheck, true);
+      node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
+      break;
+    }
+    case NodeCheck::FuzzySubControlCheck: {
+      node_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, true);
+      node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
+      break;
+    }
+    case NodeCheck::PseudoStateCheck: {
+      node_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, true);
+      node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
+      break;
+    }
+    case NodeCheck::FuzzyPseudoStateCheck: {
+      node_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, true);
+      break;
+    }
+  }
 }
 
 NodeSection*
@@ -407,14 +448,14 @@ void
 WidgetNode::setSubControlMarkerCursor(QTextCursor cursor)
 {
   widget_ptr->markerPosition = cursor;
-  widget_ptr->state.setFlag(NodeCheck::SubControlMarkerCheck, true);
+  node_ptr->state.setFlag(NodeCheck::SubControlMarkerCheck, true);
 }
 
 void
 WidgetNode::setPseudoStateMarkerCursor(QTextCursor cursor)
 {
   widget_ptr->markerPosition = cursor;
-  widget_ptr->state.setFlag(NodeCheck::PseudoStateMarkerCheck, true);
+  node_ptr->state.setFlag(NodeCheck::PseudoStateMarkerCheck, true);
 }
 
 bool
@@ -422,12 +463,12 @@ WidgetNode::doesMarkerMatch(enum NodeCheck type) const
 {
   if (type == NodeCheck::PseudoStateCheck ||
       type == NodeCheck::FuzzyPseudoStateCheck) {
-    if (widget_ptr->state.testFlag(NodeCheck::PseudoStateMarkerCheck)) {
+    if (node_ptr->state.testFlag(NodeCheck::PseudoStateMarkerCheck)) {
       return true;
     }
   } else if (type == NodeCheck::SubControlCheck ||
              type == NodeCheck::FuzzySubControlCheck) {
-    if (widget_ptr->state.testFlag(NodeCheck::SubControlMarkerCheck)) {
+    if (node_ptr->state.testFlag(NodeCheck::SubControlMarkerCheck)) {
       return true;
     }
   }
@@ -480,8 +521,8 @@ WidgetNode::setMarkerCursor(QTextCursor cursor)
 bool
 WidgetNode::hasMarker()
 {
-  return (widget_ptr->state.testFlag(NodeCheck::SubControlMarkerCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::PseudoStateMarkerCheck));
+  return (node_ptr->state.testFlag(NodeCheck::SubControlMarkerCheck) ||
+          node_ptr->state.testFlag(NodeCheck::PseudoStateMarkerCheck));
 }
 
 QString
@@ -499,12 +540,12 @@ WidgetNode::setExtensionName(const QString& name)
 bool
 WidgetNode::isExtensionValid() const
 {
-  if (widget_ptr->state.testFlag(NodeCheck::SubControlCheck)) {
+  if (node_ptr->state.testFlag(NodeCheck::SubControlCheck)) {
     if (doesMarkerMatch(NodeCheck::SubControlCheck)) {
       return true;
     }
   }
-  if (widget_ptr->state.testFlag(NodeCheck::PseudoStateCheck)) {
+  if (node_ptr->state.testFlag(NodeCheck::PseudoStateCheck)) {
     if (doesMarkerMatch(NodeCheck::PseudoStateCheck)) {
       return true;
     }
@@ -515,49 +556,59 @@ WidgetNode::isExtensionValid() const
 bool
 WidgetNode::isExtensionFuzzy() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
+  return (node_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck) ||
+          node_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
+}
+
+bool
+WidgetNode::isExtensionBad() const
+{
+  return (node_ptr->state.testFlag(NodeCheck::BadSubControlForWidgetCheck));
+  // TODO add for pseudo states? Difficult as need to check sub classed classes.
 }
 
 bool
 WidgetNode::isSubControl() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::SubControlCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck));
+  return (node_ptr->state.testFlag(NodeCheck::SubControlCheck) ||
+          node_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck));
 }
 
 bool
 WidgetNode::isPseudoState() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::PseudoStateCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
+  return (node_ptr->state.testFlag(NodeCheck::PseudoStateCheck) ||
+          node_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
 }
 
 void
-WidgetNode::setExtensionType(enum NodeType type, enum NodeCheck check)
+WidgetNode::setExtensionType(enum NodeType type, NodeChecks checks)
 {
   switch (type) {
     case NodeType::SubControlType:
-      if (check == NodeCheck::SubControlCheck) {
-        widget_ptr->state.setFlag(NodeCheck::SubControlCheck, true);
-        widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
-      } else if (check == NodeCheck::FuzzyPropertyCheck) {
-        widget_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
-        widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, true);
+      if (checks.testFlag(NodeCheck::SubControlCheck)) {
+        node_ptr->state.setFlag(NodeCheck::SubControlCheck, true);
+        node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
+      } else if (checks.testFlag(NodeCheck::FuzzySubControlCheck)) {
+        node_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+        node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, true);
       }
-      widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
-      widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
+      if (checks.testFlag(NodeCheck::BadSubControlForWidgetCheck)) {
+        node_ptr->state.setFlag(NodeCheck::BadSubControlForWidgetCheck);
+      }
+      node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
       break;
     case NodeType::PseudoStateType:
-      if (check == NodeCheck::SubControlCheck) {
-        widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, true);
-        widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
-      } else if (check == NodeCheck::FuzzyPropertyCheck) {
-        widget_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
-        widget_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, true);
+      if (checks.testFlag(NodeCheck::PseudoStateCheck)) {
+        node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, true);
+        node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, false);
+      } else if (checks.testFlag(NodeCheck::FuzzyPseudoStateCheck)) {
+        node_ptr->state.setFlag(NodeCheck::PseudoStateCheck, false);
+        node_ptr->state.setFlag(NodeCheck::FuzzyPseudoStateCheck, true);
       }
-      widget_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
-      widget_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::SubControlCheck, false);
+      node_ptr->state.setFlag(NodeCheck::FuzzySubControlCheck, false);
       break;
   }
 }
@@ -565,10 +616,10 @@ WidgetNode::setExtensionType(enum NodeType type, enum NodeCheck check)
 bool
 WidgetNode::hasExtension() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::SubControlCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::PseudoStateCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck) ||
-          widget_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
+  return (node_ptr->state.testFlag(NodeCheck::SubControlCheck) ||
+          node_ptr->state.testFlag(NodeCheck::PseudoStateCheck) ||
+          node_ptr->state.testFlag(NodeCheck::FuzzySubControlCheck) ||
+          node_ptr->state.testFlag(NodeCheck::FuzzyPseudoStateCheck));
 }
 
 int
@@ -580,22 +631,22 @@ WidgetNode::extensionLength() const
 bool
 WidgetNode::isExtensionMarkerCorrect()
 {
-  return ((widget_ptr->state.testFlag(PseudoStateCheck) &&
-           widget_ptr->state.testFlag(PseudoStateMarkerCheck)) ||
-          (widget_ptr->state.testFlag(SubControlCheck) &&
-           widget_ptr->state.testFlag(SubControlMarkerCheck)));
+  return ((node_ptr->state.testFlag(PseudoStateCheck) &&
+           node_ptr->state.testFlag(PseudoStateMarkerCheck)) ||
+          (node_ptr->state.testFlag(SubControlCheck) &&
+           node_ptr->state.testFlag(SubControlMarkerCheck)));
 }
 
 bool
 WidgetNode::hasStartBrace() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::StartBraceCheck));
+  return (node_ptr->state.testFlag(NodeCheck::StartBraceCheck));
 }
 
 void
 WidgetNode::setStartBraceCursor(QTextCursor cursor)
 {
-  widget_ptr->state.setFlag(NodeCheck::StartBraceCheck, true);
+  node_ptr->state.setFlag(NodeCheck::StartBraceCheck, true);
   widget_ptr->startBracePosition = cursor;
 }
 
@@ -614,19 +665,19 @@ WidgetNode::startBracePosition() const
 void
 WidgetNode::removeStartBrace()
 {
-  (widget_ptr->state.setFlag(NodeCheck::StartBraceCheck, false));
+  (node_ptr->state.setFlag(NodeCheck::StartBraceCheck, false));
 }
 
 bool
 WidgetNode::hasEndBrace() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::EndBraceCheck));
+  return (node_ptr->state.testFlag(NodeCheck::EndBraceCheck));
 }
 
 void
 WidgetNode::setEndBraceCursor(QTextCursor cursor)
 {
-  widget_ptr->state.setFlag(NodeCheck::EndBraceCheck, true);
+  node_ptr->state.setFlag(NodeCheck::EndBraceCheck, true);
   widget_ptr->endBracePosition = cursor;
 }
 
@@ -645,14 +696,14 @@ WidgetNode::endBracePosition() const
 void
 WidgetNode::removeEndBrace()
 {
-  widget_ptr->state.setFlag(NodeCheck::EndBraceCheck, false);
+  node_ptr->state.setFlag(NodeCheck::EndBraceCheck, false);
 }
 
 bool
 WidgetNode::hasMatchingBraces() const
 {
-  return (widget_ptr->state.testFlag(NodeCheck::StartBraceCheck) &&
-          widget_ptr->state.testFlag(NodeCheck::EndBraceCheck));
+  return (node_ptr->state.testFlag(NodeCheck::StartBraceCheck) &&
+          node_ptr->state.testFlag(NodeCheck::EndBraceCheck));
 }
 
 void
@@ -1201,7 +1252,7 @@ NewlineNode::NewlineNode(QTextCursor start,
   : WidgetNode("\n", start, editor, NodeCheck::NewLineCheck, parent, type)
 {}
 
-//StartBraceNode::StartBraceNode(QTextCursor start,
+// StartBraceNode::StartBraceNode(QTextCursor start,
 //                               StylesheetEditor* editor,
 //                               QObject* parent,
 //                               enum NodeType type)
@@ -1210,37 +1261,37 @@ NewlineNode::NewlineNode(QTextCursor start,
 //  , m_endBrace(nullptr)
 //{}
 
-//bool
-//StartBraceNode::isBraceAtCursor() const
+// bool
+// StartBraceNode::isBraceAtCursor() const
 //{
 //  return m_isBraceAtCursor;
 //}
 
-//void
-//StartBraceNode::setBraceAtCursor(bool isFlagBrace)
+// void
+// StartBraceNode::setBraceAtCursor(bool isFlagBrace)
 //{
 //  m_isBraceAtCursor = isFlagBrace;
 //}
 
-//void
-//StartBraceNode::setEndBrace(EndBraceNode* endBrace)
+// void
+// StartBraceNode::setEndBrace(EndBraceNode* endBrace)
 //{
 //  m_endBrace = endBrace;
 //}
 
-//bool
-//StartBraceNode::hasEndBrace()
+// bool
+// StartBraceNode::hasEndBrace()
 //{
 //  return (m_endBrace != nullptr);
 //}
 
-//EndBraceNode*
-//StartBraceNode::endBrace() const
+// EndBraceNode*
+// StartBraceNode::endBrace() const
 //{
 //  return m_endBrace;
 //}
 
-//EndBraceNode::EndBraceNode(QTextCursor start,
+// EndBraceNode::EndBraceNode(QTextCursor start,
 //                           StylesheetEditor* editor,
 //                           QObject* parent,
 //                           enum NodeType type)
@@ -1249,32 +1300,32 @@ NewlineNode::NewlineNode(QTextCursor start,
 //  , m_startBrace(nullptr)
 //{}
 
-//bool
-//EndBraceNode::isBraceAtCursor() const
+// bool
+// EndBraceNode::isBraceAtCursor() const
 //{
 //  return m_isBraceAtCursor;
 //}
 
-//void
-//EndBraceNode::setBraceAtCursor(bool isFlagBrace)
+// void
+// EndBraceNode::setBraceAtCursor(bool isFlagBrace)
 //{
 //  m_isBraceAtCursor = isFlagBrace;
 //}
 
-//void
-//EndBraceNode::setStartNode(StartBraceNode* startNode)
+// void
+// EndBraceNode::setStartNode(StartBraceNode* startNode)
 //{
 //  m_startBrace = startNode;
 //}
 
-//bool
-//EndBraceNode::hasStartBrace()
+// bool
+// EndBraceNode::hasStartBrace()
 //{
 //  return (m_startBrace != nullptr);
 //}
 
-//StartBraceNode*
-//EndBraceNode::startBrace() const
+// StartBraceNode*
+// EndBraceNode::startBrace() const
 //{
 //  return m_startBrace;
 //}

@@ -953,7 +953,38 @@ StylesheetEditorPrivate::handleMouseMove(QMouseEvent* event)
       if (section->node) {
         auto node = section->node;
         if (section->isWidgetType()) {
-          qWarning();
+          auto widget = qobject_cast<WidgetNode*>(node);
+          switch (section->type) {
+            case SectionType::WidgetName: {
+              if (widget->isNameFuzzy()) {
+                setHoverFuzzyWidgetName(hover, widget->name());
+              }
+              break;
+            }
+            case SectionType::WidgetSubControlMarker:
+            case SectionType::WidgetSubControl: {
+              if (widget->isExtensionFuzzy()) {
+                setHoverFuzzySubControl(hover, widget->extensionName());
+              } else if (widget->isExtensionBad()) {
+                setHoverBadSubControl(
+                  hover, widget->name(), widget->extensionName());
+              }
+              break;
+            }
+            case SectionType::WidgetPseudoStateMarker:
+            case SectionType::WidgetPseudoState: {
+              if (widget->isExtensionFuzzy()) {
+                if (widget->isPseudoState()) {
+                  setHoverFuzzyPseudoState(hover, widget->extensionName());
+                }
+              }
+              break;
+            }
+            default: {
+              qWarning();
+              break;
+            }
+          }
         } else if (section->isPropertyType()) {
           auto property = qobject_cast<PropertyNode*>(node);
           switch (section->type) {
@@ -966,21 +997,19 @@ StylesheetEditorPrivate::handleMouseMove(QMouseEvent* event)
                 setHoverBadPropertyMarker(hover);
               }
               if (!property->hasPropertyEndMarker()) {
-                setBadPropertyEndMarker(hover, property);
+                setHoverBadPropertyEndMarker(hover, property);
               }
               break;
             }
             case SectionType::PropertyValue: {
-              //              if (property) {
               if (!property->hasPropertyEndMarker()) {
-                setBadPropertyEndMarker(hover, property);
+                setHoverBadPropertyEndMarker(hover, property);
               } else if (!property->hasPropertyMarker()) {
                 setHoverBadPropertyMarker(hover);
               } else if (!property->isValueValid(section->position)) {
                 hover.append(q_ptr->tr("Invalid property value <em>%1</em>")
                                .arg(property->name()));
               }
-              //              }
               break;
             }
             case SectionType::PropertyEndMarker:
@@ -1013,8 +1042,55 @@ StylesheetEditorPrivate::setHoverBadPropertyMarker(QString& hover)
 }
 
 void
-StylesheetEditorPrivate::setBadPropertyEndMarker(QString& hover,
-                                                 const PropertyNode* property)
+StylesheetEditorPrivate::setHoverFuzzyWidgetName(QString& hover,
+                                                 const QString& name)
+{
+  if (!hover.isEmpty()) {
+    hover.append("\n");
+  }
+  hover.append(
+    q_ptr->tr("Invalid <em>fuzzy</em> widget name <em>%1</em>").arg(name));
+}
+
+void
+StylesheetEditorPrivate::setHoverFuzzySubControl(QString& hover,
+                                                 const QString& name)
+{
+  if (!hover.isEmpty()) {
+    hover.append("\n");
+  }
+  hover.append(
+    q_ptr->tr("Invalid <em>fuzzy</em> subcontrol <em>%1</em>").arg(name));
+}
+
+void
+StylesheetEditorPrivate::setHoverBadSubControl(QString& hover,
+                                               const QString& widget,
+                                               const QString& name)
+{
+  if (!hover.isEmpty()) {
+    hover.append("\n");
+  }
+  hover.append(q_ptr->tr("Invalid subcontrol <em>%1</em> for <em>%2</em>")
+                 .arg(name)
+                 .arg(widget));
+}
+
+void
+StylesheetEditorPrivate::setHoverFuzzyPseudoState(QString& hover,
+                                                  const QString& name)
+{
+  if (!hover.isEmpty()) {
+    hover.append("\n");
+  }
+  hover.append(
+    q_ptr->tr("Invalid <em>fuzzy</em> pseudo state <em>%1</em>").arg(name));
+}
+
+void
+StylesheetEditorPrivate::setHoverBadPropertyEndMarker(
+  QString& hover,
+  const PropertyNode* property)
 {
   auto text = q_ptr->toPlainText().mid(property->end());
   if (!checkForEmpty(text)) {

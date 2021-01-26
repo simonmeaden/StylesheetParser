@@ -83,7 +83,11 @@ struct StylesheetEditorPrivate
   bool handleMousePress(QMouseEvent* event);
   void handleMouseMove(QMouseEvent* event);
   void setHoverBadPropertyMarker(QString& hover);
-  void setBadPropertyEndMarker(QString& hover, const PropertyNode* property);
+  void setHoverFuzzyWidgetName(QString& hover, const QString &name);
+  void setHoverFuzzySubControl(QString& hover, const QString &name);
+  void setHoverBadSubControl(QString& hover, const QString &widget, const QString &name);
+  void setHoverFuzzyPseudoState(QString& hover, const QString &name);
+  void setHoverBadPropertyEndMarker(QString& hover, const PropertyNode* property);
 
   void format();
 
@@ -291,7 +295,7 @@ public:
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
-//  void keyPressEvent(QKeyEvent *event);
+  //  void keyPressEvent(QKeyEvent *event);
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;

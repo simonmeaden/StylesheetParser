@@ -109,12 +109,12 @@ Parser::checkType(const QString& block, PropertyNode* property) const
   } else if (block == "/*") {
     return qMakePair<NodeType, NodeCheck>(NodeType::CommentType,
                                           NodeCheck::CommentCheck);
-//  } else if (block == "{") {
-//    return qMakePair<NodeType, NodeCheck>(NodeType::StartBraceType,
-//                                          NodeCheck::StartBraceCheck);
-//  } else if (block == "}") {
-//    return qMakePair<NodeType, NodeCheck>(NodeType::EndBraceType,
-//                                          NodeCheck::EndBraceCheck);
+  } else if (block == "{") {
+    return qMakePair<NodeType, NodeCheck>(NodeType::StartBraceType,
+                                          NodeCheck::StartBraceCheck);
+  } else if (block == "}") {
+    return qMakePair<NodeType, NodeCheck>(NodeType::EndBraceType,
+                                          NodeCheck::EndBraceCheck);
   } else if (block == "\n") {
     return qMakePair<NodeType, NodeCheck>(NodeType::NewlineType,
                                           NodeCheck::NewLineCheck);
@@ -203,7 +203,13 @@ Parser::parseText(const QString& text)
             case NodeType::PseudoStateType:
               widget->setExtensionName(block);
               widget->setExtensionCursor(cursor);
-              widget->setExtensionType(type, check);
+              if (!m_datastore->isValidSubControlForWidget(widget->name(),
+                                                           block)) {
+                widget->setExtensionType(
+                  type, check | NodeCheck::BadSubControlForWidgetCheck);
+              } else {
+                widget->setExtensionType(type, check);
+              }
               continue;
             case NodeType::CommentType:
               parseComment(&nodes, text, start, pos);
@@ -214,13 +220,13 @@ Parser::parseText(const QString& text)
             case NodeType::PseudoStateMarkerType:
               widget->setPseudoStateMarkerCursor(cursor);
               break;
-//            case NodeType::StartBraceType:
-//              widget->setStartBraceCursor(cursor);
-//              break;
-//            case NodeType::EndBraceType:
-//              widget->setEndBraceCursor(cursor);
-//              leaveWidget = true;
-//              break;
+            case NodeType::StartBraceType:
+              widget->setStartBraceCursor(cursor);
+              break;
+            case NodeType::EndBraceType:
+              widget->setEndBraceCursor(cursor);
+              leaveWidget = true;
+              break;
             case NodeType::NewlineType:
               stashNewline(&nodes, pos++);
               break;
@@ -244,12 +250,12 @@ Parser::parseText(const QString& text)
       case NodeType::CommentType:
         parseComment(&nodes, text, start, pos);
         continue;
-//      case NodeType::StartBraceType:
-//        stashStartBrace(&nodes, pos - block.length());
-//        break;
-//      case NodeType::EndBraceType:
-//        stashEndBrace(&nodes, pos - block.length());
-//        break;
+        //      case NodeType::StartBraceType:
+        //        stashStartBrace(&nodes, pos - block.length());
+        //        break;
+        //      case NodeType::EndBraceType:
+        //        stashEndBrace(&nodes, pos - block.length());
+        //        break;
       case NodeType::NewlineType:
         stashNewline(&nodes, pos++);
         break;
@@ -287,7 +293,14 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsSubControl(nextBlock)) {
-              /*auto widget =*/stashWidget(&nodes, start, block, check);
+              auto widget = stashWidget(&nodes, start, block, check);
+              if (!widget->isExtensionFuzzy()) {
+                if (!m_datastore->isValidSubControlForWidget(nextBlock,
+                                                             widget->name())) {
+                  widget->setWidgetCheck(
+                    NodeCheck::BadSubControlForWidgetCheck);
+                }
+              }
               continue;
             }
           }
@@ -679,8 +692,8 @@ Parser::stashNewline(QMap<QTextCursor, Node*>* nodes, int position)
   (*nodes).insert(cursor, newline);
 }
 
-//void
-//Parser::stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position)
+// void
+// Parser::stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position)
 //{
 //  m_datastore->decrementBraceCount();
 //  auto cursor = getCursorForPosition(position);
@@ -689,8 +702,8 @@ Parser::stashNewline(QMap<QTextCursor, Node*>* nodes, int position)
 //  (*nodes).insert(cursor, endbrace);
 //}
 
-//void
-//Parser::stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position)
+// void
+// Parser::stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position)
 //{
 //  m_datastore->incrementBraceCount();
 //  auto cursor = getCursorForPosition(position);
@@ -817,6 +830,19 @@ Parser::updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu)
       (*suggestionsMenu)->addSeparator();
       updateMenu(
         matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
+    } else if (widget->isExtensionBad()) {
+      auto matches =
+        m_datastore->fuzzySearchSubControlForWidget(widget->name(), widget->extensionName());
+      (*suggestionsMenu)->clear();
+      auto widgetact = getWidgetAction(
+        m_datastore->badColonIcon(),
+        tr("Sub control %1 does not match<br>supplied widget %2")
+          .arg(widget->extensionName(), widget->name()),
+        *suggestionsMenu);
+      (*suggestionsMenu)->addAction(widgetact);
+      (*suggestionsMenu)->addSeparator();
+      updateMenu(
+        matches, widget, suggestionsMenu, SectionType::BadWidgetSubControl);
     } else if (!widget->doesMarkerMatch(SubControlCheck)) {
       (*suggestionsMenu)->clear();
       auto widgetact = getWidgetAction(
@@ -1267,7 +1293,23 @@ Parser::handleMouseClicked(const QPoint& pos)
         auto widget = qobject_cast<WidgetNode*>(section->node);
         switch (section->type) {
           case WidgetName: {
-            qWarning();
+            if (widget->isNameFuzzy()) {
+              auto matches = m_datastore->fuzzySearchWidgets(widget->name());
+              suggestionsMenu->clear();
+              auto widgetact = getWidgetAction(
+                m_datastore->fuzzyIcon(),
+                tr("Fuzzy widget name.<br>Possible values showing below.")
+                  .arg(widget->extensionName()),
+                suggestionsMenu);
+              suggestionsMenu->addAction(widgetact);
+              suggestionsMenu->addSeparator();
+              updateMenu(matches,
+                         widget,
+                         &suggestionsMenu,
+                         SectionType::FuzzyWidgetName);
+            } else {
+              qWarning();
+            }
             break;
           }
           case WidgetSubControl: {
@@ -1474,17 +1516,44 @@ Parser::handleSuggestions(QAction* act)
 {
   QVariant v = act->data();
   auto menuData = v.value<MenuData>();
-  auto nNode = menuData.node;
+  auto node = menuData.node;
   auto type = menuData.type;
   auto oldName = menuData.oldName;
 
-  if (nNode) {
+  if (node) {
     auto newName = act->text();
 
     switch (type) {
+      case FuzzyWidgetName: {
+        auto widget = qobject_cast<WidgetNode*>(node);
+        auto cursor = widget->cursor();
+        updateTextChange(cursor, widget->name(), newName);
+        widget->setName(newName);
+        widget->setWidgetCheck(NodeCheck::WidgetCheck);
+        if (widget->hasExtension()) {
+          auto [type, check] = checkType(widget->extensionName());
+          switch (check) {
+            case NodeCheck::SubControlCheck:
+            case NodeCheck::FuzzySubControlCheck:
+              widget->setSubControlMarkerCursor(widget->extensionCursor());
+              widget->setWidgetCheck(check);
+              break;
+            case NodeCheck::PseudoStateCheck:
+            case NodeCheck::FuzzyPseudoStateCheck:
+              widget->setPseudoStateMarkerCursor(widget->extensionCursor());
+              widget->setWidgetCheck(check);
+              break;
+            default:
+              qWarning();
+              break;
+          }
+        }
+        break;
+      }
+      case BadWidgetSubControl:
       case FuzzyWidgetPseudoState:
       case FuzzyWidgetSubControl: {
-        auto widget = qobject_cast<WidgetNode*>(nNode);
+        auto widget = qobject_cast<WidgetNode*>(node);
         oldName = widget->extensionName();
         auto cursor = widget->extensionCursor();
         updateTextChange(cursor, oldName, newName);
@@ -1492,7 +1561,7 @@ Parser::handleSuggestions(QAction* act)
         break;
       }
       case WidgetPseudoStateMarker: {
-        auto widget = qobject_cast<WidgetNode*>(nNode);
+        auto widget = qobject_cast<WidgetNode*>(node);
         if (widget->hasExtension()) {
           auto cursor = widget->markerCursor();
           updateTextChange(cursor, "::", ":");
@@ -1500,7 +1569,7 @@ Parser::handleSuggestions(QAction* act)
         break;
       }
       case WidgetSubControlMarker: {
-        auto widget = qobject_cast<WidgetNode*>(nNode);
+        auto widget = qobject_cast<WidgetNode*>(node);
         if (widget->hasExtension()) {
           auto cursor = widget->markerCursor();
           updateTextChange(cursor, ":", "::");
@@ -1522,23 +1591,23 @@ Parser::handleSuggestions(QAction* act)
 
       case SectionType::PropertyName: {
         m_datastore->setHasSuggestion(true);
-        actionPropertyNameChange(qobject_cast<PropertyNode*>(nNode), newName);
+        actionPropertyNameChange(qobject_cast<PropertyNode*>(node), newName);
         break;
       }
       case SectionType::PropertyValue: {
         m_datastore->setHasSuggestion(true);
         actionPropertyValueChange(
-          qobject_cast<PropertyNode*>(nNode), oldName, newName);
+          qobject_cast<PropertyNode*>(node), oldName, newName);
         break;
       }
       case SectionType::PropertyMarker: {
         m_datastore->setHasSuggestion(true);
-        actionPropertyMarker(qobject_cast<PropertyNode*>(nNode));
+        actionPropertyMarker(qobject_cast<PropertyNode*>(node));
         break;
       }
       case SectionType::PropertyEndMarker: {
         m_datastore->setHasSuggestion(true);
-        actionPropertyEndMarker(qobject_cast<PropertyNode*>(nNode));
+        actionPropertyEndMarker(qobject_cast<PropertyNode*>(node));
         break;
       }
     }

@@ -22,6 +22,7 @@
 #include "datastore.h"
 #include "node.h"
 #include "parser.h"
+#include "safe_lib.h"
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
 
@@ -179,19 +180,27 @@ QMultiMap<int, QString>
 DataStore::fuzzySearch(const QString& name, QStringList list)
 {
   QMultiMap<int, QString> matches;
-  char* pattern = new char[name.size() + 1];
-  strcpy(pattern, name.toStdString().c_str());
+  rsize_t len = rsize_t(name.size() + 1);
+  auto buf = name.toUtf8();
+  const char* name_c = buf.constData();
+  char* pattern = new char[len];
+  strcpy_s(pattern, len, name_c);
 
   int score = 0;
 
-  for (auto valueStr : list) {
+  for (auto& valueStr : list) {
     char* value = new char[valueStr.size() + 1];
-    strcpy(value, valueStr.toStdString().c_str());
+    len = valueStr.length() + 1;
+    strcpy_s(value, len, valueStr.toStdString().c_str());
 
     if (fts::fuzzy_match(pattern, value, score)) {
       matches.insert(score, valueStr);
     }
+
+    delete[] value;
   }
+
+  delete[] pattern;
 
   return matches;
 }
@@ -360,11 +369,28 @@ DataStore::containsSubControl(const QString& name)
   return m_subControls.contains(name.toLower());
 }
 
+bool
+DataStore::isValidSubControlForWidget(const QString& widget,
+                                      const QString& subcontrol)
+{
+  QMutexLocker locker(&m_mutex);
+  auto subcontrols = m_subControls.value(widget);
+  return subcontrols.contains(subcontrol);
+}
+
 QMultiMap<int, QString>
 DataStore::fuzzySearchSubControl(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
   return fuzzySearch(name, m_subControls.keys());
+}
+
+QMultiMap<int, QString>
+DataStore::fuzzySearchSubControlForWidget(const QString& widget,
+                                          const QString& name)
+{
+  auto widgets = m_subControls.value(name);
+  return fuzzySearch(name, widgets);
 }
 
 bool
@@ -1211,21 +1237,21 @@ DataStore::decrementBraceCount()
   return false;
 }
 
-//bool
-//DataStore::isBraceCountZero()
+// bool
+// DataStore::isBraceCountZero()
 //{
 //  return m_braceStack.isEmpty();
 //}
 
-//void
-//DataStore::pushStartBrace(StartBraceNode* startbrace)
+// void
+// DataStore::pushStartBrace(StartBraceNode* startbrace)
 //{
 //  m_startbraces.append(startbrace);
 //  m_braceStack.push(startbrace);
 //}
 
-//void
-//DataStore::pushEndBrace(EndBraceNode* endbrace)
+// void
+// DataStore::pushEndBrace(EndBraceNode* endbrace)
 //{
 //  m_endbraces.append(endbrace);
 //  if (!isBraceCountZero()) {
@@ -1247,13 +1273,13 @@ DataStore::insertNode(QTextCursor cursor, Node* node)
 {
   QMutexLocker locker(&m_mutex);
   m_nodes.insert(cursor, node);
-//  switch (node->type()) {
-//    case StartBraceType:
-//      pushStartBrace(qobject_cast<StartBraceNode*>(node));
-//      break;
-//    case EndBraceType:
-//      pushEndBrace(qobject_cast<EndBraceNode*>(node));
-//  }
+  //  switch (node->type()) {
+  //    case StartBraceType:
+  //      pushStartBrace(qobject_cast<StartBraceNode*>(node));
+  //      break;
+  //    case EndBraceType:
+  //      pushEndBrace(qobject_cast<EndBraceNode*>(node));
+  //  }
 }
 
 bool
@@ -1363,12 +1389,13 @@ DataStore::invalidIcon() const
 QIcon
 DataStore::validIcon() const
 {
-    return m_validIcon;
+  return m_validIcon;
 }
 
-QIcon DataStore::addDColonIcon() const
+QIcon
+DataStore::addDColonIcon() const
 {
-    return m_addDColonIcon;
+  return m_addDColonIcon;
 }
 
 QIcon
@@ -1386,28 +1413,31 @@ DataStore::addColonIcon() const
 QIcon
 DataStore::badSemiColonIcon() const
 {
-    return m_badSColonIcon;
+  return m_badSColonIcon;
 }
 
-QIcon DataStore::badColonIcon() const
+QIcon
+DataStore::badColonIcon() const
 {
-    return m_badColonIcon;
+  return m_badColonIcon;
 }
 
-QIcon DataStore::badDColonIcon() const
+QIcon
+DataStore::badDColonIcon() const
 {
-    return m_badDColonIcon;
+  return m_badDColonIcon;
 }
 
 QIcon
 DataStore::noIcon() const
 {
-    return m_noIcon;
+  return m_noIcon;
 }
 
-QIcon DataStore::fuzzyIcon() const
+QIcon
+DataStore::fuzzyIcon() const
 {
-    return m_fuzzyIcon;
+  return m_fuzzyIcon;
 }
 
 AttributeType

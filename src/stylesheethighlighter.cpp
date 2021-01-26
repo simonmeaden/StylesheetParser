@@ -262,7 +262,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
             position = widget->extensionPosition();
             length = widget->extensionLength();
             if (isInBlock(position, length, blockStart, blockEnd)) {
-              if (widget->isExtensionValid()) {
+              if (widget->isExtensionValid() && !widget->isExtensionBad()) {
                 formatVisiblePart(
                   blockStart, blockEnd, position, length, m_subControlFormat);
               } else {

@@ -63,7 +63,9 @@ public:
   bool containsPseudoState(const QString& name);
   QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
   bool containsSubControl(const QString& name);
+  bool isValidSubControlForWidget(const QString&widget, const QString& subcontrol);
   QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
+  QMultiMap<int, QString> fuzzySearchSubControlForWidget(const QString& widget,const QString& name);
 
   bool ifValidStylesheetValue(const QString& propertyname,
                               const QString& valuename,

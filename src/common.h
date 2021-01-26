@@ -60,14 +60,18 @@ enum SectionType
   None,
   Name,
   PropertyName,
-  PropertyValue, // only valid for propety nodes.
+  FuzzyPropertyName,
+  PropertyValue,      // only valid for propety nodes.
+  FuzzyPropertyValue, // only valid for propety nodes.
   PropertyMarker,
   PropertyEndMarker,
   WidgetName,
+  FuzzyWidgetName,
   WidgetPseudoState,
   FuzzyWidgetPseudoState,
   WidgetSubControl,
   FuzzyWidgetSubControl,
+  BadWidgetSubControl,
   WidgetPropertyName,
   WidgetPropertyMarker,
   WidgetPropertyValue,
@@ -91,9 +95,11 @@ struct NodeSection
   {
     switch (type) {
       case PropertyName:
+      case FuzzyPropertyName:
       case PropertyMarker:
       case PropertyEndMarker:
       case PropertyValue:
+      case FuzzyPropertyValue:
         return true;
       default:
         return false;
@@ -103,8 +109,11 @@ struct NodeSection
   {
     switch (type) {
       case WidgetName:
+      case FuzzyWidgetName:
       case WidgetPseudoStateMarker:
+      case FuzzyWidgetPseudoState:
       case WidgetSubControlMarker:
+      case FuzzyWidgetSubControl:
       case WidgetPseudoState:
       case WidgetSubControl:
       case WidgetPropertyName:
@@ -160,8 +169,8 @@ enum NodeType
   //  FuzzySubControlType,
   SubControlMarkerType,
   ColonType, //! Either a PropertyMarkerType or a PseudoStateMarkerType
-//  StartBraceType,
-//  EndBraceType,
+  StartBraceType,
+  EndBraceType,
   NewlineType,
   PropertyType,
   //  FuzzyPropertyType,
@@ -233,6 +242,7 @@ enum NodeCheck
   SubControlCheck = 0x100,
   FuzzySubControlCheck = 0x200,
   SubControlMarkerCheck = 0x400,
+  BadSubControlForWidgetCheck = 0x800,
   //
   PseudoStateCheck = 0x1000,
   FuzzyPseudoStateCheck = 0x2000,

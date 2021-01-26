@@ -113,47 +113,55 @@ MainWindow::initGui()
 
   QString text;
 
-  text = ""
-         // No Errors
-         //  "color : red; \n"
-         // Errors
-         // Good property.
-         //         "color : red; \n"
-         //         // bad property value
-         //         "color: rd;\n"
-         //         "color: blu;\n"
-         //         // no property marker
-         //         "color blue;\n"
-         //         // no end marker on non-final property
-         //         "border: green solid 1px\n"
-         //         // bad property name
-         //         "bckground-color: green; \n"
-         //         // GOOD final property does not need an end marker.
-         //         "background-color: blue;\n"
-         //         "background-color: red\n";
-         // Widget GOOD
-         //         "QTabWidget::branch {color: red}\n"
-         //         "QTabWidget::branch {color: red; background: green}\n"
-         //         "QTabWidget::branch {color: red; background: green;}\n"
-         //         "QTabWidget:active {color: red}\n"
-         //         "QTabWidget:active {color: red; background: green}\n"
-         //         "QTabWidget:active {color: red; background: green;}\n"
-         //         "QTabWidget {color: red}\n"
-         //         "QTabWidget {color: red; background: green}\n"
-         //         "QTabWidget {color: red; background: green;}\n"
-         // Widget Errors.
-//         "QTabWidget:branch {color: red}\n"                      // Bad marker
-//         "QTabWidget:branch {color: red; background: green}\n"   // Bad marker
-//         "QTabWidget:branch {color: red; background: green;}\n"  // Bad marker
-//         "QTabWidget::active {color: red}\n"                     // Bad marker
-//         "QTabWidget::active {color: red; background: green}\n"  // Bad marker
-//         "QTabWidget::active {color: red; background: green;}\n" // Bad marker
-//         "QTabWidget::branh {}\n" // GOOD widget and BAD subcontrol
-         "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
-         "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
-         "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
-//         "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
-         "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
+  text =
+    ""
+    // No Errors
+    //  "color : red; \n"
+    // Errors
+    //         // Good property.
+    //         "color : red; \n"
+    //         // bad property value
+    //         "color: rd;\n"
+    //         "color: blu;\n"
+    //         // no property marker
+    //         "color blue;\n"
+    //         // no end marker on non-final property
+    //         "border: green solid 1px\n"
+    //         // bad property name
+    //         "bckground-color: green; \n"
+    //         // GOOD final property does not need an end marker.
+    //         "background-color: blue;\n"
+    //         "background-color: red\n";
+    // Widget GOOD
+    //         "QTabWidget::branch {color: red}\n"
+    //         "QTabWidget::branch {color: red; background: green}\n"
+    //         "QTabWidget::branch {color: red; background: green;}\n"
+    //         "QTabWidget:active {color: red}\n"
+    //         "QTabWidget:active {color: red; background: green}\n"
+    //         "QTabWidget:active {color: red; background: green;}\n"
+    //         "QTabWidget {color: red}\n"
+    //         "QTabWidget {color: red; background: green}\n"
+    //         "QTabWidget {color: red; background: green;}\n"
+    // Widget Errors.
+    //         "QTabWidget:branch {color: red}\n"                      // Bad
+    //         marker "QTabWidget:branch {color: red; background: green}\n"   //
+    //         Bad marker "QTabWidget:branch {color: red; background: green;}\n"
+    //         // Bad marker "QTabWidget::active {color: red}\n" // Bad marker
+    //         "QTabWidget::active {color: red; background: green}\n"  // Bad
+    //         marker "QTabWidget::active {color: red; background: green;}\n" //
+    //         Bad marker "QTabWidget::branh {}\n" // GOOD widget and BAD
+    //         subcontrol
+    //    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
+    //    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
+    //    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
+    //    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
+    //    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
+    "QTabWidget:branch {\n" // Good widget/subcontrol
+//    "  color: green\n"              // No end marker
+//    "  color: rd;\n"                // bad color value
+//    "  border: gren slid 1py\n"     // bad property values
+//    "  bckground-color: green; \n"  // bar property name
+    "}\n"
     // End of errors
     ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //

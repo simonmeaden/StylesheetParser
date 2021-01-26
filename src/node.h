@@ -38,7 +38,7 @@ struct NodeData
   enum NodeType type;
   StylesheetEditor* editor;
   QString name;
-  NodeChecks nodeChecks = NodeCheck::BadNodeCheck;
+  NodeChecks state = NodeCheck::BadNodeCheck;
 };
 
 class Node : public QObject
@@ -65,9 +65,9 @@ public:
 
   QString name() const;
   void setName(const QString& value);
-//  bool isNameValid() const {
-//      return
-//  }
+  //  bool isNameValid() const {
+  //      return
+  //  }
 
   virtual NodeSection* isIn(QPoint pos);
 
@@ -119,20 +119,21 @@ class WidgetNode : public Node
 
   struct WidgetNodeData
   {
+//    WidgetNodeData(NodeCheck check = BadNodeCheck);
     QTextCursor markerPosition;
     QTextCursor extensionPosition;
     QString extensionName;
     QTextCursor startBracePosition;
     QTextCursor endBracePosition;
     QList<PropertyNode*> properties;
-    NodeChecks state = NodeCheck::BadNodeCheck;
+//    NodeChecks state = NodeCheck::BadNodeCheck;
   };
 
 public:
   explicit WidgetNode(const QString& name,
                       QTextCursor start,
                       StylesheetEditor* editor,
-                      NodeCheck check,
+                      NodeCheck check = NodeCheck::BadNodeCheck,
                       QObject* parent = nullptr,
                       enum NodeType type = WidgetType);
   WidgetNode(const WidgetNode& other);
@@ -145,6 +146,7 @@ public:
   bool isValid() const;
   bool isNameValid() const;
   bool isNameFuzzy() const;
+  //! \note Only changes widgetcheck or fuzzywidgetcheck.
   void setWidgetCheck(NodeCheck type);
 
   NodeSection* isIn(QPoint pos) override;
@@ -163,9 +165,10 @@ public:
   void setExtensionName(const QString& name);
   bool isExtensionValid() const;
   bool isExtensionFuzzy() const;
+  bool isExtensionBad() const;
   bool isSubControl() const;
   bool isPseudoState() const;
-  void setExtensionType(enum NodeType type, NodeCheck check);
+  void setExtensionType(enum NodeType type, NodeChecks check);
   bool hasExtension() const;
   int extensionLength() const;
 
@@ -282,7 +285,7 @@ public:
   void setPropertyNameCheck(enum NodeCheck check);
   bool isValidPropertyName() const;
   bool isFuzzyName() const;
-//  void setValidPropertyName(bool valid);
+  //  void setValidPropertyName(bool valid);
   bool isValid(bool finalProperty = false);
 
   bool hasPropertyMarker() const;
@@ -313,11 +316,11 @@ public:
                        enum NodeType type = NewlineType);
 };
 
-//class EndBraceNode;
-//class StartBraceNode : public WidgetNode
+// class EndBraceNode;
+// class StartBraceNode : public WidgetNode
 //{
 //  Q_OBJECT
-//public:
+// public:
 //  explicit StartBraceNode(QTextCursor start,
 //                          StylesheetEditor* editor,
 //                          QObject* parent = nullptr,
@@ -330,15 +333,15 @@ public:
 //  void setEndBrace(EndBraceNode* endBrace);
 //  bool hasEndBrace();
 
-//private:
+// private:
 //  bool m_isBraceAtCursor;
 //  EndBraceNode* m_endBrace;
 //};
 
-//class EndBraceNode : public WidgetNode
+// class EndBraceNode : public WidgetNode
 //{
 //  Q_OBJECT
-//public:
+// public:
 //  explicit EndBraceNode(QTextCursor start,
 //                        StylesheetEditor* editor,
 //                        QObject* parent = nullptr,
@@ -351,7 +354,7 @@ public:
 //  void setStartNode(StartBraceNode* startNode);
 //  bool hasStartBrace();
 
-//private:
+// private:
 //  bool m_isBraceAtCursor;
 //  StartBraceNode* m_startBrace;
 //};

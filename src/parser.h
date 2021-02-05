@@ -28,6 +28,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QTextCursor>
 #include <QWidgetAction>
 
+#include <algorithm>
+
 #include "common.h"
 #include "parserstate.h"
 
@@ -169,12 +171,18 @@ private:
     QMenu** suggestionsMenu);
   void updatePseudoStateMenu(WidgetNode* widget, QMenu** suggestionsMenu);
   void updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu);
+  void updateMenu(QStringList matches,
+                  Node* nNode,
+                  QMenu** suggestionsMenu,
+                  SectionType type,
+                  const QString& oldName = QString());
   void updateMenu(QMap<int, QString> matches,
                   Node* nNode,
                   QMenu** suggestionsMenu,
                   SectionType type,
                   const QString& oldName = QString());
   QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
+  QStringList reverseList(QStringList list, int count);
   QList<QPair<QString, QString>> sortLastNValues(
     QMultiMap<int, QPair<QString, QString>> matches);
   void actionPropertyNameChange(PropertyNode* property, const QString& newName);

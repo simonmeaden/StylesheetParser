@@ -81,8 +81,8 @@ target_include_directories(tst_parser
 )
 
 target_link_libraries(tst_parser PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets)
-target_link_libraries(tst_parser PRIVATE "${PROJECT_SOURCE_DIR}/lib/libmemprims.a")
-target_link_libraries(tst_parser PRIVATE "${PROJECT_SOURCE_DIR}/lib/libsafec-1.0.a")
-target_link_libraries(tst_parser PRIVATE "${PROJECT_SOURCE_DIR}/lib/libsafeccore.a")
+target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libmemprims.a")
+target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libsafec-1.0.a")
+target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libsafeccore.a")
 
 target_compile_definitions(tst_parser PRIVATE STYLESHEETPARSER_LIBRARY)

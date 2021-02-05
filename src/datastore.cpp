@@ -22,7 +22,8 @@
 #include "datastore.h"
 #include "node.h"
 #include "parser.h"
-#include "safe_lib.h"
+//#include "safe_lib.h"
+#include "string"
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
 
@@ -38,113 +39,12 @@ DataStore::DataStore(QObject* parent)
   , m_badDColonIcon(":/icons/bad-dcolon")
   , m_noIcon(":/icons/no")
   , m_fuzzyIcon(":/icons/fuzzy")
-  , m_widgets(initialiseWidgetList())
-  , m_colors(initialiseColorList())
-  , m_properties(initialisePropertyList())
-  , m_pseudoStates(initialisePseudoStateList())
-  , m_StylesheetProperties(initialiseStylesheetProperties())
-  , m_subControls(initialiseSubControlMap())
-  , m_attributes(initialiseAttributeMap())
-  , m_stylesheetAttributes(initialiseStylesheetMap())
   , m_braceCount(0)
   , m_manualMove(false)
   , m_hasSuggestion(false)
   , m_maxSuggestionCount(30)
 {
-  m_alignmentValues << "top"
-                    << "bottom"
-                    << "left"
-                    << "right"
-                    << "center";
-  m_paletteRoles << "alternate-base"
-                 << "base"
-                 << "bright-text"
-                 << "button"
-                 << "button-text"
-                 << "dark"
-                 << "highlight"
-                 << "highlighted-text"
-                 << "light"
-                 << "link"
-                 << "link-visited"
-                 << "mid"
-                 << "midlight"
-                 << "shadow"
-                 << "text"
-                 << "window"
-                 << "window-text";
-  m_gradient << "qlineargradient"
-             << "qradialgradient"
-             << "qconicalgradient";
-  m_attachment << "scroll"
-               << "fixed";
-  m_borderStyle << "dashed"
-                << "dot-dash"
-                << "dot-dot-dash"
-                << "dotted"
-                << "double"
-                << "groove"
-                << "inset"
-                << "outset"
-                << "ridge"
-                << "solid"
-                << "none";
-  m_borderImage << "stretch"
-                << "repeat";
-  m_fontStyle << "normal"
-              << "italic"
-              << "oblique";
-  m_fontWeight << "normal"
-               << "bold"
-               << "bolder"
-               << "lighter"
-               << "100"
-               << "200"
-               << "300"
-               << "400"
-               << "500"
-               << "600"
-               << "700"
-               << "800"
-               << "900";
-  m_icon << "disabled"
-         << "active"
-         << "normal"
-         << "selected"
-         << "on"
-         << "off";
-  m_origin << "dotted"
-           << "solid"
-           << "double"
-           << "groove"
-           << "ridge"
-           << "inset"
-           << "outset"
-           << "none"
-           << "hidden";
-  m_outlineStyle << "dotted"
-                 << "solid"
-                 << "double"
-                 << "groove"
-                 << "ridge"
-                 << "inset"
-                 << "outset"
-                 << "none"
-                 << "hidden";
-  m_outlineColor = "invert";
-  m_outlineWidth << "thin"
-                 << "medium"
-                 << "thick";
-  m_position << "relative"
-             << "absolute";
-  m_repeat << "repeat-x"
-           << "repeat-y"
-           << "repeat"
-           << "no-repeat";
-  m_textDecoration << "none"
-                   << "underline"
-                   << "overline"
-                   << "line-through";
+  initialiseWidgetModel();
 }
 
 DataStore::~DataStore()
@@ -153,19 +53,17 @@ DataStore::~DataStore()
 }
 
 void
-DataStore::addWidget(const QString& widget)
+DataStore::addWidget(const QString& widget, const QString& parent)
 {
   QMutexLocker locker(&m_mutex);
-  if (!m_widgets.contains(widget)) {
-    m_widgets.append(widget);
-  }
+  m_widgetModel->addWidget(widget, parent);
 }
 
 void
-DataStore::removeWidget(const QString& widget)
+DataStore::removeWidget(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  m_widgets.removeAll(widget);
+  m_widgetModel->removeWidget(name);
 }
 
 bool
@@ -173,172 +71,33 @@ DataStore::containsWidget(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
   // NOT toLower() as widget names are cased.
-  return m_widgets.contains(name);
-}
-
-QMultiMap<int, QString>
-DataStore::fuzzySearch(const QString& name, QStringList list)
-{
-  QMultiMap<int, QString> matches;
-  rsize_t len = rsize_t(name.size() + 1);
-  auto buf = name.toUtf8();
-  const char* name_c = buf.constData();
-  char* pattern = new char[len];
-  strcpy_s(pattern, len, name_c);
-
-  int score = 0;
-
-  for (auto& valueStr : list) {
-    char* value = new char[valueStr.size() + 1];
-    len = valueStr.length() + 1;
-    strcpy_s(value, len, valueStr.toStdString().c_str());
-
-    if (fts::fuzzy_match(pattern, value, score)) {
-      matches.insert(score, valueStr);
-    }
-
-    delete[] value;
-  }
-
-  delete[] pattern;
-
-  return matches;
+  return m_widgetModel->hasWidget(name);
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchWidgets(const QString& name)
 {
-  return fuzzySearch(name, m_widgets);
+  return m_widgetModel->fuzzySearchWidgets(name);
 }
 
 bool
 DataStore::containsProperty(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  return m_properties.contains(name.toLower());
+  return m_widgetModel->containsProperty(name.toLower());
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchProperty(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  return fuzzySearch(name, m_properties);
+  return fuzzySearchProperty(name);
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchPropertyValue(const QString& name, const QString& value)
 {
-  QMutexLocker locker(&m_mutex);
-  QMap<int, QString> data, dataIn;
-  QStringList list;
-  auto attribute = m_attributes.value(name);
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wswitch-enum,"
-  switch (attribute) {
-    case Alignment:
-      return fuzzySearch(value, m_alignmentValues);
-
-    case Attachment:
-      return fuzzySearch(value, m_attachment);
-
-    case Background: {
-      data.insert(fuzzyTestBrush(value));
-
-      return data;
-    }
-
-    case Border:
-      list << m_borderStyle << m_borderImage << m_colors << m_paletteRoles
-           << m_gradient;
-      return fuzzySearch(value, list);
-
-    case BorderImage:
-      return fuzzySearch(value, m_borderImage);
-
-    case BorderStyle:
-      return fuzzySearch(value, m_borderStyle);
-
-    case BoxColors:
-    case Color:
-      return fuzzySearch(value, m_colors);
-
-    case Brush:
-      list << m_colors << m_paletteRoles << m_gradient;
-      return fuzzySearch(value, list);
-
-    case Font:
-      list << m_fontStyle << m_fontWeight;
-      return fuzzySearch(value, list);
-
-    case FontStyle:
-      return fuzzySearch(value, m_fontStyle);
-
-    case FontWeight:
-      return fuzzySearch(value, m_fontWeight);
-
-    case Gradient:
-      return fuzzySearch(value, m_gradient);
-
-    case Icon:
-      return fuzzySearch(value, m_icon);
-
-    case Origin:
-      return fuzzySearch(value, m_origin);
-
-    case Outline:
-      list << m_outlineStyle << m_colors << m_outlineColor << m_outlineWidth;
-      return fuzzySearch(value, list);
-
-    case OutlineStyle:
-      return fuzzySearch(value, m_outlineStyle);
-
-    case PaletteRole:
-      return fuzzySearch(value, m_paletteRoles);
-
-    case Position:
-      return fuzzySearch(value, m_position);
-
-    case Repeat:
-      return fuzzySearch(value, m_repeat);
-
-    case TextDecoration:
-      return fuzzySearch(value, m_textDecoration);
-
-    case StylesheetEditGood:
-      list << m_colors << "thin"
-           << "extralight"
-           << "light"
-           << "normal"
-           << "medium"
-           << "demibold"
-           << "bold"
-           << "extrabold"
-           << "black";
-      return fuzzySearch(value, list);
-
-    case StylesheetEditBad:
-      list << m_colors << "thin"
-           << "extralight"
-           << "light"
-           << "normal"
-           << "medium"
-           << "demibold"
-           << "bold"
-           << "extrabold"
-           << "black"
-           << "none"
-           << "single"
-           << "dash"
-           << "dot"
-           << "dashdot"
-           << "dashdotdot"
-           << "wave"
-           << "spellcheck";
-      return fuzzySearch(value, list);
-  }
-#pragma clang diagnostic pop
-  return QMap<int, QString>();
+  return m_widgetModel->fuzzySearchPropertyValue(name, value);
 }
 
 bool
@@ -352,61 +111,56 @@ bool
 DataStore::containsPseudoState(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  return m_pseudoStates.contains(name.toLower());
+  return m_widgetModel->containsPseudoState(name.toLower());
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchPseudoStates(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  return fuzzySearch(name, m_pseudoStates);
+  return m_widgetModel->fuzzySearchPseudoStates(name);
 }
 
 bool
 DataStore::containsSubControl(const QString& name)
 {
-  QMutexLocker locker(&m_mutex);
-  return m_subControls.contains(name.toLower());
+  return m_widgetModel->containsSubControl(name);
 }
 
 bool
 DataStore::isValidSubControlForWidget(const QString& widget,
                                       const QString& subcontrol)
 {
-  QMutexLocker locker(&m_mutex);
-  auto subcontrols = m_subControls.value(widget);
-  return subcontrols.contains(subcontrol);
+  return m_widgetModel->isValidSubControlForWidget(widget, subcontrol);
 }
 
 QMultiMap<int, QString>
 DataStore::fuzzySearchSubControl(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  return fuzzySearch(name, m_subControls.keys());
-}
-
-QMultiMap<int, QString>
-DataStore::fuzzySearchSubControlForWidget(const QString& widget,
-                                          const QString& name)
-{
-  auto widgets = m_subControls.value(name);
-  return fuzzySearch(name, widgets);
+  return m_widgetModel->fuzzySearchSubControl(name);
 }
 
 bool
-DataStore::checkAlignment(const QString& value) const
+DataStore::checkSubControlForWidget(const QString& widget, const QString& name)
+{
+  return m_widgetModel->checkSubControlForWidget(widget, name);
+}
+
+bool
+WidgetModel::checkAlignment(const QString& value) const
 {
   return m_alignmentValues.contains(value);
 }
 
 bool
-DataStore::checkAttachment(const QString& value) const
+WidgetModel::checkAttachment(const QString& value) const
 {
   return m_attachment.contains(value);
 }
 
 bool
-DataStore::checkBackground(const QString& value) const
+WidgetModel::checkBackground(const QString& value) const
 {
   if (checkBrush(value)) {
     return true;
@@ -428,7 +182,7 @@ DataStore::checkBackground(const QString& value) const
 }
 
 bool
-DataStore::checkBool(const QString& value) const
+WidgetModel::checkBool(const QString& value) const
 {
   if (value == "true" || value == "false") {
     return true;
@@ -438,7 +192,7 @@ DataStore::checkBool(const QString& value) const
 }
 
 bool
-DataStore::checkBoolean(const QString& value) const
+WidgetModel::checkBoolean(const QString& value) const
 {
   if (value == "0" || value == "1") {
     return true;
@@ -448,7 +202,7 @@ DataStore::checkBoolean(const QString& value) const
 }
 
 bool
-DataStore::checkBorder(const QString& value) const
+WidgetModel::checkBorder(const QString& value) const
 {
   if (checkBorderStyle(value)) {
     return true;
@@ -466,7 +220,7 @@ DataStore::checkBorder(const QString& value) const
 }
 
 bool
-DataStore::checkBorderImage(const QString& value) const
+WidgetModel::checkBorderImage(const QString& value) const
 {
   if (checkUrl(value)) {
     return true;
@@ -480,25 +234,25 @@ DataStore::checkBorderImage(const QString& value) const
 }
 
 bool
-DataStore::checkBorderStyle(const QString& value) const
+WidgetModel::checkBorderStyle(const QString& value) const
 {
   return m_borderStyle.contains(value);
 }
 
 bool
-DataStore::checkBoxColors(const QString& value) const
+WidgetModel::checkBoxColors(const QString& value) const
 {
   return checkColor(value);
 }
 
 bool
-DataStore::checkBoxLengths(const QString& value) const
+WidgetModel::checkBoxLengths(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkBrush(const QString& value) const
+WidgetModel::checkBrush(const QString& value) const
 {
   if (checkColor(value)) {
     return true;
@@ -516,7 +270,7 @@ DataStore::checkBrush(const QString& value) const
 }
 
 bool
-DataStore::checkColor(const QString& value) const
+WidgetModel::checkColor(const QString& value) const
 {
   // check if this was a color name.
   if (m_colors.contains(value)) {
@@ -701,13 +455,13 @@ DataStore::checkColor(const QString& value) const
 }
 
 bool
-DataStore::checkFontStyle(const QString& value) const
+WidgetModel::checkFontStyle(const QString& value) const
 {
   return m_fontStyle.contains(value);
 }
 
 bool
-DataStore::checkFont(const QString& value) const
+WidgetModel::checkFont(const QString& value) const
 {
   if (checkFontSize(value)) {
     return true;
@@ -726,25 +480,25 @@ DataStore::checkFont(const QString& value) const
 }
 
 bool
-DataStore::checkFontSize(const QString& value) const
+WidgetModel::checkFontSize(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkFontWeight(const QString& value) const
+WidgetModel::checkFontWeight(const QString& value) const
 {
   return m_fontWeight.contains(value);
 }
 
 bool
-DataStore::checkGradient(const QString& value) const
+WidgetModel::checkGradient(const QString& value) const
 {
   return m_gradient.contains(value);
 }
 
 bool
-DataStore::checkIcon(const QString& value) const
+WidgetModel::checkIcon(const QString& value) const
 {
   if (checkUrl(value)) {
     return true;
@@ -754,7 +508,7 @@ DataStore::checkIcon(const QString& value) const
 }
 
 bool
-DataStore::checkLength(const QString& value) const
+WidgetModel::checkLength(const QString& value) const
 {
   bool ok = false;
 
@@ -774,7 +528,7 @@ DataStore::checkLength(const QString& value) const
 }
 
 bool
-DataStore::checkNumber(const QString& value) const
+WidgetModel::checkNumber(const QString& value) const
 {
   bool ok = false;
   // don't actually need the value, I only want to know
@@ -784,7 +538,7 @@ DataStore::checkNumber(const QString& value) const
 }
 
 bool
-DataStore::checkOutline(const QString& value) const
+WidgetModel::checkOutline(const QString& value) const
 {
   if (checkOutlineColor(value)) {
     return true;
@@ -806,19 +560,19 @@ DataStore::checkOutline(const QString& value) const
 }
 
 bool
-DataStore::checkOrigin(const QString& value) const
+WidgetModel::checkOrigin(const QString& value) const
 {
   return m_origin.contains(value);
 }
 
 bool
-DataStore::checkOutlineStyle(const QString& value) const
+WidgetModel::checkOutlineStyle(const QString& value) const
 {
   return m_outlineStyle.contains(value);
 }
 
 bool
-DataStore::checkOutlineColor(const QString& value) const
+WidgetModel::checkOutlineColor(const QString& value) const
 {
   if (value == m_outlineColor) {
     return true;
@@ -828,7 +582,7 @@ DataStore::checkOutlineColor(const QString& value) const
 }
 
 bool
-DataStore::checkOutlineWidth(const QString& value) const
+WidgetModel::checkOutlineWidth(const QString& value) const
 {
   if (m_outlineWidth.contains(value)) {
     return true;
@@ -838,20 +592,20 @@ DataStore::checkOutlineWidth(const QString& value) const
 }
 
 bool
-DataStore::checkOutlineOffset(const QString& value) const
+WidgetModel::checkOutlineOffset(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkOutlineRadius(const QString& value) const
+WidgetModel::checkOutlineRadius(const QString& value) const
 {
   // check for 4 radius values.
   return checkRadius(value);
 }
 
 bool
-DataStore::checkPaletteRole(const QString& value) const
+WidgetModel::checkPaletteRole(const QString& value) const
 {
   if (m_paletteRoles.contains(value)) {
     return true;
@@ -861,19 +615,19 @@ DataStore::checkPaletteRole(const QString& value) const
 }
 
 bool
-DataStore::checkRadius(const QString& value) const
+WidgetModel::checkRadius(const QString& value) const
 {
   return checkLength(value);
 }
 
 bool
-DataStore::checkRepeat(const QString& value) const
+WidgetModel::checkRepeat(const QString& value) const
 {
   return m_repeat.contains(value);
 }
 
 bool
-DataStore::checkUrl(const QString& value) const
+WidgetModel::checkUrl(const QString& value) const
 {
   QFile file(value);
 
@@ -890,19 +644,20 @@ DataStore::checkUrl(const QString& value) const
 }
 
 bool
-DataStore::checkPosition(const QString& value) const
+WidgetModel::checkPosition(const QString& value) const
 {
   return m_position.contains(value);
 }
 
 bool
-DataStore::checkTextDecoration(const QString& value) const
+WidgetModel::checkTextDecoration(const QString& value) const
 {
   return m_textDecoration.contains(value);
 }
 
 bool
-DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data) const
+WidgetModel::checkStylesheetEdit(const QString& value,
+                                 StylesheetData* data) const
 {
   if (data && checkColor(value)) {
     data->colors.append(value);
@@ -917,8 +672,8 @@ DataStore::checkStylesheetEdit(const QString& value, StylesheetData* data) const
 }
 
 bool
-DataStore::checkStylesheetEditBad(const QString& value,
-                                  StylesheetData* data) const
+WidgetModel::checkStylesheetEditBad(const QString& value,
+                                    StylesheetData* data) const
 {
   if (data) {
     if (checkColor(value)) {
@@ -968,8 +723,8 @@ DataStore::checkStylesheetEditBad(const QString& value,
 }
 
 bool
-DataStore::checkStylesheetFontWeight(const QString& value,
-                                     StylesheetData* data) const
+WidgetModel::checkStylesheetFontWeight(const QString& value,
+                                       StylesheetData* data) const
 {
   if (data) {
     if (value == "thin") {
@@ -1013,10 +768,16 @@ DataStore::checkStylesheetFontWeight(const QString& value,
   return false;
 }
 
+void
+DataStore::initialiseWidgetModel()
+{
+  m_widgetModel = new WidgetModel();
+}
+
 bool
-DataStore::checkPropertyValue(AttributeType propertyAttribute,
-                              const QString& valuename,
-                              StylesheetData* data)
+WidgetModel::checkPropertyValue(AttributeType propertyAttribute,
+                                const QString& valuename,
+                                StylesheetData* data)
 {
   switch (propertyAttribute) {
     case Alignment:
@@ -1118,11 +879,12 @@ DataStore::checkPropertyValue(AttributeType propertyAttribute,
       // This should never reach here.
       break;
 
-    case StylesheetEditGood:
-      return checkStylesheetEdit(valuename, data);
+      // TODO add custom property value checks.
+      //    case StylesheetEditGood:
+      //      return checkStylesheetEdit(valuename, data);
 
-    case StylesheetEditBad:
-      return checkStylesheetEditBad(valuename, data);
+      //    case StylesheetEditBad:
+      //      return checkStylesheetEditBad(valuename, data);
   }
 
   return false;
@@ -1134,75 +896,58 @@ DataStore::ifValidStylesheetValue(const QString& propertyname,
                                   StylesheetData* data)
 {
   QMutexLocker locker(&m_mutex);
-  if (valuename.isEmpty()) {
-    return false;
-  }
-
-  AttributeType stylesheetAttribute =
-    m_stylesheetAttributes.value(propertyname);
-  return (checkPropertyValue(stylesheetAttribute, valuename, data) !=
-          NoAttributeValue);
+  return m_widgetModel->ifValidStylesheetValue(propertyname, valuename, data);
 }
 
 bool
 DataStore::isValidPropertyValueForProperty(const QString& propertyname,
                                            const QString& valuename)
 {
-  QMutexLocker locker(&m_mutex);
-  if (valuename.isEmpty()) {
-    return false;
-  }
-
-  AttributeType propertyAttribute = m_attributes.value(propertyname);
-  return (checkPropertyValue(propertyAttribute,
-                             valuename,
-                             new StylesheetData()) != NoAttributeValue);
+  return m_widgetModel->isValidPropertyValueForProperty(propertyname,
+                                                        valuename);
 }
 
 QStringList
 DataStore::possibleSubControlWidgets(const QString& name)
 {
-  QMutexLocker locker(&m_mutex);
-  return m_subControls.value(name);
+  return m_widgetModel->possibleSubControlWidgets(name);
 }
 
 void
 DataStore::addSubControl(const QString& control, const QString& widget)
 {
   QMutexLocker locker(&m_mutex);
-  m_subControls.insert(control, addControls(1, &widget));
+  QStringList widgets;
+  widgets << widget;
+  m_widgetModel->addSubControl(control, widgets);
 }
 
 void
 DataStore::addSubControl(const QString& control, QStringList& widgets)
 {
   QMutexLocker locker(&m_mutex);
-  m_subControls.insert(control, widgets);
+  m_widgetModel->addSubControl(control, widgets);
 }
 
 void
 DataStore::removeSubControl(const QString& control)
 {
   QMutexLocker locker(&m_mutex);
-  if (m_subControls.contains(control)) {
-    m_subControls.remove(control);
-  }
+  m_widgetModel->removeSubControl(control);
 }
 
 void
 DataStore::addPseudoState(const QString& state)
 {
   QMutexLocker locker(&m_mutex);
-  if (!m_pseudoStates.contains(state)) {
-    m_pseudoStates.append(state);
-  }
+  m_widgetModel->addPseudoState(state, true);
 }
 
 void
 DataStore::removePseudoState(const QString& state)
 {
   QMutexLocker locker(&m_mutex);
-  m_pseudoStates.removeAll(state);
+  m_widgetModel->removePseudoState(state);
 }
 
 int
@@ -1444,6 +1189,1280 @@ AttributeType
 DataStore::propertyValueAttribute(const QString& value)
 {
   QMutexLocker locker(&m_mutex);
+  return m_widgetModel->propertyValueAttribute(value);
+}
+
+// QMap<QString, AttributeType>
+// DataStore::initialiseStylesheetMap()
+//{
+//  QMap<QString, AttributeType> map;
+//  map.insert("widget", StylesheetEditGood);
+//  map.insert("subcontrol", StylesheetEditGood);
+//  map.insert("pseudostate", StylesheetEditGood);
+//  map.insert("subcontrolmarker", StylesheetEditGood);
+//  map.insert("pseudostatemarker", StylesheetEditGood);
+//  map.insert("property", StylesheetEditGood);
+//  map.insert("propertymarker", StylesheetEditGood);
+//  map.insert("value", StylesheetEditGood);
+//  map.insert("startbrace", StylesheetEditGood);
+//  map.insert("endbrace", StylesheetEditGood);
+//  map.insert("bracematch", StylesheetEditGood);
+//  map.insert("comment", StylesheetEditGood);
+//  map.insert("bad", StylesheetEditBad);
+//  // TODO more values
+//  return map;
+//}
+
+WidgetItem::WidgetItem(const QString& name, WidgetItem* parent)
+  : m_name(name)
+  , m_parent(parent)
+{}
+
+QString
+WidgetItem::name()
+{
+  return m_name;
+}
+
+WidgetItem*
+WidgetItem::parent()
+{
+  return m_parent;
+}
+
+QList<WidgetItem*>
+WidgetItem::children()
+{
+  return m_children;
+}
+
+void
+WidgetItem::addChild(WidgetItem* child)
+{
+  m_children.append(child);
+}
+
+void
+WidgetItem::removeChild(const QString& name)
+{
+  for (auto child : m_children) {
+    if (child->name() == name) {
+      m_children.removeOne(child);
+      break;
+    }
+  }
+}
+
+bool
+WidgetItem::hasChildren()
+{
+  return m_children.isEmpty();
+}
+
+bool
+WidgetItem::isExtraWidget() const
+{
+  return m_extraWidget;
+}
+
+void
+WidgetItem::setExtraWidget(bool extraWidget)
+{
+  m_extraWidget = extraWidget;
+}
+
+void
+WidgetModel::initPaletteRoles()
+{
+  m_paletteRoles << "alternate-base"
+                 << "base"
+                 << "bright-text"
+                 << "button"
+                 << "button-text"
+                 << "dark"
+                 << "highlight"
+                 << "highlighted-text"
+                 << "light"
+                 << "link"
+                 << "link-visited"
+                 << "mid"
+                 << "midlight"
+                 << "shadow"
+                 << "text"
+                 << "window"
+                 << "window-text";
+}
+
+void
+WidgetModel::initColorNames()
+{
+  m_colors << "black"
+           << "silver"
+           << "gray"
+           << "whitesmoke"
+           << "maroon"
+           << "red"
+           << "purple"
+           << "fuchsia"
+           << "green"
+           << "lime"
+           << "olivedrab"
+           << "yellow"
+           << "navy"
+           << "blue"
+           << "teal"
+           << "aquamarine"
+           << "orange"
+           << "aliceblue"
+           << "antiquewhite"
+           << "aqua"
+           << "azure"
+           << "beige"
+           << "bisque"
+           << "blanchedalmond"
+           << "blueviolet"
+           << "brown"
+           << "burlywood"
+           << "cadetblue"
+           << "chartreuse"
+           << "chocolate"
+           << "coral"
+           << "cornflowerblue"
+           << "cornsilk"
+           << "crimson"
+           << "darkblue"
+           << "darkcyan"
+           << "darkgoldenrod"
+           << "darkgray"
+           << "darkgreen"
+           << "darkgrey"
+           << "darkkhaki"
+           << "darkmagenta"
+           << "darkolivegreen"
+           << "darkorange"
+           << "darkorchid"
+           << "darkred"
+           << "darksalmon"
+           << "darkseagreen"
+           << "darkslateblue"
+           << "darkslategray"
+           << "darkslategrey"
+           << "darkturquoise"
+           << "darkviolet"
+           << "deeppink"
+           << "deepskyblue"
+           << "dimgray"
+           << "dimgrey"
+           << "dodgerblue"
+           << "firebrick"
+           << "floralwhite"
+           << "forestgreen"
+           << "gainsboro"
+           << "ghostwhite"
+           << "goldenrod"
+           << "gold"
+           << "greenyellow"
+           << "grey"
+           << "honeydew"
+           << "hotpink"
+           << "indianred"
+           << "indigo"
+           << "ivory"
+           << "khaki"
+           << "lavenderblush"
+           << "lavender"
+           << "lawngreen"
+           << "lemonchiffon"
+           << "lightblue"
+           << "lightcoral"
+           << "lightcyan"
+           << "lightgoldenrodyellow"
+           << "lightgray"
+           << "lightgreen"
+           << "lightgrey"
+           << "lightpink"
+           << "lightsalmon"
+           << "lightseagreen"
+           << "lightskyblue"
+           << "lightslategray"
+           << "lightslategrey"
+           << "lightsteelblue"
+           << "lightyellow"
+           << "limegreen"
+           << "linen"
+           << "mediumaquamarine"
+           << "mediumblue"
+           << "mediumorchid"
+           << "mediumpurple"
+           << "mediumseagreen"
+           << "mediumslateblue"
+           << "mediumspringgreen"
+           << "mediumturquoise"
+           << "mediumvioletred"
+           << "midnightblue"
+           << "mintcream"
+           << "mistyrose"
+           << "moccasin"
+           << "navajowhite"
+           << "oldlace"
+           << "olive"
+           << "orangered"
+           << "orchid"
+           << "palegoldenrod"
+           << "palegreen"
+           << "paleturquoise"
+           << "palevioletred"
+           << "papayawhip"
+           << "peachpuff"
+           << "peru"
+           << "pink"
+           << "plum"
+           << "powderblue"
+           << "rosybrown"
+           << "royalblue"
+           << "saddlebrown"
+           << "salmon"
+           << "sandybrown"
+           << "seagreen"
+           << "seashell"
+           << "sienna"
+           << "skyblue"
+           << "slateblue"
+           << "slategray"
+           << "slategrey"
+           << "snow"
+           << "springgreen"
+           << "steelblue"
+           << "tan"
+           << "thistle"
+           << "tomato"
+           << "transparent"
+           << "turquoise"
+           << "violet"
+           << "wheat"
+           << "white"
+           << "yellowgreen"
+           << "rebeccapurple";
+}
+
+void
+WidgetModel::initProperties()
+{
+  addProperty("alternate-background-color");
+  addProperty("background");
+  addProperty("background-color");
+  addProperty("background-image");
+  addProperty("background-repeat");
+  addProperty("background-position");
+  addProperty("background-attachment");
+  addProperty("background-clip");
+  addProperty("background-origin");
+  addProperty("border");
+  addProperty("border-top");
+  addProperty("border-right");
+  addProperty("border-bottom");
+  addProperty("border-left");
+  addProperty("border-color");
+  addProperty("border-top-color");
+  addProperty("border-right-color");
+  addProperty("border-bottom-color");
+  addProperty("border-left-color");
+  addProperty("border-image");
+  addProperty("border-radius");
+  addProperty("border-top-left-radius");
+  addProperty("border-top-right-radius");
+  addProperty("border-bottom-right-radius");
+  addProperty("border-bottom-left-radius");
+  addProperty("border-style");
+  addProperty("border-top-style");
+  addProperty("border-right-style");
+  addProperty("border-bottom-style");
+  addProperty("border-left-style");
+  addProperty("border-width");
+  addProperty("border-top-width");
+  addProperty("border-right-width");
+  addProperty("border-bottom-width");
+  addProperty("border-left-width");
+  addProperty("bottom");
+  addProperty("button-laout");
+  addProperty("color");
+  addProperty("dialogbuttonbox-buttons-have-icons");
+  addProperty("font");
+  addProperty("font-family");
+  addProperty("font-size");
+  addProperty("font-style");
+  addProperty("font-weight");
+  addProperty("gridline-color");
+  addProperty("height");
+  addProperty("icon");
+  addProperty("icon-size");
+  addProperty("image");
+  addProperty("image-position");
+  addProperty("left");
+  addProperty("lineedit-password-character");
+  addProperty("lineedit-password-mask-delay");
+  addProperty("margin");
+  addProperty("margin-top");
+  addProperty("margin-right");
+  addProperty("margin-bottom");
+  addProperty("margin-left");
+  addProperty("max-height");
+  addProperty("max-width");
+  addProperty("messagebox-text-interaction-flags");
+  addProperty("min-height");
+  addProperty("min-width");
+  addProperty("opacity");
+  addProperty("outline");
+  addProperty("outline-color");
+  addProperty("outline-offset");
+  addProperty("outline-style");
+  addProperty("outline-radius");
+  addProperty("outline-bottom-left-radius");
+  addProperty("outline-bottom-right-radius");
+  addProperty("outline-top-left-radius");
+  addProperty("outline-top-right-radius");
+  addProperty("padding");
+  addProperty("padding-top");
+  addProperty("padding-right");
+  addProperty("padding-bottom");
+  addProperty("padding-left");
+  addProperty("paint-alternating-row-colors-for-empty-area");
+  addProperty("position");
+  addProperty("right");
+  addProperty("selection-background-color");
+  addProperty("selection-color");
+  addProperty("show-decoration-selected");
+  addProperty("spacing");
+  addProperty("subcontrol-origin");
+  addProperty("subcontrol-position");
+  addProperty("titlebar-show-tooltips-on-buttons");
+  addProperty("widget-animation-duration");
+  addProperty("text-align");
+  addProperty("text-decoration");
+  addProperty("top");
+  addProperty("width");
+  addProperty("-qt-background-role");
+  addProperty("-qt-style-features");
+  // I might as well add stylesheet stuff for this widget.
+  addProperty("widget", true);
+  addProperty("subcontrol", true);
+  addProperty("subcontrolmarker", true);
+  addProperty("pseudostate", true);
+  addProperty("pseudostatemarker", true);
+  addProperty("property", true);
+  addProperty("propertymarker", true);
+  addProperty("value", true);
+  addProperty("startbrace", true);
+  addProperty("endbrace", true);
+  addProperty("bracematch", true);
+  addProperty("comment", true);
+  addProperty("bad", true);
+}
+
+void
+WidgetModel::initSubControls()
+{
+  addSubControl("add-line", addControls(1, new QString("QScrollBar")));
+  addSubControl("add-page", addControls(1, new QString("QScrollBar")));
+  addSubControl("branch", addControls(1, new QString("QTreeBar")));
+  addSubControl("chunk", addControls(1, new QString("QProgressBar")));
+  addSubControl(
+    "close-button ",
+    addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
+  addSubControl("corner", addControls(1, new QString("QAbstractScrollArea")));
+  addSubControl("down-arrow",
+                addControls(4,
+                            new QString("QComboBox"),
+                            new QString("QHeaderView"),
+                            new QString("QScrollBar"),
+                            new QString("QSpinBox")));
+  addSubControl(
+    "down-button",
+    addControls(2, new QString("QScrollBar"), new QString("QSpinBox")));
+  addSubControl("drop-down", addControls(1, new QString("QComboBox")));
+  addSubControl("float-button", addControls(1, new QString("QDockWidget")));
+  addSubControl("groove", addControls(1, new QString("QSlider")));
+  addSubControl("indicator",
+                addControls(5,
+                            new QString("QAbstractItemView"),
+                            new QString("QCheckBox"),
+                            new QString("QRadioButton"),
+                            new QString("QMenu"),
+                            new QString("QGroupBox")));
+  addSubControl("handle",
+                addControls(3,
+                            new QString("QScrollBar"),
+                            new QString("QSplitter"),
+                            new QString("QSlider")));
+  addSubControl(
+    "icon",
+    addControls(2, new QString("QAbstractItemView"), new QString("QMenu")));
+  addSubControl("item",
+                addControls(4,
+                            new QString("QAbstractItemView"),
+                            new QString("QMenuBar"),
+                            new QString("QMenu"),
+                            new QString("QStatusBar")));
+  addSubControl("left-arrow", addControls(1, new QString("QScrollBar")));
+  addSubControl("left-corner", addControls(1, new QString("QTabWidget")));
+  addSubControl("menu-arrow", addControls(1, new QString("QToolButton")));
+  addSubControl("menu-button", addControls(1, new QString("QToolButton")));
+  addSubControl("menu-indicator", addControls(1, new QString("QPushButton")));
+  addSubControl(
+    "right-arrow",
+    addControls(2, new QString("QMenu"), new QString("QScrollBar")));
+  addSubControl("pane", addControls(1, new QString("QTabWidget")));
+  addSubControl("right-corner", addControls(1, new QString("QTabWidget")));
+  addSubControl("scroller",
+                addControls(2, new QString("QMenu"), new QString("QTabBar")));
+  addSubControl("section", addControls(1, new QString("QHeaderView")));
+  addSubControl(
+    "separator",
+    addControls(2, new QString("QMenu"), new QString("QMainWindow")));
+  addSubControl("sub-line", addControls(1, new QString("QScrollBar")));
+  addSubControl("sub-page", addControls(1, new QString("QScrollBar")));
+  addSubControl(
+    "tab", addControls(2, new QString("QTabBar"), new QString("QToolBox")));
+  addSubControl("tab-bar", addControls(1, new QString("QTabWidget")));
+  addSubControl("tear", addControls(1, new QString("QTabBar")));
+  addSubControl("tearoff", addControls(1, new QString("QMenu")));
+  addSubControl("text", addControls(1, new QString("QAbstractItemView")));
+  addSubControl(
+    "title",
+    addControls(2, new QString("QGroupBox"), new QString("QDockWidget")));
+  addSubControl("up-arrow",
+                addControls(3,
+                            new QString("QHeaderView"),
+                            new QString("QScrollBar"),
+                            new QString("QSpinBox")));
+  addSubControl("up-button", addControls(1, new QString("QSpinBox")));
+}
+
+void
+WidgetModel::initPseudoStates()
+{
+  addPseudoState("active");
+  addPseudoState("adjoins-item");
+  addPseudoState("alternate");
+  addPseudoState("bottom");
+  addPseudoState("checked");
+  addPseudoState("closable");
+  addPseudoState("closed");
+  addPseudoState("default");
+  addPseudoState("disabled");
+  addPseudoState("editable");
+  addPseudoState("edit-focus");
+  addPseudoState("enabled");
+  addPseudoState("exclusive");
+  addPseudoState("first");
+  addPseudoState("flat");
+  addPseudoState("floatable");
+  addPseudoState("focus");
+  addPseudoState("has-children");
+  addPseudoState("has-siblings");
+  addPseudoState("horizontal");
+  addPseudoState("hover");
+  addPseudoState("indeterminate");
+  addPseudoState("last");
+  addPseudoState("left");
+  addPseudoState("maximized");
+  addPseudoState("middle");
+  addPseudoState("minimized");
+  addPseudoState("movable");
+  addPseudoState("no-frame");
+  addPseudoState("non-exclusive");
+  addPseudoState("off");
+  addPseudoState("on");
+  addPseudoState("only-one");
+  addPseudoState("open");
+  addPseudoState("next-selected");
+  addPseudoState("pressed");
+  addPseudoState("previous-selected");
+  addPseudoState("read-only");
+  addPseudoState("right");
+  addPseudoState("selected");
+  addPseudoState("top");
+  addPseudoState("unchecked");
+  addPseudoState("vertical");
+  addPseudoState("window");
+}
+
+void
+WidgetModel::initWidgetTree()
+{
+  m_root = new WidgetItem("QWidget", nullptr);
+  m_widgets.insert("QWidget", m_root);
+
+  addWidget("QWidget", "QAbstractButton");
+  addWidget("QAbstractButton", "QPushButton");
+  addWidget("QAbstractButton", "QCheckBox");
+  addWidget("QAbstractButton", "QRadioButton");
+  addWidget("QAbstractButton", "QToolButton");
+  addWidget("QWidget", "QAbstractSlider");
+  addWidget("QAbstractSlider", "QSlider");
+  addWidget("QAbstractSlider", "QDial");
+  addWidget("QAbstractSlider", "QScrollBar");
+  addWidget("QWidget", "QAbstractSpinBox");
+  addWidget("QAbstractSpinBox", "QSpinBox");
+  addWidget("QAbstractSpinBox", "QDoubleSpinBox");
+  addWidget("QAbstractSpinBox", "QDateTimeEdit");
+  addWidget("QDateTimeEdit", "QDateEdit");
+  addWidget("QDateTimeEdit", "QTimeEdit");
+  addWidget("QWidget", "QDialog");
+  addWidget("QWidget", "QComboBox");
+  addWidget("QComboBox", "QFontComboBox");
+  addWidget("QDialog", "QInputDialog");
+  addWidget("QDialog", "QMessageBox");
+  addWidget("QDialog", "QColorDialog");
+  addWidget("QDialog", "QErrorMessage");
+  addWidget("QDialog", "QFileDialog");
+  addWidget("QDialog", "QFontDialog");
+  addWidget("QDialog", "QProgressDialog");
+  addWidget("QWidget", "QDialogButtonBox");
+  addWidget("QWidget", "QFrame");
+  addWidget("QFrame", "QAbstractScrollArea");
+  addWidget("QAbstractScrollArea", "QAbstractItemView");
+  addWidget("QAbstractScrollArea", "QGraphicsView");
+  addWidget("QAbstractScrollArea", "QMdiArea");
+  addWidget("QAbstractScrollArea", "QScrollArea");
+  addWidget("QAbstractItemView", "QColumnView");
+  addWidget("QAbstractItemView", "QHeaderView");
+  addWidget("QAbstractItemView", "QListView");
+  addWidget("QAbstractItemView", "QListWidget");
+  addWidget("QAbstractItemView", "QUndoView");
+  addWidget("QAbstractItemView", "QTreeView");
+  addWidget("QAbstractItemView", "QTreeWidget");
+  addWidget("QAbstractItemView", "QTableView");
+  addWidget("QAbstractItemView", "QTableWidget");
+  addWidget("QAbstractScrollArea", "QPlainTextEdit");
+  addWidget("QAbstractScrollArea", "QTextEdit");
+  addWidget("QFrame", "QLabel");
+  addWidget("QFrame", "QLCDNumber");
+  addWidget("QFrame", "QSplitter");
+  addWidget("QFrame", "QStackedWidget");
+  addWidget("QFrame", "QToolBox");
+  addWidget("QWidget", "QGroupBox");
+  addWidget("QWidget", "QLineEdit");
+  addWidget("QWidget", "QMainWindow");
+  addWidget("QWidget", "QDockWidget");
+  addWidget("QWidget", "QFocusFrame");
+  addWidget("QWidget", "QKeySequenceEdit");
+  addWidget("QWidget", "QMdiSubWindow");
+  addWidget("QWidget", "QOpenGLWidget");
+  addWidget("QWidget", "QProgressBar");
+  addWidget("QWidget", "QQuickWidget");
+  addWidget("QWidget", "QSizeGrip");
+  addWidget("QWidget", "QSplashScreen");
+  addWidget("QWidget", "QSplitterHandle");
+  addWidget("QWidget", "QSvgWidget");
+  addWidget("QWidget", "QWizardPage");
+  //  addWidget("QWidget", "QDesktopWidget"); // Obsolete
+  addWidget("QWidget", "QMenu");
+  addWidget("QWidget", "QMenuBar");
+  addWidget("QWidget", "QRubberBand");
+  addWidget("QWidget", "QStatusBar");
+  addWidget("QWidget", "QTabBar");
+  addWidget("QWidget", "QTabWidget");
+  addWidget("QWidget", "QToolBar");
+  addWidget("QWidget", "QCalendarWidget");
+  //  // extra widgets.
+  //  addWidget("QPlainTextEdit", "StylesheetEdit", true);
+}
+
+void
+WidgetModel::initAlignment()
+{
+  m_alignmentValues << "top"
+                    << "bottom"
+                    << "left"
+                    << "right"
+                    << "center";
+}
+
+void
+WidgetModel::initGradients()
+{
+  m_gradient << "qlineargradient"
+             << "qradialgradient"
+             << "qconicalgradient";
+}
+
+void
+WidgetModel::initAttachments()
+{
+  m_attachment << "scroll"
+               << "fixed";
+}
+
+void
+WidgetModel::initBorderStyle()
+{
+  m_borderStyle << "dashed"
+                << "dot-dash"
+                << "dot-dot-dash"
+                << "dotted"
+                << "double"
+                << "groove"
+                << "inset"
+                << "outset"
+                << "ridge"
+                << "solid"
+                << "none";
+}
+
+void
+WidgetModel::initBorderImage()
+{
+  m_borderImage << "stretch"
+                << "repeat";
+}
+
+void
+WidgetModel::initFontStyle()
+{
+  m_fontStyle << "normal"
+              << "italic"
+              << "oblique";
+}
+
+void
+WidgetModel::initFontWeight()
+{
+  m_fontWeight << "normal"
+               << "bold"
+               << "bolder"
+               << "lighter"
+               << "100"
+               << "200"
+               << "300"
+               << "400"
+               << "500"
+               << "600"
+               << "700"
+               << "800"
+               << "900";
+}
+
+void
+WidgetModel::initIcon()
+{
+  m_icon << "disabled"
+         << "active"
+         << "normal"
+         << "selected"
+         << "on"
+         << "off";
+}
+
+void
+WidgetModel::initOrigin()
+{
+  m_origin << "dotted"
+           << "solid"
+           << "double"
+           << "groove"
+           << "ridge"
+           << "inset"
+           << "outset"
+           << "none"
+           << "hidden";
+}
+
+void
+WidgetModel::initOutlineStyle()
+{
+  m_outlineStyle << "dotted"
+                 << "solid"
+                 << "double"
+                 << "groove"
+                 << "ridge"
+                 << "inset"
+                 << "outset"
+                 << "none"
+                 << "hidden";
+}
+
+void
+WidgetModel::initOutlineColor()
+{
+  m_outlineColor = "invert";
+}
+
+void
+WidgetModel::initOutlineWidth()
+{
+  m_outlineWidth << "thin"
+                 << "medium"
+                 << "thick";
+}
+
+void
+WidgetModel::initPosition()
+{
+  m_position << "relative"
+             << "absolute";
+}
+
+void
+WidgetModel::initRepeat()
+{
+  m_repeat << "repeat-x"
+           << "repeat-y"
+           << "repeat"
+           << "no-repeat";
+}
+
+void
+WidgetModel::initTextDecoration()
+{
+  m_textDecoration << "none"
+                   << "underline"
+                   << "overline"
+                   << "line-through";
+}
+
+void
+WidgetModel::initAttributeMap()
+{
+  m_attributes.insert("alternate-background-color", Brush);
+  m_attributes.insert("background", Background);
+  m_attributes.insert("background-color", Brush);
+  m_attributes.insert("background-image", Url);
+  m_attributes.insert("background-repeat", Repeat);
+  m_attributes.insert("background-position", Alignment);
+  m_attributes.insert("background-clip", Origin);
+  m_attributes.insert("background-origin", Origin);
+  m_attributes.insert("border", Border);
+  m_attributes.insert("border-top", Border);
+  m_attributes.insert("border-left", Border);
+  m_attributes.insert("border-right", Border);
+  m_attributes.insert("border-bottom", Border);
+  m_attributes.insert("border-color", BoxColors);
+  m_attributes.insert("border-top-color", Brush);
+  m_attributes.insert("border-right-color", Brush);
+  m_attributes.insert("border-bottom-color", Brush);
+  m_attributes.insert("border-left-color", Brush);
+  m_attributes.insert("border-image", BorderImage);
+  m_attributes.insert("border-radius", Radius);
+  m_attributes.insert("border-top-left-radius", Radius);
+  m_attributes.insert("border-top-right-radius", Radius);
+  m_attributes.insert("border-bottom-right-radius", Radius);
+  m_attributes.insert("border-bottom-left-radius", Radius);
+  m_attributes.insert("border-style", BorderStyle);
+  m_attributes.insert("border-top-style", BorderStyle);
+  m_attributes.insert("border-right-style", BorderStyle);
+  m_attributes.insert("border-bottom-style", BorderStyle);
+  m_attributes.insert("border-left-style", BorderStyle);
+  m_attributes.insert("border-width", BoxLengths);
+  m_attributes.insert("border-top-width", Length);
+  m_attributes.insert("border-right-width", Length);
+  m_attributes.insert("border-bottom-width", Length);
+  m_attributes.insert("border-left-width", Length);
+  m_attributes.insert("bottom", Length);
+  m_attributes.insert("button-layout", Number);
+  m_attributes.insert("color", Brush);
+  m_attributes.insert("dialogbuttonbox-buttons-have-icons", Brush);
+  m_attributes.insert("font", Font);
+  m_attributes.insert("font-family", String);
+  m_attributes.insert("font-size", FontSize);
+  m_attributes.insert("font-style", FontStyle);
+  m_attributes.insert("font-weight", FontWeight);
+  m_attributes.insert("gridline-color", Color);
+  m_attributes.insert("height", Length);
+  m_attributes.insert("icon", Url);
+  m_attributes.insert("icon-size", Length);
+  m_attributes.insert("image", Alignment);
+  m_attributes.insert("image-position", Url);
+  m_attributes.insert("left", Length);
+  m_attributes.insert("lineedit-password-character", Number);
+  m_attributes.insert("lineedit-password-mask-delay", Number);
+  m_attributes.insert("margin", BoxLengths);
+  m_attributes.insert("margin-top", Length);
+  m_attributes.insert("margin-right", Length);
+  m_attributes.insert("margin-bottom", Length);
+  m_attributes.insert("margin-left", Length);
+  m_attributes.insert("max-height", Length);
+  m_attributes.insert("max-width", Length);
+  m_attributes.insert("messagebox-text-interaction-flags", Number);
+  m_attributes.insert("min-height", Length);
+  m_attributes.insert("min-width", Length);
+  m_attributes.insert("opacity", Length);
+  m_attributes.insert("outline", Outline); // not known??
+  m_attributes.insert("outline-color", Color);
+  m_attributes.insert("outline-offset", Length);
+  m_attributes.insert("outline-style", OutlineStyle);
+  m_attributes.insert("outline-radius", OutlineRadius);
+  m_attributes.insert("outline-bottom-left-radius", Radius);
+  m_attributes.insert("outline-bottom-right-radius", Radius);
+  m_attributes.insert("outline-top-left-radius", Radius);
+  m_attributes.insert("outline-top-right-radius", Radius);
+  m_attributes.insert("padding", BoxLengths);
+  m_attributes.insert("padding-top", Length);
+  m_attributes.insert("padding-right", Length);
+  m_attributes.insert("padding-bottom", Length);
+  m_attributes.insert("padding-left", Length);
+  m_attributes.insert("paint-alternating-row-colors-for-empty-area", Bool);
+  m_attributes.insert("position", Position);
+  m_attributes.insert("right", Length);
+  m_attributes.insert("selection-background-color", Brush);
+  m_attributes.insert("selection-color", Brush);
+  m_attributes.insert("show-decoration-selected", Boolean);
+  m_attributes.insert("spacing", Length);
+  m_attributes.insert("subcontrol-position", Alignment);
+  m_attributes.insert("titlebar-show-tooltips-on-buttons", Bool);
+  m_attributes.insert("widget-animation-duration", Number);
+  m_attributes.insert("text-align", Alignment);
+  m_attributes.insert("text-decoration", TextDecoration);
+  m_attributes.insert("top", Length);
+  m_attributes.insert("width", Length);
+  m_attributes.insert("-qt-background-role", PaletteRole);
+  m_attributes.insert("-qt-style-features", List);
+}
+
+WidgetModel::WidgetModel()
+{
+  initWidgetTree();
+  initSubControls();
+  initPseudoStates();
+  initProperties();
+  initColorNames();
+  initPaletteRoles();
+  initAlignment();
+  initGradients();
+  initAttachments();
+  initBorderStyle();
+  initBorderImage();
+  initFontStyle();
+  initFontWeight();
+  initIcon();
+  initOrigin();
+  initOutlineStyle();
+  initOutlineColor();
+  initOutlineWidth();
+  initPosition();
+  initRepeat();
+  initTextDecoration();
+  initAttributeMap();
+}
+
+QStringList
+WidgetModel::addControls(int count, ...)
+{
+  va_list arguments;
+
+  QStringList widgets;
+  va_start(arguments, count);
+
+  for (int i = 0; i < count; i++) {
+    QString* currentString = va_arg(arguments, QString*);
+    widgets << *currentString;
+  }
+
+  va_end(arguments);
+
+  return widgets;
+}
+
+void
+WidgetModel::addWidget(const QString& parentName,
+                       const QString& name,
+                       bool extraWidget)
+{
+  WidgetItem* parent = m_widgets.value(parentName);
+  if (parent) {
+    if (!m_widgets.contains(name)) {
+      WidgetItem* item = new WidgetItem(name, parent);
+      item->setExtraWidget(extraWidget);
+      parent->addChild(item);
+      m_widgets.insert(name, item);
+    }
+  }
+}
+
+void
+WidgetModel::removeWidget(const QString& name)
+{
+  WidgetItem* parent = m_widgets.value(name)->parent();
+  if (parent->isExtraWidget()) {
+    m_widgets.remove(name);
+    parent->removeChild(name);
+  }
+}
+
+// QStringList
+// WidgetModel::widgets()
+//{
+//  return m_widgets.keys();
+//}
+
+bool
+WidgetModel::hasWidget(const QString& widget)
+{
+  return m_widgets.contains(widget);
+}
+
+WidgetItem*
+WidgetModel::widgetItem(const QString& name)
+{
+  return m_widgets.value(name);
+}
+
+void
+WidgetModel::addSubControl(const QString& control, QStringList widgets)
+{
+  if (m_subControls.contains(control)) {
+    auto list = m_subControls.value(control);
+    for (auto name : widgets) {
+      if (!list.contains(name)) {
+        list.append(widgets);
+      }
+    }
+    m_subControls.insert(control, list);
+  } else {
+    m_subControls.insert(control, widgets);
+  }
+}
+
+void
+WidgetModel::removeSubControl(const QString& control)
+{
+  auto widgets = m_subControls.value(control);
+  for (auto name : widgets) {
+    auto w = widgetItem(name);
+    if (w && w->isExtraWidget()) {
+      widgets.removeOne(name);
+    }
+  }
+  if (widgets.isEmpty()) {
+    m_subControls.remove(control);
+  } else {
+    m_subControls.insert(control, widgets);
+  }
+}
+
+// bool
+// WidgetModel::containsSubControl(const QString& control)
+//{
+//  return m_subControls.contains(control);
+//}
+
+bool
+WidgetModel::checkSubControlForWidget(const QString& widgetName,
+                                      const QString& name)
+{
+  auto widgets = m_subControls.value(name);
+  auto has_widget = widgets.contains(widgetName);
+  if (has_widget) {
+    return true;
+  }
+
+  for (auto wName : widgets) {
+    auto item = widgetItem(wName);
+    while (item->parent() != nullptr) {
+      if (item->name() == widgetName) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// QStringList
+// WidgetModel::subControls()
+//{
+//  return m_subControls.keys();
+//}
+
+bool
+WidgetModel::isValidSubControlForWidget(const QString& widgetName,
+                                        const QString& subcontrol)
+{
+  auto item = widgetItem(widgetName);
+  while (item != nullptr) {
+    auto subcontrols = m_subControls.value(item->name());
+    if (subcontrols.contains(subcontrol)) {
+      return true;
+    }
+    item = item->parent();
+  }
+
+  return false;
+}
+
+bool
+WidgetModel::isValidPropertyValueForProperty(const QString& propertyname,
+                                             const QString& valuename)
+{
+  if (valuename.isEmpty()) {
+    return false;
+  }
+
+  AttributeType propertyAttribute = m_attributes.value(propertyname);
+  return (checkPropertyValue(propertyAttribute, valuename, nullptr) !=
+          NoAttributeValue);
+}
+
+bool
+WidgetModel::ifValidStylesheetValue(const QString& propertyname,
+                                    const QString& valuename,
+                                    StylesheetData* data)
+{
+  // TODO
+  //  if (valuename.isEmpty()) {
+  //    return false;
+  //  }
+
+  //  AttributeType stylesheetAttribute =
+  //    m_stylesheetAttributes.value(propertyname);
+  //  return (checkPropertyValue(stylesheetAttribute, valuename, data) !=
+  //          NoAttributeValue);
+  return false;
+}
+
+bool
+WidgetModel::containsSubControl(const QString& name)
+{
+  return m_subControls.contains(name.toLower());
+}
+
+QStringList
+WidgetModel::possibleSubControlWidgets(const QString& name)
+{
+  QStringList names;
+  auto nameList = m_subControls.value(name);
+  names.append(nameList);
+
+  for (auto n : names) {
+    auto w = widgetItem(n);
+    if (w) {
+      names.append(recurseWidgets(w));
+    }
+  }
+  return names;
+}
+
+void
+WidgetModel::addPseudoState(const QString& state,
+//                            QStringList widgets,
+                            bool extraState)
+{
+  m_pseudoStates << state;
+  m_pseudoStatesExtra << extraState;
+}
+
+void
+WidgetModel::removePseudoState(const QString& state)
+{
+  auto i = m_pseudoStates.indexOf(state);
+  if (m_pseudoStates.contains(state) && m_pseudoStatesExtra.at(i)) {
+    m_pseudoStates.removeAt(i);
+    m_pseudoStatesExtra.removeAt(i);
+  }
+}
+
+bool
+WidgetModel::containsPseudoState(const QString& name)
+{
+  return m_pseudoStates.contains(name);
+}
+
+// QStringList
+// WidgetModel::pseudoStates()
+//{
+//  return m_pseudoStates;
+//}
+
+void
+WidgetModel::addProperty(const QString& property, bool extraProperty)
+{
+  m_properties << property;
+  m_propertiesExtra << extraProperty;
+}
+
+bool
+WidgetModel::containsProperty(const QString& name)
+{
+  return m_properties.contains(name);
+}
+
+QStringList
+WidgetModel::borderValues()
+{
+  QStringList values;
+  values << m_borderStyle << m_borderImage << m_colors << m_paletteRoles
+         << m_gradient;
+  return values;
+}
+
+QMultiMap<int, QString>
+WidgetModel::fuzzySearch(const QString& name, QStringList list)
+{
+  QMultiMap<int, QString> matches;
+  char* pattern = new char[name.length() + 1];
+  strcpy(pattern, name.toStdString().c_str());
+
+  int score = 0;
+
+  for (auto& valueStr : list) {
+    char* value = new char[valueStr.size() + 1];
+    strcpy(value, valueStr.toStdString().c_str());
+
+    if (fts::fuzzy_match(pattern, value, score)) {
+      matches.insert(score, valueStr);
+    }
+
+    delete[] value;
+  }
+
+  delete[] pattern;
+
+  return matches;
+}
+
+QMultiMap<int, QString>
+WidgetModel::fuzzySearchWidgets(const QString& name)
+{
+  return fuzzySearch(name, m_widgets.keys());
+}
+
+QMultiMap<int, QString>
+WidgetModel::fuzzySearchProperty(const QString& name)
+{
+  return fuzzySearch(name, m_properties);
+}
+
+QMultiMap<int, QString>
+WidgetModel::fuzzySearchPropertyValue(const QString& name, const QString& value)
+{
+  QStringList list;
+  auto attribute = m_attributes.value(name);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum,"
+  switch (attribute) {
+    case Alignment:
+      return fuzzySearch(value, m_alignmentValues);
+
+    case Attachment:
+      return fuzzySearch(value, m_attachment);
+
+    case Background: {
+      QMap<int, QString> data;
+      data.insert(fuzzySearch(value, m_colors));
+      data.insert(fuzzySearch(value, m_paletteRoles));
+      data.insert(fuzzySearch(value, m_gradient));
+      return data;
+    }
+
+    case Border:
+      list << m_borderStyle << m_borderImage << m_colors << m_paletteRoles
+           << m_gradient;
+      return fuzzySearch(value, list);
+
+    case BorderImage:
+      return fuzzySearch(value, m_borderImage);
+
+    case BorderStyle:
+      return fuzzySearch(value, m_borderStyle);
+
+    case BoxColors:
+    case Color:
+      return fuzzySearch(value, m_colors);
+
+    case Brush:
+      list << m_colors << m_paletteRoles << m_gradient;
+      return fuzzySearch(value, list);
+
+    case Font:
+      list << m_fontStyle << m_fontWeight;
+      return fuzzySearch(value, list);
+
+    case FontStyle:
+      return fuzzySearch(value, m_fontStyle);
+
+    case FontWeight:
+      return fuzzySearch(value, m_fontWeight);
+
+    case Gradient:
+      return fuzzySearch(value, m_gradient);
+
+    case Icon:
+      return fuzzySearch(value, m_icon);
+
+    case Origin:
+      return fuzzySearch(value, m_origin);
+
+    case Outline:
+      list << m_outlineStyle << m_colors << m_outlineColor << m_outlineWidth;
+      return fuzzySearch(value, list);
+
+    case OutlineStyle:
+      return fuzzySearch(value, m_outlineStyle);
+
+    case PaletteRole:
+      return fuzzySearch(value, m_paletteRoles);
+
+    case Position:
+      return fuzzySearch(value, m_position);
+
+    case Repeat:
+      return fuzzySearch(value, m_repeat);
+
+    case TextDecoration:
+      return fuzzySearch(value, m_textDecoration);
+
+      //    case StylesheetEditGood:
+      //      list << m_colors << "thin"
+      //           << "extralight"
+      //           << "light"
+      //           << "normal"
+      //           << "medium"
+      //           << "demibold"
+      //           << "bold"
+      //           << "extrabold"
+      //           << "black";
+      //      return fuzzySearch(value, list);
+
+      //    case StylesheetEditBad:
+      //      list << m_colors << "thin"
+      //           << "extralight"
+      //           << "light"
+      //           << "normal"
+      //           << "medium"
+      //           << "demibold"
+      //           << "bold"
+      //           << "extrabold"
+      //           << "black"
+      //           << "none"
+      //           << "single"
+      //           << "dash"
+      //           << "dot"
+      //           << "dashdot"
+      //           << "dashdotdot"
+      //           << "wave"
+      //           << "spellcheck";
+      //      return fuzzySearch(value, list);
+  }
+#pragma clang diagnostic pop
+  return QMap<int, QString>();
+}
+
+QMultiMap<int, QString>
+WidgetModel::fuzzySearchPseudoStates(const QString& name)
+{
+  return fuzzySearch(name, m_pseudoStates);
+}
+
+QMultiMap<int, QString>
+WidgetModel::fuzzySearchSubControl(const QString& name)
+{
+  return fuzzySearch(name, m_subControls.keys());
+}
+
+AttributeType
+WidgetModel::propertyValueAttribute(const QString& value)
+{
   if (checkColor(value)) {
     return Color;
 
@@ -1534,659 +2553,160 @@ DataStore::propertyValueAttribute(const QString& value)
   } else if (checkTextDecoration(value)) {
     return TextDecoration;
 
-  } else if (checkStylesheetEdit(value)) {
+  } // TODO add property tests.
+  /* else if (checkStylesheetEdit(value)) {
     return StylesheetEditGood;
 
   } else if (checkStylesheetEditBad(value)) {
     return StylesheetEditBad;
-  }
+  }*/
 
   return NoAttributeValue;
 }
 
-QMap<int, QString>
-DataStore::fuzzyTestBrush(const QString& value)
+QStringList
+WidgetModel::eraseDuplicates(QStringList list)
 {
-  QMap<int, QString> data;
-  data.insert(fuzzySearch(value, m_colors));
-  data.insert(fuzzySearch(value, m_paletteRoles));
-  data.insert(fuzzySearch(value, m_gradient));
-  return data;
+  QStringList result;
+  for (auto v : list) {
+    if (!result.contains(v))
+      result.append(v);
+  }
+  return result;
+  // this doesn't seem to work with QList
+  //  list->erase(std::unique(list->begin(), list->end()), list->end());
 }
 
-QMap<QString, QStringList>
-DataStore::initialiseSubControlMap()
+bool
+WidgetModel::addCustomWidget(const QString& name, const QString& parent)
+{
+  if (hasWidget(parent)) {
+    WidgetItem* parentItem = widgetItem(parent);
+    auto item = new WidgetItem(name, parentItem);
+    item->setExtraWidget(true);
+    parentItem->addChild(item);
+    return true;
+  }
+  return false;
+}
+
+bool
+WidgetModel::addCustomWidgetPseudoStates(const QString& widgetName,
+                                         QStringList states)
+{
+  if (hasWidget(widgetName)) {
+    auto item = widgetItem(widgetName);
+    states = eraseDuplicates(states);
+    //    for (auto state : states) {
+    m_customPseudoStates.insert(widgetName, states);
+    //    }
+    return true;
+  }
+  return false;
+}
+
+bool
+WidgetModel::addCustomWidgetSubControls(const QString& widget,
+                                        QStringList controls)
+{
+  if (m_customNames.contains(widget)) {
+    controls = eraseDuplicates(controls);
+    m_customSubControls.insert(widget, controls);
+    return true;
+  }
+  return false;
+}
+
+bool
+WidgetModel::addCustomWidgetProperties(const QString& widget,
+                                       QStringList properties)
+{
+  if (m_customNames.contains(widget)) {
+    properties = eraseDuplicates(properties);
+    m_customProperties.insert(widget, properties);
+    return true;
+  }
+  return false;
+}
+
+bool
+WidgetModel::addCustomWidgetPropertyValue(const QString& widget,
+                                          const QString& property,
+                                          QString value)
 {
   QMap<QString, QStringList> map;
-  map.insert("add-line", addControls(1, new QString("QScrollBar")));
-  map.insert("add-page", addControls(1, new QString("QScrollBar")));
-  map.insert("branch", addControls(1, new QString("QTreeBar")));
-  map.insert("chunk", addControls(1, new QString("QProgressBar")));
-  map.insert(
-    "close-button ",
-    addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
-  map.insert("corner", addControls(1, new QString("QAbstractScrollArea")));
-  map.insert("down-arrow",
-             addControls(4,
-                         new QString("QComboBox"),
-                         new QString("QHeaderView"),
-                         new QString("QScrollBar"),
-                         new QString("QSpinBox")));
-  map.insert(
-    "down-button",
-    addControls(2, new QString("QScrollBar"), new QString("QSpinBox")));
-  map.insert("drop-down", addControls(1, new QString("QComboBox")));
-  map.insert("float-button", addControls(1, new QString("QDockWidget")));
-  map.insert("groove", addControls(1, new QString("QSlider")));
-  map.insert("indicator",
-             addControls(5,
-                         new QString("QAbstractItemView"),
-                         new QString("QCheckBox"),
-                         new QString("QRadioButton"),
-                         new QString("QMenu"),
-                         new QString("QGroupBox")));
-  map.insert("handle",
-             addControls(3,
-                         new QString("QScrollBar"),
-                         new QString("QSplitter"),
-                         new QString("QSlider")));
-  map.insert(
-    "icon",
-    addControls(2, new QString("QAbstractItemView"), new QString("QMenu")));
-  map.insert("item",
-             addControls(4,
-                         new QString("QAbstractItemView"),
-                         new QString("QMenuBar"),
-                         new QString("QMenu"),
-                         new QString("QStatusBar")));
-  map.insert("left-arrow", addControls(1, new QString("QScrollBar")));
-  map.insert("left-corner", addControls(1, new QString("QTabWidget")));
-  map.insert("menu-arrow", addControls(1, new QString("QToolButton")));
-  map.insert("menu-button", addControls(1, new QString("QToolButton")));
-  map.insert("menu-indicator", addControls(1, new QString("QPushButton")));
-  map.insert("right-arrow",
-             addControls(2, new QString("QMenu"), new QString("QScrollBar")));
-  map.insert("pane", addControls(1, new QString("QTabWidget")));
-  map.insert("right-corner", addControls(1, new QString("QTabWidget")));
-  map.insert("scroller",
-             addControls(2, new QString("QMenu"), new QString("QTabBar")));
-  map.insert("section", addControls(1, new QString("QHeaderView")));
-  map.insert("separator",
-             addControls(2, new QString("QMenu"), new QString("QMainWindow")));
-  map.insert("sub-line", addControls(1, new QString("QScrollBar")));
-  map.insert("sub-page", addControls(1, new QString("QScrollBar")));
-  map.insert("tab",
-             addControls(2, new QString("QTabBar"), new QString("QToolBox")));
-  map.insert("tab-bar", addControls(1, new QString("QTabWidget")));
-  map.insert("tear", addControls(1, new QString("QTabBar")));
-  map.insert("tearoff", addControls(1, new QString("QMenu")));
-  map.insert("text", addControls(1, new QString("QAbstractItemView")));
-  map.insert(
-    "title",
-    addControls(2, new QString("QGroupBox"), new QString("QDockWidget")));
-  map.insert("up-arrow",
-             addControls(3,
-                         new QString("QHeaderView"),
-                         new QString("QScrollBar"),
-                         new QString("QSpinBox")));
-  map.insert("up-button", addControls(1, new QString("QSpinBox")));
-  return map;
-}
-
-QStringList
-DataStore::initialiseWidgetList()
-{
   QStringList list;
-  list << "QAbstractScrollArea"
-       << "QCheckBox"
-       << "QColumnView"
-       << "QComboBox"
-       << "QDateEdit"
-       << "QDateTimeEdit"
-       << "QDialog"
-       << "QDialogButtonBox"
-       << "QDockWidget"
-       << "QDoubleSpinBox"
-       << "QFrame"
-       << "QGroupBox"
-       << "QHeaderView"
-       << "QLabel"
-       << "QLineEdit"
-       << "QListView"
-       << "QListWidget"
-       << "QMainWindow"
-       << "QMenu"
-       << "QMenu"
-       << "QMessageBox"
-       << "QProgressBar"
-       << "QPushButton"
-       << "QRadioButton"
-       << "QScrollBar"
-       << "QSizeGrip"
-       << "QSlider"
-       << "QSpinBox"
-       << "QSplitter"
-       << "QStatusBar"
-       << "QTabBar"
-       << "QTabWidget"
-       << "QTableView"
-       << "QTableWidget"
-       << "QTextEdit"
-       << "QTimeEdit"
-       << "QToolBar"
-       << "QToolButton"
-       << "QToolBox"
-       << "QToolTip"
-       << "QTreeView"
-       << "QTreeWidget"
-       << "QWidget"
-       // I might as well add stylesheetedit stuff to this widget.
-       << "StylesheetEdit";
-
-  //  QString fuzzyWidgets = m_widgets.first();
-  //  for (int i = 1; i < m_widgets.size(); i++) {
-  //    fuzzyWidgets += " ";
-  //    fuzzyWidgets += m_widgets.at(i);
-  //  }
-  //  char *pline = new char[fuzzyWidgets.size() + 1];
-  //  strcpy ( pline, fuzzyWidgets.toStdString().c_str() );
-  //  m_fuzzyWidgets = pline;
-
-  return list;
-}
-
-QStringList
-DataStore::initialisePseudoStateList()
-{
-  QStringList list;
-  list << "active"
-       << "adjoins-item"
-       << "alternate"
-       << "bottom"
-       << "checked"
-       << "closable"
-       << "closed"
-       << "default"
-       << "disabled"
-       << "editable"
-       << "edit-focus"
-       << "enabled"
-       << "exclusive"
-       << "first"
-       << "flat"
-       << "floatable"
-       << "focus"
-       << "has-children"
-       << "has-siblings"
-       << "horizontal"
-       << "hover"
-       << "indeterminate"
-       << "last"
-       << "left"
-       << "maximized"
-       << "middle"
-       << "minimized"
-       << "movable"
-       << "no-frame"
-       << "non-exclusive"
-       << "off"
-       << "on"
-       << "only-one"
-       << "open"
-       << "next-selected"
-       << "pressed"
-       << "previous-selected"
-       << "read-only"
-       << "right"
-       << "selected"
-       << "top"
-       << "unchecked"
-       << "vertical"
-       << "window";
-  return list;
-}
-
-QStringList
-DataStore::initialisePropertyList()
-{
-  QStringList list;
-  list << "alternate-background-color"
-       << "background"
-       << "background-color"
-       << "background-image"
-       << "background-repeat"
-       << "background-position"
-       << "background-attachment"
-       << "background-clip"
-       << "background-origin"
-       << "border"
-       << "border-top"
-       << "border-right"
-       << "border-bottom"
-       << "border-left"
-       << "border-color"
-       << "border-top-color"
-       << "border-right-color"
-       << "border-bottom-color"
-       << "border-left-color"
-       << "border-image"
-       << "border-radius"
-       << "border-top-left-radius"
-       << "border-top-right-radius"
-       << "border-bottom-right-radius"
-       << "border-bottom-left-radius"
-       << "border-style"
-       << "border-top-style"
-       << "border-right-style"
-       << "border-bottom-style"
-       << "border-left-style"
-       << "border-width"
-       << "border-top-width"
-       << "border-right-width"
-       << "border-bottom-width"
-       << "border-left-width"
-       << "bottom"
-       << "button-layout"
-       << "color"
-       << "dialogbuttonbox-buttons-have-icons"
-       << "font"
-       << "font-family"
-       << "font-size"
-       << "font-style"
-       << "font-weight"
-       << "gridline-color"
-       << "height"
-       << "icon"
-       << "icon-size"
-       << "image"
-       << "image-position"
-       << "left"
-       << "lineedit-password-character"
-       << "lineedit-password-mask-delay"
-       << "margin"
-       << "margin-top"
-       << "margin-right"
-       << "margin-bottom"
-       << "margin-left"
-       << "max-height"
-       << "max-width"
-       << "messagebox-text-interaction-flags"
-       << "min-height"
-       << "min-width"
-       << "opacity"
-       << "outline"
-       << "outline-color"
-       << "outline-offset"
-       << "outline-style"
-       << "outline-radius"
-       << "outline-bottom-left-radius"
-       << "outline-bottom-right-radius"
-       << "outline-top-left-radius"
-       << "outline-top-right-radius"
-       << "padding"
-       << "padding-top"
-       << "padding-right"
-       << "padding-bottom"
-       << "padding-left"
-       << "paint-alternating-row-colors-for-empty-area"
-       << "position"
-       << "right"
-       << "selection-background-color"
-       << "selection-color"
-       << "show-decoration-selected"
-       << "spacing"
-       << "subcontrol-origin"
-       << "subcontrol-position"
-       << "titlebar-show-tooltips-on-buttons"
-       << "widget-animation-duration"
-       << "text-align"
-       << "text-decoration"
-       << "top"
-       << "width"
-       << "-qt-background-role"
-       << "-qt-style-features"
-       // I might as well add stylesheet stuff for this widget.
-       << "widget"
-       << "subcontrol"
-       << "subcontrolmarker"
-       << "pseudostate"
-       << "pseudostatemarker"
-       << "property"
-       << "propertymarker"
-       << "value"
-       << "startbrace"
-       << "endbrace"
-       << "bracematch"
-       << "comment"
-       << "bad";
-  return list;
-}
-
-QStringList
-DataStore::initialiseStylesheetProperties()
-{
-  QStringList list;
-  list << "widget"
-       << "subcontrol"
-       << "subcontrolmarker"
-       << "pseudostate"
-       << "pseudostatemarker"
-       << "property"
-       << "propertymarker"
-       << "value"
-       << "startbrace"
-       << "endbrace"
-       << "bracematch"
-       << "comment"
-       << "bad";
-  // TODO more values
-  return list;
-}
-
-QMap<QString, AttributeType>
-DataStore::initialiseStylesheetMap()
-{
-  QMap<QString, AttributeType> map;
-  map.insert("widget", StylesheetEditGood);
-  map.insert("subcontrol", StylesheetEditGood);
-  map.insert("pseudostate", StylesheetEditGood);
-  map.insert("subcontrolmarker", StylesheetEditGood);
-  map.insert("pseudostatemarker", StylesheetEditGood);
-  map.insert("property", StylesheetEditGood);
-  map.insert("propertymarker", StylesheetEditGood);
-  map.insert("value", StylesheetEditGood);
-  map.insert("startbrace", StylesheetEditGood);
-  map.insert("endbrace", StylesheetEditGood);
-  map.insert("bracematch", StylesheetEditGood);
-  map.insert("comment", StylesheetEditGood);
-  map.insert("bad", StylesheetEditBad);
-  // TODO more values
-  return map;
-}
-
-QStringList
-DataStore::initialiseColorList()
-{
-  QStringList list;
-  list << "black"
-       << "silver"
-       << "gray"
-       << "whitesmoke"
-       << "maroon"
-       << "red"
-       << "purple"
-       << "fuchsia"
-       << "green"
-       << "lime"
-       << "olivedrab"
-       << "yellow"
-       << "navy"
-       << "blue"
-       << "teal"
-       << "aquamarine"
-       << "orange"
-       << "aliceblue"
-       << "antiquewhite"
-       << "aqua"
-       << "azure"
-       << "beige"
-       << "bisque"
-       << "blanchedalmond"
-       << "blueviolet"
-       << "brown"
-       << "burlywood"
-       << "cadetblue"
-       << "chartreuse"
-       << "chocolate"
-       << "coral"
-       << "cornflowerblue"
-       << "cornsilk"
-       << "crimson"
-       << "darkblue"
-       << "darkcyan"
-       << "darkgoldenrod"
-       << "darkgray"
-       << "darkgreen"
-       << "darkgrey"
-       << "darkkhaki"
-       << "darkmagenta"
-       << "darkolivegreen"
-       << "darkorange"
-       << "darkorchid"
-       << "darkred"
-       << "darksalmon"
-       << "darkseagreen"
-       << "darkslateblue"
-       << "darkslategray"
-       << "darkslategrey"
-       << "darkturquoise"
-       << "darkviolet"
-       << "deeppink"
-       << "deepskyblue"
-       << "dimgray"
-       << "dimgrey"
-       << "dodgerblue"
-       << "firebrick"
-       << "floralwhite"
-       << "forestgreen"
-       << "gainsboro"
-       << "ghostwhite"
-       << "goldenrod"
-       << "gold"
-       << "greenyellow"
-       << "grey"
-       << "honeydew"
-       << "hotpink"
-       << "indianred"
-       << "indigo"
-       << "ivory"
-       << "khaki"
-       << "lavenderblush"
-       << "lavender"
-       << "lawngreen"
-       << "lemonchiffon"
-       << "lightblue"
-       << "lightcoral"
-       << "lightcyan"
-       << "lightgoldenrodyellow"
-       << "lightgray"
-       << "lightgreen"
-       << "lightgrey"
-       << "lightpink"
-       << "lightsalmon"
-       << "lightseagreen"
-       << "lightskyblue"
-       << "lightslategray"
-       << "lightslategrey"
-       << "lightsteelblue"
-       << "lightyellow"
-       << "limegreen"
-       << "linen"
-       << "mediumaquamarine"
-       << "mediumblue"
-       << "mediumorchid"
-       << "mediumpurple"
-       << "mediumseagreen"
-       << "mediumslateblue"
-       << "mediumspringgreen"
-       << "mediumturquoise"
-       << "mediumvioletred"
-       << "midnightblue"
-       << "mintcream"
-       << "mistyrose"
-       << "moccasin"
-       << "navajowhite"
-       << "oldlace"
-       << "olive"
-       << "orangered"
-       << "orchid"
-       << "palegoldenrod"
-       << "palegreen"
-       << "paleturquoise"
-       << "palevioletred"
-       << "papayawhip"
-       << "peachpuff"
-       << "peru"
-       << "pink"
-       << "plum"
-       << "powderblue"
-       << "rosybrown"
-       << "royalblue"
-       << "saddlebrown"
-       << "salmon"
-       << "sandybrown"
-       << "seagreen"
-       << "seashell"
-       << "sienna"
-       << "skyblue"
-       << "slateblue"
-       << "slategray"
-       << "slategrey"
-       << "snow"
-       << "springgreen"
-       << "steelblue"
-       << "tan"
-       << "thistle"
-       << "tomato"
-       << "transparent"
-       << "turquoise"
-       << "violet"
-       << "wheat"
-       << "white"
-       << "yellowgreen"
-       << "rebeccapurple";
-  return list;
-}
-
-QMap<QString, AttributeType>
-DataStore::initialiseAttributeMap()
-{
-  QMap<QString, AttributeType> map;
-  map.insert("alternate-background-color", Brush);
-  map.insert("background", Background);
-  map.insert("background-color", Brush);
-  map.insert("background-image", Url);
-  map.insert("background-repeat", Repeat);
-  map.insert("background-position", Alignment);
-  map.insert("background-clip", Origin);
-  map.insert("background-origin", Origin);
-  map.insert("border", Border);
-  map.insert("border-top", Border);
-  map.insert("border-left", Border);
-  map.insert("border-right", Border);
-  map.insert("border-bottom", Border);
-  map.insert("border-color", BoxColors);
-  map.insert("border-top-color", Brush);
-  map.insert("border-right-color", Brush);
-  map.insert("border-bottom-color", Brush);
-  map.insert("border-left-color", Brush);
-  map.insert("border-image", BorderImage);
-  map.insert("border-radius", Radius);
-  map.insert("border-top-left-radius", Radius);
-  map.insert("border-top-right-radius", Radius);
-  map.insert("border-bottom-right-radius", Radius);
-  map.insert("border-bottom-left-radius", Radius);
-  map.insert("border-style", BorderStyle);
-  map.insert("border-top-style", BorderStyle);
-  map.insert("border-right-style", BorderStyle);
-  map.insert("border-bottom-style", BorderStyle);
-  map.insert("border-left-style", BorderStyle);
-  map.insert("border-width", BoxLengths);
-  map.insert("border-top-width", Length);
-  map.insert("border-right-width", Length);
-  map.insert("border-bottom-width", Length);
-  map.insert("border-left-width", Length);
-  map.insert("bottom", Length);
-  map.insert("button-layout", Number);
-  map.insert("color", Brush);
-  map.insert("dialogbuttonbox-buttons-have-icons", Brush);
-  map.insert("font", Font);
-  map.insert("font-family", String);
-  map.insert("font-size", FontSize);
-  map.insert("font-style", FontStyle);
-  map.insert("font-weight", FontWeight);
-  map.insert("gridline-color", Color);
-  map.insert("height", Length);
-  map.insert("icon", Url);
-  map.insert("icon-size", Length);
-  map.insert("image", Alignment);
-  map.insert("image-position", Url);
-  map.insert("left", Length);
-  map.insert("lineedit-password-character", Number);
-  map.insert("lineedit-password-mask-delay", Number);
-  map.insert("margin", BoxLengths);
-  map.insert("margin-top", Length);
-  map.insert("margin-right", Length);
-  map.insert("margin-bottom", Length);
-  map.insert("margin-left", Length);
-  map.insert("max-height", Length);
-  map.insert("max-width", Length);
-  map.insert("messagebox-text-interaction-flags", Number);
-  map.insert("min-height", Length);
-  map.insert("min-width", Length);
-  map.insert("opacity", Length);
-  map.insert("outline", Outline); // not known??
-  map.insert("outline-color", Color);
-  map.insert("outline-offset", Length);
-  map.insert("outline-style", OutlineStyle);
-  map.insert("outline-radius", OutlineRadius);
-  map.insert("outline-bottom-left-radius", Radius);
-  map.insert("outline-bottom-right-radius", Radius);
-  map.insert("outline-top-left-radius", Radius);
-  map.insert("outline-top-right-radius", Radius);
-  map.insert("padding", BoxLengths);
-  map.insert("padding-top", Length);
-  map.insert("padding-right", Length);
-  map.insert("padding-bottom", Length);
-  map.insert("padding-left", Length);
-  map.insert("paint-alternating-row-colors-for-empty-area", Bool);
-  map.insert("position", Position);
-  map.insert("right", Length);
-  map.insert("selection-background-color", Brush);
-  map.insert("selection-color", Brush);
-  map.insert("show-decoration-selected", Boolean);
-  map.insert("spacing", Length);
-  map.insert("subcontrol-position", Alignment);
-  map.insert("titlebar-show-tooltips-on-buttons", Bool);
-  map.insert("widget-animation-duration", Number);
-  map.insert("text-align", Alignment);
-  map.insert("text-decoration", TextDecoration);
-  map.insert("top", Length);
-  map.insert("width", Length);
-  map.insert("-qt-background-role", PaletteRole);
-  map.insert("-qt-style-features", List);
-  // Below this is the attributes available for this stylesheet editor.
-  map.insert("widget", StylesheetEditGood);
-  map.insert("subcontrol", StylesheetEditGood);
-  map.insert("pseudostate", StylesheetEditGood);
-  map.insert("subcontrolmarker", StylesheetEditGood);
-  map.insert("pseudostatemarker", StylesheetEditGood);
-  map.insert("property", StylesheetEditGood);
-  map.insert("propertymarker", StylesheetEditGood);
-  map.insert("value", StylesheetEditGood);
-  map.insert("startbrace", StylesheetEditGood);
-  map.insert("endbrace", StylesheetEditGood);
-  map.insert("bracematch", StylesheetEditGood);
-  map.insert("comment", StylesheetEditGood);
-  map.insert("bad", StylesheetEditBad);
-
-  return map;
-}
-
-QStringList
-DataStore::addControls(int count, ...)
-{
-  va_list arguments;
-
-  QStringList widgets;
-  va_start(arguments, count);
-
-  for (int i = 0; i < count; i++) {
-    QString* currentString = va_arg(arguments, QString*);
-    widgets << *currentString;
+  if (m_customValues.contains(widget)) {
+    map = m_customValues.value(widget);
+    if (map.contains(property)) {
+      list = map.value(property);
+    }
+    list.append(value);
+    list = eraseDuplicates(list);
+    map.insert(property, list);
+    m_customValues.insert(widget, map);
+    return true;
   }
+  return false;
+}
 
-  va_end(arguments);
+bool
+WidgetModel::addCustomWidgetPropertyValues(const QString& widget,
+                                           const QString& property,
+                                           QStringList values)
+{
+  if (m_customNames.contains(widget)) {
+    QMap<QString, QStringList> map;
+    QStringList list;
+    if (m_customValues.contains(widget)) {
+      map = m_customValues.value(widget);
+      if (map.contains(property)) {
+        list = map.value(property);
+      }
+      list.append(values);
+    }
+    list = eraseDuplicates(values);
+    map.insert(property, list);
+    m_customValues.insert(widget, map);
+    return true;
+  }
+  return false;
+}
 
-  return widgets;
+QStringList
+WidgetModel::recurseWidgets(WidgetItem* item)
+{
+  QStringList names;
+  for (auto child : item->children()) {
+    names.append(child->name());
+    auto w = widgetItem(child->name());
+    if (w && w->hasChildren()) {
+      names.append(recurseWidgets(w));
+    }
+  }
+  return names;
+}
+
+QString
+Property::propertyName() const
+{
+  return m_propertyname;
+}
+
+void
+Property::setPropertyName(const QString& propertyname)
+{
+  m_propertyname = propertyname;
+}
+
+AttributeTypes
+Property::attributes() const
+{
+  return m_attributes;
+}
+
+void
+Property::setAttributes(AttributeTypes attributes)
+{
+  m_attributes = attributes;
 }

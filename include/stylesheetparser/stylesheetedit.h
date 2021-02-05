@@ -33,6 +33,8 @@
 #include <QTextCursor>
 #include <QToolTip>
 
+#include "common.h"
+
 class LineNumberArea;
 class StylesheetEditorPrivate;
 class BookmarkArea;
@@ -40,7 +42,8 @@ class BookmarkData;
 class WidgetNode;
 class StylesheetEditor;
 
-class StylesheetEdit : public QWidget {
+class StylesheetEdit : public QWidget
+{
   Q_OBJECT
 public:
   explicit StylesheetEdit(QWidget* parent = nullptr);
@@ -166,9 +169,9 @@ public:
   //! Returns the current line number
   int currentLineNumber() const;
   //! Moves n lines up, defaults to 1 line.
-  void up(int n=1);
+  void up(int n = 1);
   //! Moves n lines down defults to 1 line.
-  void down(int n=1);
+  void down(int n = 1);
   //! Moves n characters left, defaults to 1 line.
   void left(int n = 1);
   //! Moves n characters right, defaults to 1 character.
@@ -189,6 +192,22 @@ public:
   int maxSuggestionCount() const;
   void setMaxSuggestionCount(int maxSuggestionCount);
 
+  //! add a custom widget to the widget tree.
+  //!
+  //! This will allow a user to add any of their own widgets to
+  //! the list of supported widget names.
+  bool addCustomWidget(const QString& name, const QString &parent);
+
+  //! Returns a list of the widget names that are supported.
+  //!
+  //! This will include all the standard QWidget subclasses plus any added widgets.
+  QStringList widgets();
+
+  bool addCustomWidgetPseudoStates(const QString& name, const QStringList& states);
+  bool addCustomWidgetSubControls(const QString& name, const QStringList& controls);
+  bool addCustomWidgetProperties(const QString& name, const QStringList& properties);
+  bool addCustomWidgetPropertyValue(const QString& widget, const QString& property, const QString& value);
+  bool addCustomWidgetPropertyValues(const QString& widget, const QString& property, QStringList values);
 
 signals:
   void lineNumber(int);
@@ -200,13 +219,10 @@ signals:
   void handleDocumentChanged(int, int, int);
 
 protected:
-
 private:
-  StylesheetEditor *m_editor;
-  LineNumberArea *m_linenumberArea;
-  BookmarkArea *m_bookmarkArea;
+  StylesheetEditor* m_editor;
+  LineNumberArea* m_linenumberArea;
+  BookmarkArea* m_bookmarkArea;
 };
-
-
 
 #endif // STYLESHEETEDIT_H

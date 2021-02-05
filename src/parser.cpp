@@ -831,18 +831,54 @@ Parser::updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu)
       updateMenu(
         matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
     } else if (widget->isExtensionBad()) {
-      auto matches =
-        m_datastore->fuzzySearchSubControlForWidget(widget->name(), widget->extensionName());
-      (*suggestionsMenu)->clear();
-      auto widgetact = getWidgetAction(
-        m_datastore->badColonIcon(),
-        tr("Sub control %1 does not match<br>supplied widget %2")
-          .arg(widget->extensionName(), widget->name()),
-        *suggestionsMenu);
-      (*suggestionsMenu)->addAction(widgetact);
-      (*suggestionsMenu)->addSeparator();
-      updateMenu(
-        matches, widget, suggestionsMenu, SectionType::BadWidgetSubControl);
+      if (widget->isSubControl()){
+        auto matches =
+            m_datastore->fuzzySearchSubControl(widget->extensionName());
+        (*suggestionsMenu)->clear();
+        auto widgetact =
+            getWidgetAction(m_datastore->fuzzyIcon(),
+                            tr("Sub control %1 does not match <br>"
+                           "supplied widget %2.<br>"
+                           "Possible sub controls are.")
+                            .arg(widget->extensionName(), widget->name()),
+                            *suggestionsMenu);
+        (*suggestionsMenu)->addAction(widgetact);
+        (*suggestionsMenu)->addSeparator();
+        updateMenu(
+              matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
+      } else if (widget->isPseudoState()) {
+        auto matches =
+            m_datastore->fuzzySearchSubControl(widget->extensionName());
+        (*suggestionsMenu)->clear();
+        auto widgetact =
+            getWidgetAction(m_datastore->fuzzyIcon(),
+                            tr("Pseudo state %1 does not match <br>"
+                           "supplied widget %2.<br>"
+                           "Possible states are.")
+                            .arg(widget->extensionName(), widget->name()),
+                            *suggestionsMenu);
+        (*suggestionsMenu)->addAction(widgetact);
+        (*suggestionsMenu)->addSeparator();
+        updateMenu(
+              matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
+      }
+      //      auto [check, matches] = m_datastore->checkSubControlForWidget(
+      //        widget->name(), widget->extensionName());
+      //      (*suggestionsMenu)->clear();
+      //      QString text;
+      //      if (!check) {
+      //        text = tr("Sub control %1 does not match <br>"
+      //                  "supplied widget %2.<br>"
+      //                  "Possible widgets are.")
+      //                 .arg(widget->extensionName(), widget->name());
+      //        auto widgetact =
+      //          getWidgetAction(m_datastore->badColonIcon(), text,
+      //          *suggestionsMenu);
+      //        (*suggestionsMenu)->addAction(widgetact);
+      //        (*suggestionsMenu)->addSeparator();
+      //        updateMenu(
+      //          matches, widget, suggestionsMenu,
+      //          SectionType::BadWidgetSubControl);
     } else if (!widget->doesMarkerMatch(SubControlCheck)) {
       (*suggestionsMenu)->clear();
       auto widgetact = getWidgetAction(
@@ -1001,6 +1037,36 @@ Parser::updateInvalidNameAndPropertyValueContextMenu(
 }
 
 void
+Parser::updateMenu(QStringList matches,
+                   Node* nNode,
+                   QMenu** suggestionsMenu,
+                   SectionType type,
+                   const QString& oldName)
+{
+  QAction* act;
+
+  if (matches.isEmpty()) {
+    (*suggestionsMenu)
+      ->addSection(m_datastore->noIcon(), tr("No suggestions are available!"));
+    return;
+  }
+
+  auto reversed = reverseList(matches, m_datastore->maxSuggestionCount());
+
+  for (auto& match : reversed) {
+    act = new QAction(match);
+    (*suggestionsMenu)->addAction(act);
+    setMenuData(act, nNode, type, oldName);
+    m_editor->connect(
+      act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
+  }
+
+  if (reversed.size() > 0) {
+    (*suggestionsMenu)->setEnabled(true);
+  }
+}
+
+void
 Parser::updateMenu(QMap<int, QString> matches,
                    Node* nNode,
                    QMenu** suggestionsMenu,
@@ -1047,6 +1113,13 @@ Parser::reverseLastNValues(QMultiMap<int, QString> matches)
   }
 
   return reversed;
+}
+
+QStringList
+Parser::reverseList(QStringList list, int count)
+{
+  std::reverse(list.begin(), list.end());
+  return list.mid(0, count - 1);
 }
 
 QList<QPair<QString, QString>>

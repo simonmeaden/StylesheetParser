@@ -223,10 +223,16 @@ enum AttributeType
   Position,
   TextDecoration,
   List,
+  UnderlineColor,
+  UnderlineStyle,
   // below here are specific to StylesheetEdit
-  StylesheetEditGood,
-  StylesheetEditBad,
+  //  StylesheetEditGood,
+  //  StylesheetEditBad,
+  //  Custom,
 };
+Q_DECLARE_FLAGS(AttributeTypes, AttributeType);
+Q_DECLARE_OPERATORS_FOR_FLAGS(AttributeTypes)
+
 enum NodeCheck
 {
   BadNodeCheck = 0,

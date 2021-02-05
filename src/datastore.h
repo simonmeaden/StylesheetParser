@@ -22,6 +22,7 @@
 #ifndef DATASTORE_H
 #define DATASTORE_H
 
+#include <QAbstractItemModel>
 #include <QFile>
 #include <QIcon>
 #include <QList>
@@ -31,6 +32,8 @@
 #include <QObject>
 #include <QStack>
 #include <QTextCursor>
+#include <QtDebug>
+#include <QtWidgets>
 
 #include "common.h"
 
@@ -41,8 +44,223 @@ class StylesheetEditor;
 class StylesheetData;
 class Node;
 class WidgetNode;
-//class StartBraceNode;
-//class EndBraceNode;
+// class StartBraceNode;
+// class EndBraceNode;
+
+class Property
+{
+public:
+  Property(const QString& name) { m_propertyname = name; }
+  QString propertyName() const;
+  void setPropertyName(const QString& propertyname);
+
+  AttributeTypes attributes() const;
+  void setAttributes(AttributeTypes attributes);
+
+private:
+  QString m_propertyname;
+  AttributeTypes m_attributes;
+};
+
+class WidgetItem
+{
+public:
+  WidgetItem(const QString& name, WidgetItem* parent);
+
+  QString name();
+  WidgetItem* parent();
+  QList<WidgetItem*> children();
+  void addChild(WidgetItem* child);
+  void removeChild(const QString& name);
+  bool hasChildren();
+  bool isExtraWidget() const;
+  void setExtraWidget(bool extraWidget);
+
+private:
+  QString m_name;
+  WidgetItem* m_parent = nullptr;
+  QList<WidgetItem*> m_children;
+  bool m_extraWidget = false;
+};
+
+class WidgetModel
+{
+public:
+  WidgetModel();
+
+  void addWidget(const QString& parentName,
+                 const QString& name,
+                 bool extraWidget = false);
+  //! \note only non-standard custom widgets that have been added can be
+  //! removed.
+  void removeWidget(const QString& name);
+  //  QStringList widgets();
+  bool hasWidget(const QString& widget);
+  WidgetItem* widgetItem(const QString& name);
+
+  void addSubControl(const QString& control, QStringList widgets);
+  void removeSubControl(const QString& control);
+  bool containsSubControl(const QString& control);
+  bool checkSubControlForWidget(const QString& widgetName, const QString& name);
+  //  QStringList subControls();
+
+  bool isValidSubControlForWidget(const QString& widgetName,
+                                  const QString& subcontrol);
+  bool isValidPropertyValueForProperty(const QString& propertyname,
+                                       const QString& valuename);
+  bool ifValidStylesheetValue(const QString& propertyname,
+                              const QString& valuename,
+                              StylesheetData* data);
+
+  //  bool containsSubControl(const QString& name);
+  QStringList possibleSubControlWidgets(const QString& name);
+
+  void addPseudoState(const QString& state, bool extraState = false);
+  void removePseudoState(const QString& state);
+  bool containsPseudoState(const QString& name);
+  //  QStringList pseudoStates();
+
+  void addProperty(const QString& property, bool extraProperty = true);
+  bool containsProperty(const QString& name);
+  //  QStringList properties();
+
+  //  QStringList colorNames();
+  //  QStringList paletteRoles();
+  //  QStringList alignmentValues() { return m_alignmentValues; }
+  //  QStringList attachment() { return m_attachment; }
+  //  QStringList borderStyle() { return m_borderStyle; }
+  //  QStringList borderImage() { return m_borderImage; }
+  //  QStringList gradient() { return m_gradient; }
+  QStringList borderValues();
+
+  QMultiMap<int, QString> fuzzySearch(const QString& name, QStringList list);
+  QMultiMap<int, QString> fuzzySearchWidgets(const QString& name);
+  QMultiMap<int, QString> fuzzySearchProperty(const QString& name);
+  QMultiMap<int, QString> fuzzySearchPropertyValue(const QString& name,
+                                                   const QString& value);
+  QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
+  QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
+
+  AttributeType propertyValueAttribute(const QString& value);
+
+  bool addCustomWidget(const QString& name, const QString &parent);
+  QStringList widgets() {
+    return m_widgets.keys();
+  }
+  bool addCustomWidgetPseudoStates(const QString& widget, QStringList states);
+  bool addCustomWidgetSubControls(const QString& widget, QStringList controls);
+  bool addCustomWidgetProperties(const QString& widget, QStringList properties);
+  bool addCustomWidgetPropertyValue(const QString& widget,
+                                    const QString& property,
+                                    QString value);
+  bool addCustomWidgetPropertyValues(const QString& widget,
+                                     const QString& property,
+                                     QStringList values);
+
+private:
+  WidgetItem* m_root;
+  QMap<QString, WidgetItem*> m_widgets;
+  QMap<QString, QStringList> m_subControls;
+  QMap<QString, QStringList> m_extraSubControls;
+  QMap<QString, AttributeType> m_attributes;
+  QStringList m_pseudoStates;
+  QList<bool> m_pseudoStatesExtra;
+  QStringList m_properties;
+  QList<bool> m_propertiesExtra;
+  QStringList m_colors;
+  QStringList m_paletteRoles;
+  QStringList m_alignmentValues;
+  QStringList m_gradient;
+  QStringList m_attachment;
+  QStringList m_borderStyle;
+  QStringList m_borderImage;
+  QStringList m_fontStyle;
+  QStringList m_fontWeight;
+  QStringList m_icon;
+  QStringList m_origin;
+  QStringList m_outlineStyle;
+  QStringList m_outlineWidth;
+  QStringList m_position;
+  QStringList m_repeat;
+  QStringList m_textDecoration;
+  QString m_outlineColor;
+  QStringList m_customNames;
+  QMap<QString, QStringList> m_customPseudoStates;
+  QMap<QString, QStringList> m_customSubControls;
+  QMap<QString, QStringList> m_customProperties;
+  QMap<QString, QMap<QString, QStringList>> m_customValues;
+  QMap<QString, QMap<QString, AttributeTypes>> m_customAttributes;
+  QStringList recurseWidgets(WidgetItem* item);
+  QStringList addControls(int count, ...);
+
+  void initPseudoStates();
+  void initPaletteRoles();
+  void initColorNames();
+  void initProperties();
+  void initSubControls();
+  void initWidgetTree();
+  void initAlignment();
+  void initGradients();
+  void initAttachments();
+  void initBorderStyle();
+  void initBorderImage();
+  void initFontStyle();
+  void initFontWeight();
+  void initIcon();
+  void initOrigin();
+  void initOutlineStyle();
+  void initOutlineColor();
+  void initOutlineWidth();
+  void initPosition();
+  void initRepeat();
+  void initTextDecoration();
+  void initAttributeMap();
+
+  bool checkPropertyValue(AttributeType propertyAttribute,
+                          const QString& valuename,
+                          StylesheetData* data = nullptr);
+  bool checkAlignment(const QString& value) const;
+  bool checkAttachment(const QString& value) const;
+  bool checkBackground(const QString& value) const;
+  bool checkBool(const QString& value) const;
+  bool checkBoolean(const QString& value) const;
+  bool checkBorder(const QString& value) const;
+  bool checkBorderImage(const QString& value) const;
+  bool checkBorderStyle(const QString& value) const;
+  bool checkBoxColors(const QString& value) const;
+  bool checkBoxLengths(const QString& value) const;
+  bool checkBrush(const QString& value) const;
+  bool checkColor(const QString& value) const;
+  bool checkFontStyle(const QString& value) const;
+  bool checkFont(const QString& value) const;
+  bool checkFontSize(const QString& value) const;
+  bool checkFontWeight(const QString& value) const;
+  bool checkGradient(const QString& value) const;
+  bool checkIcon(const QString& value) const;
+  bool checkLength(const QString& value) const;
+  bool checkNumber(const QString& value) const;
+  bool checkOutline(const QString& value) const;
+  bool checkOrigin(const QString& value) const;
+  bool checkOutlineStyle(const QString& value) const;
+  bool checkOutlineColor(const QString& value) const;
+  bool checkOutlineWidth(const QString& value) const;
+  bool checkOutlineOffset(const QString& value) const;
+  bool checkOutlineRadius(const QString& value) const;
+  bool checkPaletteRole(const QString& value) const;
+  bool checkRadius(const QString& value) const;
+  bool checkRepeat(const QString& value) const;
+  bool checkUrl(const QString& value) const;
+  bool checkPosition(const QString& value) const;
+  bool checkTextDecoration(const QString& value) const;
+  //
+  bool checkStylesheetEdit(const QString& value,
+                           StylesheetData* data = nullptr) const;
+  bool checkStylesheetEditBad(const QString& value,
+                              StylesheetData* data = nullptr) const;
+  bool checkStylesheetFontWeight(const QString& value,
+                                 StylesheetData* data) const;
+  QStringList eraseDuplicates(QStringList list);
+};
 
 class DataStore : public QObject
 {
@@ -51,21 +269,20 @@ public:
   explicit DataStore(QObject* parent = nullptr);
   ~DataStore();
 
-  void addWidget(const QString& widget);
-  void removeWidget(const QString& widget);
+  void addWidget(const QString& widget, const QString& parent);
+  QStringList widgets() {
+    return m_widgetModel->widgets();
+  }
+  void removeWidget(const QString& name);
   bool containsWidget(const QString& name);
-  QMultiMap<int, QString> fuzzySearchWidgets(const QString& name);
   bool containsProperty(const QString& name);
-  QMultiMap<int, QString> fuzzySearchProperty(const QString& name);
-  QMultiMap<int, QString> fuzzySearchPropertyValue(const QString& name,
-                                                   const QString& value);
+
   bool containsStylesheetProperty(const QString& name);
   bool containsPseudoState(const QString& name);
-  QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
   bool containsSubControl(const QString& name);
-  bool isValidSubControlForWidget(const QString&widget, const QString& subcontrol);
-  QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
-  QMultiMap<int, QString> fuzzySearchSubControlForWidget(const QString& widget,const QString& name);
+  bool isValidSubControlForWidget(const QString& widget,
+                                  const QString& subcontrol);
+  bool checkSubControlForWidget(const QString& widgetName, const QString& name);
 
   bool ifValidStylesheetValue(const QString& propertyname,
                               const QString& valuename,
@@ -74,7 +291,9 @@ public:
                                        const QString& value);
   AttributeType propertyValueAttribute(const QString& value);
 
-  //! Returns the names of all widgets for which this sub-control is valid.
+  //! Returns the names of all
+  //! widgets for which this
+  //! sub-control is valid.
   QStringList possibleSubControlWidgets(const QString& name);
 
   void addSubControl(const QString& control, const QString& widget);
@@ -121,101 +340,71 @@ public:
   QIcon noIcon() const;
   QIcon fuzzyIcon() const;
 
+  QMultiMap<int, QString> fuzzySearchWidgets(const QString& name);
+  QMultiMap<int, QString> fuzzySearchProperty(const QString& name);
+  QMultiMap<int, QString> fuzzySearchPropertyValue(const QString& name,
+                                                   const QString& value);
+  QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
+  QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
+
+  //! Adds a new custom widget, with it's specialised names and values.
+  bool addCustomWidget(const QString& name, const QString& parent)
+  {
+    return m_widgetModel->addCustomWidget(name, parent);
+  }
+  bool addCustomWidgetPseudoStates(const QString& name,
+                                   const QStringList& states)
+  {
+    return m_widgetModel->addCustomWidgetPseudoStates(name, states);
+  }
+  bool addCustomWidgetSubControls(const QString& name,
+                                  const QStringList& controls)
+  {
+    return m_widgetModel->addCustomWidgetSubControls(name, controls);
+  }
+  bool addCustomWidgetProperties(const QString& name,
+                                 const QStringList& properties)
+  {
+    return m_widgetModel->addCustomWidgetProperties(name, properties);
+  }
+  bool addCustomWidgetPropertyValue(const QString& widget,
+                                    const QString& property,
+                                    const QString& value)
+  {
+    return m_widgetModel->addCustomWidgetPropertyValue(widget, property, value);
+  }
+  bool addCustomWidgetPropertyValues(const QString& widget,
+                                     const QString& property,
+                                     QStringList values)
+  {
+    return m_widgetModel->addCustomWidgetPropertyValues(
+      widget, property, values);
+  }
 signals:
   void finished();
 
 private:
-  const QIcon m_invalidIcon, m_validIcon, m_addSemiColonIcon, m_addDColonIcon, m_addColonIcon,
-    m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon, m_fuzzyIcon;
+  const QIcon m_invalidIcon, m_validIcon, m_addSemiColonIcon, m_addDColonIcon,
+    m_addColonIcon, m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon,
+    m_fuzzyIcon;
   QMutex m_mutex;
-  QStringList m_widgets;
-  QStringList m_colors;
   QStringList m_attributeNames;
-  QStringList m_properties;
-  QStringList m_pseudoStates;
   QStringList m_possibleWidgets;
   QStringList m_StylesheetProperties;
-  QStringList m_alignmentValues;
-  QStringList m_paletteRoles, m_gradient, m_attachment, m_borderStyle,
-    m_borderImage, m_fontStyle, m_fontWeight, m_icon, m_origin, m_outlineStyle,
-    m_outlineWidth, m_position, m_repeat, m_textDecoration;
-  QString m_outlineColor;
-
-  QMap<QString, QStringList> m_subControls;
-  QMap<QString, AttributeType> m_attributes;
-  QMap<QString, AttributeType> m_stylesheetAttributes;
 
   QMap<QTextCursor, Node*> m_nodes;
-//  QList<StartBraceNode*> m_startbraces;
-//  QList<EndBraceNode*> m_endbraces;
   int m_braceCount;
   bool m_manualMove, m_hasSuggestion;
   QTextCursor m_currentCursor;
   Node* m_currentNode;
   int m_maxSuggestionCount;
-//  QStack<StartBraceNode*> m_braceStack;
 
   bool isBraceCountZero();
-//  void pushStartBrace(StartBraceNode* startbrace);
-//  void pushEndBrace(EndBraceNode* endbrace);
 
-  bool checkPropertyValue(AttributeType propertyAttribute,
-                          const QString& valuename,
-                          StylesheetData* data = nullptr);
-  bool checkAlignment(const QString& value) const;
-  bool checkAttachment(const QString& value) const;
-  bool checkBackground(const QString& value) const;
-  bool checkBool(const QString& value) const;
-  bool checkBoolean(const QString& value) const;
-  bool checkBorder(const QString& value) const;
-  bool checkBorderImage(const QString& value) const;
-  bool checkBorderStyle(const QString& value) const;
-  bool checkBoxColors(const QString& value) const;
-  bool checkBoxLengths(const QString& value) const;
-  bool checkBrush(const QString& value) const;
-  bool checkColor(const QString& value) const;
-  bool checkFontStyle(const QString& value) const;
-  bool checkFont(const QString& value) const;
-  bool checkFontSize(const QString& value) const;
-  bool checkFontWeight(const QString& value) const;
-  bool checkGradient(const QString& value) const;
-  bool checkIcon(const QString& value) const;
-  bool checkLength(const QString& value) const;
-  bool checkNumber(const QString& value) const;
-  bool checkOutline(const QString& value) const;
-  bool checkOrigin(const QString& value) const;
-  bool checkOutlineStyle(const QString& value) const;
-  bool checkOutlineColor(const QString& value) const;
-  bool checkOutlineWidth(const QString& value) const;
-  bool checkOutlineOffset(const QString& value) const;
-  bool checkOutlineRadius(const QString& value) const;
-  bool checkPaletteRole(const QString& value) const;
-  bool checkRadius(const QString& value) const;
-  bool checkRepeat(const QString& value) const;
-  bool checkUrl(const QString& value) const;
-  bool checkPosition(const QString& value) const;
-  bool checkTextDecoration(const QString& value) const;
-  //
-  bool checkStylesheetEdit(const QString& value,
-                           StylesheetData* data = nullptr) const;
-  bool checkStylesheetEditBad(const QString& value,
-                              StylesheetData* data = nullptr) const;
-  bool checkStylesheetFontWeight(const QString& value,
-                                 StylesheetData* data) const;
+  WidgetModel* m_widgetModel;
+  void initialiseWidgetModel();
+  //  QMap<QString, AttributeType> initialiseStylesheetMap();
 
-  QMap<QString, QStringList> initialiseSubControlMap();
-  QStringList initialiseWidgetList();
-  QStringList initialisePropertyList();
-  QStringList initialisePseudoStateList();
-  QMap<QString, AttributeType> initialiseAttributeMap();
-  QStringList initialiseStylesheetProperties();
-  QMap<QString, AttributeType> initialiseStylesheetMap();
-  QStringList initialiseColorList();
-
-  QStringList addControls(int count, ...);
-
-  QMultiMap<int, QString> fuzzySearch(const QString& name, QStringList list);
-  //  QMap<int, QString> fuzzyTestColorNames(const QString &value);
   QMap<int, QString> fuzzyTestBrush(const QString& value);
 };
 

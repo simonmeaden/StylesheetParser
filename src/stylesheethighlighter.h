@@ -48,10 +48,6 @@ public:
                                  QBrush back,
                                  QFont::Weight weight);
   void setValueFormat(QBrush color, QBrush back, QFont::Weight weight);
-  //  void setBadValueFormat(QBrush color, QBrush back, QFont::Weight weight,
-  //  bool underline,
-  //                         QTextCharFormat::UnderlineStyle underlineStyle,
-  //                         QColor underlineColor);
   void setPropertyFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPropertyMarkerFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPropertyEndMarkerFormat(QBrush color,

@@ -203,7 +203,7 @@ BookmarkArea::mousePressEvent(QMouseEvent* event)
     if (lineNumber >= 0) {
       m_editor->goToLine(lineNumber);
       emit m_editor->lineNumber(m_editor->currentLineNumber());
-      emit m_editor->lineCount(m_editor->getLineCount());
+      emit m_editor->lineCount(m_editor->lineCount());
     } else
       QWidget::mousePressEvent(event);
   }
@@ -216,7 +216,7 @@ BookmarkArea::mouseMoveEvent(QMouseEvent* event)
   auto tc = m_editor->cursorForPosition(pos);
   auto lineNumber = m_editor->calculateLineNumber(tc);
   setToolTip(QString());
-  if (lineNumber > 0 && lineNumber <= m_editor->getLineCount()) {
+  if (lineNumber > 0 && lineNumber <= m_editor->lineCount()) {
     auto bm = m_bookmarks->value(lineNumber);
     if (bm) {
       if (bm->text.isEmpty())
@@ -325,7 +325,7 @@ BookmarkArea::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
 
   auto keys = bookmarks->keys();
   for (auto& key : keys) {
-    if (key <= m_editor->getLineCount()) {
+    if (key <= m_editor->lineCount()) {
       m_bookmarks->insert(key, bookmarks->value(key));
     }
   }
@@ -339,7 +339,7 @@ BookmarkArea::insertBookmark(int bookmark, const QString& text)
     m_oldBookmarks.insert(bookmark, bookmarkText(bookmark));
 
   } else {
-    if (bookmark > 0 && bookmark <= m_editor->getLineCount()) {
+    if (bookmark > 0 && bookmark <= m_editor->lineCount()) {
       BookmarkData* data = new BookmarkData();
       data->text = text;
       m_bookmarks->insert(bookmark, data);
@@ -378,7 +378,7 @@ BookmarkArea::removeBookmark(int bookmark)
 void
 BookmarkArea::editBookmark(int lineNumber)
 {
-  auto lineCount = m_editor->getLineCount();
+  auto lineCount = m_editor->lineCount();
   if (lineNumber > 0 && lineNumber < lineCount) {
     QString text = bookmarkText(lineNumber);
 

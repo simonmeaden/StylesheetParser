@@ -75,9 +75,14 @@ public:
   bool hasChildren();
   bool isExtraWidget() const;
   void setExtraWidget(bool extraWidget);
+  void addSubcontrol(const QString& control);
+  bool removeSubcontrol(const QString& control);
+  bool hasSubControl(const QString& name);
+  QStringList subControls();
 
 private:
   QString m_name;
+  QStringList m_subcontrols;
   WidgetItem* m_parent = nullptr;
   QList<WidgetItem*> m_children;
   bool m_extraWidget = false;
@@ -94,43 +99,32 @@ public:
   //! \note only non-standard custom widgets that have been added can be
   //! removed.
   void removeWidget(const QString& name);
-  //  QStringList widgets();
   bool hasWidget(const QString& widget);
   WidgetItem* widgetItem(const QString& name);
 
   void addSubControl(const QString& control, QStringList widgets);
   void removeSubControl(const QString& control);
   bool containsSubControl(const QString& control);
-  bool checkSubControlForWidget(const QString& widgetName, const QString& name);
-  //  QStringList subControls();
+  bool checkSubControlForWidget(const QString& widget, const QString& control);
 
   bool isValidSubControlForWidget(const QString& widgetName,
                                   const QString& subcontrol);
   bool isValidPropertyValueForProperty(const QString& propertyname,
                                        const QString& valuename);
-  bool ifValidStylesheetValue(const QString& propertyname,
-                              const QString& valuename,
-                              StylesheetData* data);
+//  bool ifValidStylesheetValue(const QString& propertyname,
+//                              const QString& valuename,
+//                              StylesheetData* data);
 
-  //  bool containsSubControl(const QString& name);
-  QStringList possibleSubControlWidgets(const QString& name);
+  QStringList possibleWidgetsForSubControl(const QString& name);
+  QStringList possibleSubControlsForWidget(const QString& widget);
 
   void addPseudoState(const QString& state, bool extraState = false);
   void removePseudoState(const QString& state);
   bool containsPseudoState(const QString& name);
-  //  QStringList pseudoStates();
 
   void addProperty(const QString& property, bool extraProperty = true);
   bool containsProperty(const QString& name);
-  //  QStringList properties();
 
-  //  QStringList colorNames();
-  //  QStringList paletteRoles();
-  //  QStringList alignmentValues() { return m_alignmentValues; }
-  //  QStringList attachment() { return m_attachment; }
-  //  QStringList borderStyle() { return m_borderStyle; }
-  //  QStringList borderImage() { return m_borderImage; }
-  //  QStringList gradient() { return m_gradient; }
   QStringList borderValues();
 
   QMultiMap<int, QString> fuzzySearch(const QString& name, QStringList list);
@@ -143,10 +137,8 @@ public:
 
   AttributeType propertyValueAttribute(const QString& value);
 
-  bool addCustomWidget(const QString& name, const QString &parent);
-  QStringList widgets() {
-    return m_widgets.keys();
-  }
+  bool addCustomWidget(const QString& name, const QString& parent);
+  QStringList widgets() { return m_widgets.keys(); }
   bool addCustomWidgetPseudoStates(const QString& widget, QStringList states);
   bool addCustomWidgetSubControls(const QString& widget, QStringList controls);
   bool addCustomWidgetProperties(const QString& widget, QStringList properties);
@@ -160,8 +152,7 @@ public:
 private:
   WidgetItem* m_root;
   QMap<QString, WidgetItem*> m_widgets;
-  QMap<QString, QStringList> m_subControls;
-  QMap<QString, QStringList> m_extraSubControls;
+  QMap<QString, QList<WidgetItem*>> m_subControls;
   QMap<QString, AttributeType> m_attributes;
   QStringList m_pseudoStates;
   QList<bool> m_pseudoStatesExtra;
@@ -190,7 +181,7 @@ private:
   QMap<QString, QStringList> m_customProperties;
   QMap<QString, QMap<QString, QStringList>> m_customValues;
   QMap<QString, QMap<QString, AttributeTypes>> m_customAttributes;
-  QStringList recurseWidgets(WidgetItem* item);
+  QStringList recurseWidgetsForNames(WidgetItem* item);
   QStringList addControls(int count, ...);
 
   void initPseudoStates();
@@ -270,9 +261,7 @@ public:
   ~DataStore();
 
   void addWidget(const QString& widget, const QString& parent);
-  QStringList widgets() {
-    return m_widgetModel->widgets();
-  }
+  QStringList widgets() { return m_widgetModel->widgets(); }
   void removeWidget(const QString& name);
   bool containsWidget(const QString& name);
   bool containsProperty(const QString& name);
@@ -284,9 +273,9 @@ public:
                                   const QString& subcontrol);
   bool checkSubControlForWidget(const QString& widgetName, const QString& name);
 
-  bool ifValidStylesheetValue(const QString& propertyname,
-                              const QString& valuename,
-                              StylesheetData* data);
+//  bool ifValidStylesheetValue(const QString& propertyname,
+//                              const QString& valuename,
+//                              StylesheetData* data);
   bool isValidPropertyValueForProperty(const QString& propertyname,
                                        const QString& value);
   AttributeType propertyValueAttribute(const QString& value);
@@ -294,7 +283,8 @@ public:
   //! Returns the names of all
   //! widgets for which this
   //! sub-control is valid.
-  QStringList possibleSubControlWidgets(const QString& name);
+  QStringList possibleWidgetsForSubControl(const QString& name);
+  QStringList possibleSubControlsForWidget(const QString& widget);
 
   void addSubControl(const QString& control, const QString& widget);
   void addSubControl(const QString& control, QStringList& widgets);

@@ -890,14 +890,14 @@ WidgetModel::checkPropertyValue(AttributeType propertyAttribute,
   return false;
 }
 
-bool
-DataStore::ifValidStylesheetValue(const QString& propertyname,
-                                  const QString& valuename,
-                                  StylesheetData* data)
-{
-  QMutexLocker locker(&m_mutex);
-  return m_widgetModel->ifValidStylesheetValue(propertyname, valuename, data);
-}
+//bool
+//DataStore::ifValidStylesheetValue(const QString& propertyname,
+//                                  const QString& valuename,
+//                                  StylesheetData* data)
+//{
+//  QMutexLocker locker(&m_mutex);
+//  return m_widgetModel->ifValidStylesheetValue(propertyname, valuename, data);
+//}
 
 bool
 DataStore::isValidPropertyValueForProperty(const QString& propertyname,
@@ -908,9 +908,14 @@ DataStore::isValidPropertyValueForProperty(const QString& propertyname,
 }
 
 QStringList
-DataStore::possibleSubControlWidgets(const QString& name)
+DataStore::possibleWidgetsForSubControl(const QString& name)
 {
-  return m_widgetModel->possibleSubControlWidgets(name);
+  return m_widgetModel->possibleWidgetsForSubControl(name);
+}
+
+QStringList DataStore::possibleSubControlsForWidget(const QString &widget)
+{
+  return m_widgetModel->possibleSubControlsForWidget(widget);
 }
 
 void
@@ -933,7 +938,7 @@ void
 DataStore::removeSubControl(const QString& control)
 {
   QMutexLocker locker(&m_mutex);
-  m_widgetModel->removeSubControl(control);
+  m_widgetModel->removeSubControl(control.trimmed());
 }
 
 void
@@ -1272,6 +1277,31 @@ WidgetItem::setExtraWidget(bool extraWidget)
 }
 
 void
+WidgetItem::addSubcontrol(const QString& control)
+{
+  if (!m_subcontrols.contains(control))
+    m_subcontrols.append(control);
+}
+
+bool
+WidgetItem::removeSubcontrol(const QString& control)
+{
+  return m_subcontrols.removeOne(control);
+}
+
+bool
+WidgetItem::hasSubControl(const QString& name)
+{
+  return m_subcontrols.contains(name);
+}
+
+QStringList
+WidgetItem::subControls()
+{
+  return m_subcontrols;
+}
+
+void
 WidgetModel::initPaletteRoles()
 {
   m_paletteRoles << "alternate-base"
@@ -1564,10 +1594,10 @@ WidgetModel::initSubControls()
 {
   addSubControl("add-line", addControls(1, new QString("QScrollBar")));
   addSubControl("add-page", addControls(1, new QString("QScrollBar")));
-  addSubControl("branch", addControls(1, new QString("QTreeBar")));
+  addSubControl("branch", addControls(1, new QString("QTreeView")));
   addSubControl("chunk", addControls(1, new QString("QProgressBar")));
   addSubControl(
-    "close-button ",
+    "close-button",
     addControls(2, new QString("QDockWidget"), new QString("QTabBar")));
   addSubControl("corner", addControls(1, new QString("QAbstractScrollArea")));
   addSubControl("down-arrow",
@@ -1731,9 +1761,9 @@ WidgetModel::initWidgetTree()
   addWidget("QAbstractItemView", "QListWidget");
   addWidget("QAbstractItemView", "QUndoView");
   addWidget("QAbstractItemView", "QTreeView");
-  addWidget("QAbstractItemView", "QTreeWidget");
+  addWidget("QTreeView", "QTreeWidget");
   addWidget("QAbstractItemView", "QTableView");
-  addWidget("QAbstractItemView", "QTableWidget");
+  addWidget("QTableView", "QTableWidget");
   addWidget("QAbstractScrollArea", "QPlainTextEdit");
   addWidget("QAbstractScrollArea", "QTextEdit");
   addWidget("QFrame", "QLabel");
@@ -2045,6 +2075,10 @@ WidgetModel::WidgetModel()
   initAttributeMap();
 }
 
+/*!
+   \brief Takes a variable size list of strings add creates a QStringList odf
+   them.
+ */
 QStringList
 WidgetModel::addControls(int count, ...)
 {
@@ -2089,12 +2123,6 @@ WidgetModel::removeWidget(const QString& name)
   }
 }
 
-// QStringList
-// WidgetModel::widgets()
-//{
-//  return m_widgets.keys();
-//}
-
 bool
 WidgetModel::hasWidget(const QString& widget)
 {
@@ -2111,56 +2139,63 @@ void
 WidgetModel::addSubControl(const QString& control, QStringList widgets)
 {
   if (m_subControls.contains(control)) {
-    auto list = m_subControls.value(control);
-    for (auto name : widgets) {
-      if (!list.contains(name)) {
-        list.append(widgets);
+    auto items = m_subControls.value(control);
+    for (auto& name : widgets) {
+      auto item = widgetItem(name);
+      if (item && !item->hasSubControl(control)) {
+        item->addSubcontrol(control);
+        items.append(item);
       }
     }
-    m_subControls.insert(control, list);
+    m_subControls.insert(control, items);
   } else {
-    m_subControls.insert(control, widgets);
+    QList<WidgetItem*> items;
+    for (auto& name : widgets) {
+      auto item = widgetItem(name);
+      item->addSubcontrol(control);
+      items.append(item);
+    }
+    m_subControls.insert(control, items);
   }
 }
 
 void
 WidgetModel::removeSubControl(const QString& control)
 {
-  auto widgets = m_subControls.value(control);
-  for (auto name : widgets) {
-    auto w = widgetItem(name);
-    if (w && w->isExtraWidget()) {
-      widgets.removeOne(name);
+  if (m_subControls.contains(control)) {
+    auto items = m_subControls.value(control);
+    for (auto& item : items) {
+      if (item && item->isExtraWidget()) {
+        item->removeSubcontrol(control);
+        items.removeOne(item);
+      }
     }
-  }
-  if (widgets.isEmpty()) {
-    m_subControls.remove(control);
-  } else {
-    m_subControls.insert(control, widgets);
+    if (items.isEmpty()) {
+      m_subControls.remove(control);
+    } else {
+      m_subControls.insert(control, items);
+    }
   }
 }
 
-// bool
-// WidgetModel::containsSubControl(const QString& control)
-//{
-//  return m_subControls.contains(control);
-//}
-
 bool
-WidgetModel::checkSubControlForWidget(const QString& widgetName,
-                                      const QString& name)
+WidgetModel::checkSubControlForWidget(const QString& widget,
+                                      const QString& control)
 {
-  auto widgets = m_subControls.value(name);
-  auto has_widget = widgets.contains(widgetName);
-  if (has_widget) {
-    return true;
-  }
+  // first check direct widgets.
+  auto items = m_subControls.value(control);
+  if (!items.isEmpty()) {
+    auto item = widgetItem(widget);
+    if (items.contains(item)) {
+      return true;
+    }
 
-  for (auto wName : widgets) {
-    auto item = widgetItem(wName);
-    while (item->parent() != nullptr) {
-      if (item->name() == widgetName) {
-        return true;
+    // then check for a subclassed widget.
+    for (auto item : items) {
+      while (item->parent() != nullptr) {
+        if (item->name() == widget) {
+          return true;
+        }
       }
     }
   }
@@ -2168,23 +2203,17 @@ WidgetModel::checkSubControlForWidget(const QString& widgetName,
   return false;
 }
 
-// QStringList
-// WidgetModel::subControls()
-//{
-//  return m_subControls.keys();
-//}
-
 bool
-WidgetModel::isValidSubControlForWidget(const QString& widgetName,
-                                        const QString& subcontrol)
+WidgetModel::isValidSubControlForWidget(const QString& widget,
+                                        const QString& control)
 {
-  auto item = widgetItem(widgetName);
-  while (item != nullptr) {
-    auto subcontrols = m_subControls.value(item->name());
-    if (subcontrols.contains(subcontrol)) {
-      return true;
+  auto items = m_subControls.value(control);
+  if (!items.isEmpty()) {
+    for (auto item : items) {
+      if (item->name() == widget) {
+        return true;
+      }
     }
-    item = item->parent();
   }
 
   return false;
@@ -2203,48 +2232,54 @@ WidgetModel::isValidPropertyValueForProperty(const QString& propertyname,
           NoAttributeValue);
 }
 
-bool
-WidgetModel::ifValidStylesheetValue(const QString& propertyname,
-                                    const QString& valuename,
-                                    StylesheetData* data)
-{
-  // TODO
-  //  if (valuename.isEmpty()) {
-  //    return false;
-  //  }
+//bool
+//WidgetModel::ifValidStylesheetValue(const QString& propertyname,
+//                                    const QString& valuename,
+//                                    StylesheetData* data)
+//{
+//  // TODO
+//  //  if (valuename.isEmpty()) {
+//  //    return false;
+//  //  }
 
-  //  AttributeType stylesheetAttribute =
-  //    m_stylesheetAttributes.value(propertyname);
-  //  return (checkPropertyValue(stylesheetAttribute, valuename, data) !=
-  //          NoAttributeValue);
-  return false;
-}
+//  //  AttributeType stylesheetAttribute =
+//  //    m_stylesheetAttributes.value(propertyname);
+//  //  return (checkPropertyValue(stylesheetAttribute, valuename, data) !=
+//  //          NoAttributeValue);
+//  return false;
+//}
 
 bool
 WidgetModel::containsSubControl(const QString& name)
 {
-  return m_subControls.contains(name.toLower());
+  return m_subControls.contains(name.trimmed().toLower());
 }
 
 QStringList
-WidgetModel::possibleSubControlWidgets(const QString& name)
+WidgetModel::possibleWidgetsForSubControl(const QString& name)
 {
   QStringList names;
-  auto nameList = m_subControls.value(name);
-  names.append(nameList);
-
-  for (auto n : names) {
-    auto w = widgetItem(n);
-    if (w) {
-      names.append(recurseWidgets(w));
-    }
+  auto items = m_subControls.value(name);
+  for (auto item : items) {
+    names.append(recurseWidgetsForNames(item));
   }
   return names;
 }
 
+QStringList
+WidgetModel::possibleSubControlsForWidget(const QString& widget)
+{
+  for (auto& item : m_widgets) {
+    if (item->name() == widget) {
+      return item->subControls();
+    }
+  }
+  return QStringList();
+}
+
 void
 WidgetModel::addPseudoState(const QString& state,
-//                            QStringList widgets,
+                            //                            QStringList widgets,
                             bool extraState)
 {
   m_pseudoStates << state;
@@ -2674,14 +2709,14 @@ WidgetModel::addCustomWidgetPropertyValues(const QString& widget,
 }
 
 QStringList
-WidgetModel::recurseWidgets(WidgetItem* item)
+WidgetModel::recurseWidgetsForNames(WidgetItem* item)
 {
   QStringList names;
   for (auto child : item->children()) {
     names.append(child->name());
     auto w = widgetItem(child->name());
     if (w && w->hasChildren()) {
-      names.append(recurseWidgets(w));
+      names.append(recurseWidgetsForNames(w));
     }
   }
   return names;

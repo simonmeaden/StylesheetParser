@@ -201,19 +201,26 @@ MainWindow::initGui()
     //    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
     //    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
     //    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
-    "QTabWidget:branch {\n" // Bad pseudostate - is subcontrol
+//    "QTabWidget:branch {\n" // Bad pseudostate - is subcontrol
     //    "  color: green\n"              // No end marker
     //    "  color: rd;\n"                // bad color value
     //    "  border: gren slid 1py\n"     // bad property values
     //    "  bckground-color: green; \n"  // bar property name
-    "}\n"
-    "QTabWidget::active {\n" // Bad subcontrol - is pseudostate
-    //    "  color: green\n"              // No end marker
+//    "}\n"
+//    "QTabWidget::active {\n" // Bad subcontrol - is pseudostate
+   //    "  color: green\n"              // No end marker
     //    "  color: rd;\n"                // bad color value
     //    "  border: gren slid 1py\n"     // bad property values
     //    "  bckground-color: green; \n"  // bar property name
-    "}\n"
+//    "}\n"
     // End of errors
+//      "QTabBar::close-button {\n"
+//      "    image: url(close.png)\n"
+//      "    subcontrol-position: left;\n"
+//      "}\n"
+      "QTabBar::close-button:hover {\n"
+//      "    image: url(close-hover.png)\n"
+      "}"
     ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
   //    MISSING END

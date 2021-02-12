@@ -53,26 +53,25 @@ public:
   Node(const Node& other);
   ~Node();
 
-  void setStart(int position);
-  void moveStart(int count);
   virtual int end() const;
   QTextCursor cursor() const;
   void setCursor(QTextCursor podition);
-  virtual int start() const;
+  virtual int position() const;
   virtual int length() const;
   virtual int pointWidth() const;
   virtual int pointHeight() const;
 
   QString name() const;
   void setName(const QString& value);
-  //  bool isNameValid() const {
-  //      return
-  //  }
 
   virtual NodeSection* isIn(QPoint pos);
 
   enum NodeType type() const;
   QString toString() const;
+
+  NodeChecks checks() { return node_ptr->state; }
+  void setCheck(NodeCheck check) { node_ptr->state.setFlag(check, true); }
+  void clearCheck(NodeCheck check) { node_ptr->state.setFlag(check, false); }
 
 protected:
   NodeData* node_ptr;
@@ -83,35 +82,95 @@ struct NameNodeData
   QString name;
 };
 
-class BadNode
-{
-public:
-  explicit BadNode(ParserState::Errors errors);
+// class BadNode
+//{
+// public:
+//  explicit BadNode(ParserState::Errors errors);
 
-  ParserState::Errors errors() const;
-  void setError(const ParserState::Errors& errors);
+//  ParserState::Errors errors() const;
+//  void setError(const ParserState::Errors& errors);
 
-private:
-  ParserState::Errors m_errors;
-};
+// private:
+//  ParserState::Errors m_errors;
+//};
 
-class BadBlockNode
-  : public Node
-  , public BadNode
-{
-  Q_OBJECT
-public:
-  explicit BadBlockNode(const QString& name,
-                        QTextCursor start,
-                        ParserState::Errors errors,
-                        StylesheetEditor* editor,
-                        QObject* parent = nullptr,
-                        enum NodeType type = NodeType::BadNodeType);
+// class BadBlockNode
+//  : public Node
+//  , public BadNode
+//{
+//  Q_OBJECT
+// public:
+//  explicit BadBlockNode(const QString& name,
+//                        QTextCursor start,
+//                        ParserState::Errors errors,
+//                        StylesheetEditor* editor,
+//                        QObject* parent = nullptr,
+//                        enum NodeType type = NodeType::BadNodeType);
 
-  int end() const override;
-};
+//  int end() const override;
+//};
 
 class PropertyNode;
+
+class Extension : public Node
+{
+public:
+  Extension(QTextCursor markerCursor,
+            QTextCursor nameCursor,
+            const QString& name,
+            StylesheetEditor* editor)
+    : Node(name, nameCursor, editor)
+    , m_markerCursor(markerCursor)
+  {}
+
+  QTextCursor markerCursor() const;
+  void setMarkerCursor(const QTextCursor& markerCursor);
+
+  QString marker() const;
+  void setMarker(const QString& marker);
+  int markerPosition() const { return m_markerCursor.position(); }
+
+  virtual int length() const
+  {
+    return (name().length());
+  }
+  virtual bool isIn() {}
+
+protected:
+  QTextCursor m_markerCursor;
+  QString m_marker;
+};
+
+class PseudoState : public Extension
+{
+public:
+  PseudoState(QTextCursor markerCursor,
+              QTextCursor nameCursor,
+              const QString& name,
+              StylesheetEditor* editor)
+    : Extension(markerCursor, nameCursor, name, editor)
+  {
+    m_marker = ":";
+  }
+};
+
+struct SubControl : public Extension
+{
+public:
+  SubControl(QTextCursor markerCursor,
+             QTextCursor nameCursor,
+             const QString& name,
+             StylesheetEditor* editor);
+
+  QList<PseudoState*>* pseudoStates() const;
+  void addPseudoState(PseudoState* pseudoStates);
+  bool hasMarker() { return (checks().testFlag(SubControlMarkerCheck)); }
+  int length() const;
+  bool isFuzzy();
+
+private:
+  QList<PseudoState*>* m_pseudoStates = nullptr;
+};
 
 class WidgetNode : public Node
 {
@@ -119,14 +178,11 @@ class WidgetNode : public Node
 
   struct WidgetNodeData
   {
-//    WidgetNodeData(NodeCheck check = BadNodeCheck);
-    QTextCursor markerPosition;
-    QTextCursor extensionPosition;
-    QString extensionName;
+    SubControl* subcontrol = nullptr;
+    QList<PseudoState*> pseudoStates;
     QTextCursor startBracePosition;
     QTextCursor endBracePosition;
     QList<PropertyNode*> properties;
-//    NodeChecks state = NodeCheck::BadNodeCheck;
   };
 
 public:
@@ -151,26 +207,47 @@ public:
 
   NodeSection* isIn(QPoint pos) override;
 
+  SubControl* subControl() { return widget_ptr->subcontrol; }
+  void setSubControl(SubControl* control) { widget_ptr->subcontrol = control; }
+  QList<PseudoState*> pseudoStates() { return widget_ptr->pseudoStates; }
+  void addPseudoState(PseudoState* state)
+  {
+    if (widget_ptr->pseudoStates.contains(state)) {
+      widget_ptr->pseudoStates.replace(widget_ptr->pseudoStates.indexOf(state),
+                                       state);
+    } else {
+      widget_ptr->pseudoStates.append(state);
+    }
+  }
+  PseudoState* pseudoState(QTextCursor cursor)
+  {
+    for (auto state : widget_ptr->pseudoStates) {
+      if (state->cursor() == cursor) {
+        return state;
+      }
+    }
+    return nullptr;
+  }
   void setSubControlMarkerCursor(QTextCursor cursor);
   void setPseudoStateMarkerCursor(QTextCursor cursor);
-  QTextCursor extensionCursor() const;
-  int extensionPosition() const;
-  void setExtensionCursor(QTextCursor cursor);
-  QTextCursor markerCursor() const;
-  int markerPosition() const;
-  void setMarkerCursor(QTextCursor cursor);
-  bool hasMarker();
+  //  QTextCursor extensionCursor() const;
+  //  int extensionPosition() const;
+  //  void setExtensionCursor(QTextCursor cursor);
+  //  QTextCursor markerCursor() const;
+  //  int markerPosition() const;
+  //  void setMarkerCursor(QTextCursor cursor);
+  //  bool hasMarker();
 
-  QString extensionName() const;
-  void setExtensionName(const QString& name);
+  //  QString extensionName() const;
+  //  void setExtensionName(const QString& name);
   bool isExtensionValid() const;
-  bool isExtensionFuzzy() const;
+  bool isSubControlFuzzy() const;
   bool isExtensionBad() const;
   bool isSubControl() const;
   bool isPseudoState() const;
-  void setExtensionType(enum NodeType type, NodeChecks check);
-  bool hasExtension() const;
-  int extensionLength() const;
+  //  void setExtensionType(enum NodeType type, NodeChecks check);
+  bool hasSubControl() const;
+  //  int subControlLength() const;
 
   bool hasStartBrace() const;
   void setStartBraceCursor(QTextCursor cursor);
@@ -397,34 +474,34 @@ private:
   CommentNodeData* comment_ptr;
 };
 
-class BadStartCommentNode
-  : public WidgetNode
-  , public BadNode
-{
-  Q_OBJECT
-public:
-  explicit BadStartCommentNode(QTextCursor start,
-                               ParserState::Errors errors,
-                               StylesheetEditor* editor,
-                               QObject* parent = nullptr,
-                               enum NodeType type = CommentStartMarkerType);
+// class BadStartCommentNode
+//  : public WidgetNode
+//  , public BadNode
+//{
+//  Q_OBJECT
+// public:
+//  explicit BadStartCommentNode(QTextCursor start,
+//                               ParserState::Errors errors,
+//                               StylesheetEditor* editor,
+//                               QObject* parent = nullptr,
+//                               enum NodeType type = CommentStartMarkerType);
 
-  int end() const override;
-};
+//  int end() const override;
+//};
 
-class BadEndCommentNode
-  : public WidgetNode
-  , public BadNode
-{
-  Q_OBJECT
-public:
-  explicit BadEndCommentNode(QTextCursor start,
-                             ParserState::Errors errors,
-                             StylesheetEditor* editor,
-                             QObject* parent = nullptr,
-                             enum NodeType type = CommentEndMarkerType);
+// class BadEndCommentNode
+//  : public WidgetNode
+//  , public BadNode
+//{
+//  Q_OBJECT
+// public:
+//  explicit BadEndCommentNode(QTextCursor start,
+//                             ParserState::Errors errors,
+//                             StylesheetEditor* editor,
+//                             QObject* parent = nullptr,
+//                             enum NodeType type = CommentEndMarkerType);
 
-  int end() const override;
-};
+//  int end() const override;
+//};
 
 #endif // NODE_H

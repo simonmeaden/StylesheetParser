@@ -139,10 +139,10 @@ private:
                           int position,
                           const QString& block,
                           NodeCheck check = NodeCheck::WidgetCheck);
-  void stashBadNode(QMap<QTextCursor, Node*>* nodes,
-                    int position,
-                    const QString& block,
-                    ParserState::Error error);
+//  void stashBadNode(QMap<QTextCursor, Node*>* nodes,
+//                    int position,
+//                    const QString& block,
+//                    ParserState::Error error);
   void stashNewline(QMap<QTextCursor, Node*>* nodes, int position);
 //  void stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position);
 //  void stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position);

@@ -36,8 +36,8 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
   //  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
   setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
   //  setSubControlFormat(QColor("pink"), m_back, QFont::Light);
-  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  //  setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
+//  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+    setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
   setPropertyFormat(QColor("darkblue"), m_back, QFont::Light);
   setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
@@ -137,7 +137,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
                                       bool finalBlock)
 {
   auto length = property->name().length();
-  auto position = property->start();
+  auto position = property->position();
   if (isInBlock(position, length, blockStart, blockEnd)) {
     if (property->isValid(finalBlock)) {
       formatVisiblePart(
@@ -208,7 +208,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
   for (auto& key : nodes.keys()) {
     auto node = nodes.value(key);
     auto type = node->type();
-    int nodeStart = node->start();
+    int nodeStart = node->position();
     auto length = node->length();
     auto nodeEnd = nodeStart + length;
     int position;
@@ -224,31 +224,32 @@ StylesheetHighlighter::highlightBlock(const QString& text)
       case NodeType::NewlineType:
         break;
 
-//      case NodeType::FuzzyWidgetType:
+        //      case NodeType::FuzzyWidgetType:
       case NodeType::WidgetType: {
         WidgetNode* widget = qobject_cast<WidgetNode*>(node);
 
-        position = widget->start();
+        position = widget->position();
         length = widget->name().length();
         if (isInBlock(position, length, blockStart, blockEnd)) {
           if (widget->isNameValid()) {
             formatVisiblePart(
               blockStart, blockEnd, position, length, m_widgetFormat);
           } else {
-            if (widget->start() < blockEnd) {
+            if (widget->position() < blockEnd) {
               formatVisiblePart(
                 blockStart, blockEnd, position, length, m_badWidgetFormat);
             }
           }
         }
 
-        if (widget->hasExtension()) {
-          auto extname = widget->extensionName();
-          if (widget->isSubControl()) {
-            position = widget->markerPosition();
+        if (widget->hasSubControl()) {
+          auto subcontrol = widget->subControl();
+          auto extname = subcontrol->name();
+          if (subcontrol->hasMarker()) {
+            position = subcontrol->markerPosition();
             if (isInBlock(position, 2, blockStart, blockEnd)) {
-              if (!widget->isExtensionFuzzy() &&
-                  widget->doesMarkerMatch(NodeCheck::SubControlCheck)) {
+              if (!subcontrol->isFuzzy()/* &&
+                  widget->doesMarkerMatch(NodeCheck::SubControlCheck)*/) {
                 formatVisiblePart(
                   blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
               } else {
@@ -259,8 +260,9 @@ StylesheetHighlighter::highlightBlock(const QString& text)
                                   m_badSubControlMarkerFormat);
               }
             }
-            position = widget->extensionPosition();
-            length = widget->extensionLength();
+//            auto subcontrol = widget->subControl();
+            position = subcontrol->position();
+            length = subcontrol->length();
             if (isInBlock(position, length, blockStart, blockEnd)) {
               if (widget->isExtensionValid() && !widget->isExtensionBad()) {
                 formatVisiblePart(
@@ -268,49 +270,51 @@ StylesheetHighlighter::highlightBlock(const QString& text)
               } else {
                 formatVisiblePart(blockStart,
                                   blockEnd,
-                                  widget->extensionPosition(),
-                                  widget->extensionLength(),
+                                  position,
+                                  length,
                                   m_badSubControlFormat);
               }
             }
-          } else if (widget->isPseudoState() && widget->doMarkersMatch()) {
-            position = widget->markerPosition();
-            if (isInBlock(position, 1, blockStart, blockEnd)) {
-              if (!widget->isExtensionFuzzy() &&
-                  widget->doesMarkerMatch(NodeCheck::PseudoStateCheck)) {
-                formatVisiblePart(
-                  blockStart, blockEnd, position, 1, m_pseudoStateMarkerFormat);
-              } else {
-                formatVisiblePart(blockStart,
-                                  blockEnd,
-                                  position,
-                                  2,
-                                  m_badPseudoStateMarkerFormat);
-              }
-            }
-            position = widget->extensionPosition();
-            length = widget->extensionLength();
-            if (isInBlock(position, length, blockStart, blockEnd)) {
-              if (widget->isExtensionValid()) {
-                formatVisiblePart(blockStart,
-                                  blockEnd,
-                                  widget->extensionPosition(),
-                                  widget->extensionLength(),
-                                  m_pseudoStateFormat);
-              } else {
-                formatVisiblePart(blockStart,
-                                  blockEnd,
-                                  widget->extensionPosition(),
-                                  widget->extensionLength(),
-                                  m_badPseudoStateFormat);
-              }
-            }
+          } else if (widget->isPseudoState() /*&& widget->doMarkersMatch()*/) {
+            //            position = widget->markerPosition();
+            //            if (isInBlock(position, 1, blockStart, blockEnd)) {
+            //              if (!widget->isExtensionFuzzy() &&
+            //                  widget->doesMarkerMatch(NodeCheck::PseudoStateCheck))
+            //                  {
+            //                formatVisiblePart(
+            //                  blockStart, blockEnd, position, 1,
+            //                  m_pseudoStateMarkerFormat);
+            //              } else {
+            //                formatVisiblePart(blockStart,
+            //                                  blockEnd,
+            //                                  position,
+            //                                  2,
+            //                                  m_badPseudoStateMarkerFormat);
+            //              }
+            //            }
+            //            auto subcontrol = widget->subControl();
+            //            auto position = subcontrol->position();
+            //            length = subcontrol->length();
+            //            if (isInBlock(position, length, blockStart, blockEnd))
+            //            {
+            //              if (widget->isExtensionValid()) {
+            //                formatVisiblePart(
+            //                  blockStart, blockEnd, position, length,
+            //                  m_pseudoStateFormat);
+            //              } else {
+            //                formatVisiblePart(blockStart,
+            //                                  blockEnd,
+            //                                  position,
+            //                                  length,
+            //                                  m_badPseudoStateFormat);
+            //              }
+            //            }
           } else {
-            formatVisiblePart(blockStart,
-                              blockEnd,
-                              widget->extensionPosition(),
-                              widget->extensionLength(),
-                              m_badSubControlFormat);
+            //            formatVisiblePart(blockStart,
+            //                              blockEnd,
+            //                              widget->extensionPosition(),
+            //                              widget->subControlLength(),
+            //                              m_badSubControlFormat);
           }
         }
 
@@ -361,8 +365,11 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         break;
 
       case NodeType::CommentType:
-        formatVisiblePart(
-          blockStart, blockEnd, node->start(), node->length(), m_commentFormat);
+        formatVisiblePart(blockStart,
+                          blockEnd,
+                          node->position(),
+                          node->length(),
+                          m_commentFormat);
         break;
 
       case NodeType::PropertyType: {
@@ -373,41 +380,45 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         break;
       }
 
-//      case NodeType::StartBraceType: {
-//        StartBraceNode* startbrace = qobject_cast<StartBraceNode*>(node);
-//        if (startbrace->isBraceAtCursor()) {
-//          if (startbrace->hasEndBrace()) {
-//            setFormat(nodeStart, node->length(), m_braceMatchFormat);
-//          } else {
-//            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
-//          }
-//        } else {
-//          if (startbrace->hasEndBrace()) {
-//            setFormat(nodeStart, node->length(), m_startBraceFormat);
-//          } else {
-//            setFormat(nodeStart, node->length(), m_badStartBraceFormat);
-//          }
-//        }
-//        break;
-//      }
+        //      case NodeType::StartBraceType: {
+        //        StartBraceNode* startbrace =
+        //        qobject_cast<StartBraceNode*>(node); if
+        //        (startbrace->isBraceAtCursor()) {
+        //          if (startbrace->hasEndBrace()) {
+        //            setFormat(nodeStart, node->length(), m_braceMatchFormat);
+        //          } else {
+        //            setFormat(nodeStart, node->length(),
+        //            m_badBraceMatchFormat);
+        //          }
+        //        } else {
+        //          if (startbrace->hasEndBrace()) {
+        //            setFormat(nodeStart, node->length(), m_startBraceFormat);
+        //          } else {
+        //            setFormat(nodeStart, node->length(),
+        //            m_badStartBraceFormat);
+        //          }
+        //        }
+        //        break;
+        //      }
 
-//      case NodeType::EndBraceType: {
-//        EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
-//        if (endbrace->isBraceAtCursor()) {
-//          if (endbrace->hasStartBrace()) {
-//            setFormat(nodeStart, node->length(), m_braceMatchFormat);
-//          } else {
-//            setFormat(nodeStart, node->length(), m_badBraceMatchFormat);
-//          }
-//        } else {
-//          if (endbrace->hasStartBrace()) {
-//            setFormat(nodeStart, node->length(), m_endBraceFormat);
-//          } else {
-//            setFormat(nodeStart, node->length(), m_badEndBraceFormat);
-//          }
-//        }
-//        break;
-//      }
+        //      case NodeType::EndBraceType: {
+        //        EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
+        //        if (endbrace->isBraceAtCursor()) {
+        //          if (endbrace->hasStartBrace()) {
+        //            setFormat(nodeStart, node->length(), m_braceMatchFormat);
+        //          } else {
+        //            setFormat(nodeStart, node->length(),
+        //            m_badBraceMatchFormat);
+        //          }
+        //        } else {
+        //          if (endbrace->hasStartBrace()) {
+        //            setFormat(nodeStart, node->length(), m_endBraceFormat);
+        //          } else {
+        //            setFormat(nodeStart, node->length(), m_badEndBraceFormat);
+        //          }
+        //        }
+        //        break;
+        //      }
 
       default:
         break;

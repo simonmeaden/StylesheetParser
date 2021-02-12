@@ -337,7 +337,9 @@ StylesheetEdit::addCustomWidget(const QString& name, const QString& parent)
   return m_editor->addCustomWidget(name, parent);
 }
 
-QStringList StylesheetEdit::widgets() {
+QStringList
+StylesheetEdit::widgets()
+{
   return m_editor->widgets();
 }
 
@@ -407,104 +409,151 @@ StylesheetEditor::setup(BookmarkArea* bookmarkArea,
   m_lineNumberArea = linenumberArea;
 
   m_datastore = new DataStore();
-  m_parser = new Parser(m_datastore, q_ptr);
+  m_parser = new Parser(m_datastore, this);
 
-  m_highlighter = new StylesheetHighlighter(q_ptr, m_datastore);
+  m_highlighter = new StylesheetHighlighter(this, m_datastore);
 
-  q_ptr->connect(m_parser,
-                 &Parser::parseComplete,
-                 q_ptr,
-                 &StylesheetEditor::handleParseComplete);
-  q_ptr->connect(m_parser,
-                 &Parser::rehighlight,
-                 q_ptr,
-                 &StylesheetEditor::handleRehighlight);
-  q_ptr->connect(m_parser,
-                 &Parser::rehighlightBlock,
-                 q_ptr,
-                 &StylesheetEditor::handleRehighlightBlock);
+  connect(m_parser,
+          &Parser::parseComplete,
+          this,
+          &StylesheetEditor::handleParseComplete);
+  connect(
+    m_parser, &Parser::rehighlight, this, &StylesheetEditor::handleRehighlight);
+  connect(m_parser,
+          &Parser::rehighlightBlock,
+          this,
+          &StylesheetEditor::handleRehighlightBlock);
 
-  q_ptr->connect(q_ptr,
-                 &QPlainTextEdit::cursorPositionChanged,
-                 q_ptr,
-                 &StylesheetEditor::updateLineNumberArea);
-  q_ptr->connect(q_ptr,
-                 &QPlainTextEdit::cursorPositionChanged,
-                 q_ptr,
-                 &StylesheetEditor::cursorPositionHasChanged);
-  q_ptr->connect(q_ptr->document(),
-                 &QTextDocument::contentsChange,
-                 q_ptr,
-                 &StylesheetEditor::documentChanged,
-                 Qt::UniqueConnection);
+  connect(this,
+          &QPlainTextEdit::cursorPositionChanged,
+          this,
+          &StylesheetEditor::updateLineNumberArea);
+  connect(this,
+          &QPlainTextEdit::cursorPositionChanged,
+          this,
+          &StylesheetEditor::cursorPositionHasChanged);
+  connect(document(),
+          &QTextDocument::contentsChange,
+          this,
+          &StylesheetEditor::documentChanged,
+          Qt::UniqueConnection);
 }
 
-//StylesheetEditorPrivate::StylesheetEditorPrivate(StylesheetEditor* parent)
-//  : q_ptr(parent)
+// StylesheetEditorPrivate::StylesheetEditorPrivate(StylesheetEditor* parent)
+//  : this(parent)
 //  , m_parseComplete(false)
 //  , m_oldSection(new NodeSection())
 //{}
 
-//void
-//StylesheetEditorPrivate::setup(BookmarkArea* bookmarkArea,
+// void
+// StylesheetEditorPrivate::setup(BookmarkArea* bookmarkArea,
 //                               LineNumberArea* linenumberArea)
 //{
 //  m_bookmarkArea = bookmarkArea;
 //  m_lineNumberArea = linenumberArea;
 
 //  m_datastore = new DataStore();
-//  m_parser = new Parser(m_datastore, q_ptr);
+//  m_parser = new Parser(m_datastore, this);
 
-//  m_highlighter = new StylesheetHighlighter(q_ptr, m_datastore);
+//  m_highlighter = new StylesheetHighlighter(this, m_datastore);
 
-//  q_ptr->connect(m_parser,
+//  connect(m_parser,
 //                 &Parser::parseComplete,
-//                 q_ptr,
+//                 this,
 //                 &StylesheetEditor::handleParseComplete);
-//  q_ptr->connect(m_parser,
+//  connect(m_parser,
 //                 &Parser::rehighlight,
-//                 q_ptr,
+//                 this,
 //                 &StylesheetEditor::handleRehighlight);
-//  q_ptr->connect(m_parser,
+//  connect(m_parser,
 //                 &Parser::rehighlightBlock,
-//                 q_ptr,
+//                 this,
 //                 &StylesheetEditor::handleRehighlightBlock);
 
-//  q_ptr->connect(q_ptr,
+//  connect(this,
 //                 &QPlainTextEdit::cursorPositionChanged,
-//                 q_ptr,
+//                 this,
 //                 &StylesheetEditor::updateLineNumberArea);
-//  q_ptr->connect(q_ptr,
+//  connect(this,
 //                 &QPlainTextEdit::cursorPositionChanged,
-//                 q_ptr,
+//                 this,
 //                 &StylesheetEditor::cursorPositionHasChanged);
-//  q_ptr->connect(q_ptr->document(),
+//  connect(document(),
 //                 &QTextDocument::contentsChange,
-//                 q_ptr,
+//                 this,
 //                 &StylesheetEditor::documentChanged,
 //                 Qt::UniqueConnection);
 //}
 
-//int
-//StylesheetEditorPrivate::maxSuggestionCount() const
+// int
+// StylesheetEditorPrivate::maxSuggestionCount() const
 //{
 //  return m_parser->maxSuggestionCount();
 //}
 
-//void
-//StylesheetEditorPrivate::setMaxSuggestionCount(int maxSuggestionCount)
+// void
+// StylesheetEditorPrivate::setMaxSuggestionCount(int maxSuggestionCount)
 //{
 //  m_parser->setMaxSuggestionCount(maxSuggestionCount);
 //}
 
 int
-StylesheetEditor::getLineCount()
+StylesheetEditor::lineCount()
 {
   return m_lineNumberArea->lineCount();
 }
 
-//int
-//StylesheetEditorPrivate::getLineCount() const
+bool
+StylesheetEditor::addCustomWidget(const QString& name, const QString& parent)
+{
+  return m_datastore->addCustomWidget(name, parent);
+}
+
+QStringList
+StylesheetEditor::widgets()
+{
+  return m_datastore->widgets();
+}
+
+bool
+StylesheetEditor::addCustomWidgetPseudoStates(const QString& name,
+                                              const QStringList& states)
+{
+  return m_datastore->addCustomWidgetPseudoStates(name, states);
+}
+
+bool
+StylesheetEditor::addCustomWidgetSubControls(const QString& name,
+                                             const QStringList& controls)
+{
+  return m_datastore->addCustomWidgetSubControls(name, controls);
+}
+
+bool
+StylesheetEditor::addCustomWidgetProperties(const QString& name,
+                                            const QStringList& properties)
+{
+  return m_datastore->addCustomWidgetProperties(name, properties);
+}
+
+bool
+StylesheetEditor::addCustomWidgetPropertyValue(const QString& widget,
+                                               const QString& property,
+                                               const QString& value)
+{
+  return m_datastore->addCustomWidgetPropertyValue(widget, property, value);
+}
+
+bool
+StylesheetEditor::addCustomWidgetPropertyValues(const QString& widget,
+                                                const QString& property,
+                                                QStringList values)
+{
+  return m_datastore->addCustomWidgetPropertyValues(widget, property, values);
+}
+
+// int
+// StylesheetEditorPrivate::getLineCount() const
 //{
 //  return m_lineNumberArea->lineCount();
 //}
@@ -522,8 +571,8 @@ StylesheetEditor::setPlainText(const QString& text)
           Qt::UniqueConnection);
 }
 
-//void
-//StylesheetEditorPrivate::setPlainText(const QString& text)
+// void
+// StylesheetEditorPrivate::setPlainText(const QString& text)
 //{
 //  m_parser->parseInitialText(text);
 //}
@@ -540,14 +589,14 @@ StylesheetEditor::handleRehighlightBlock(const QTextBlock& block)
   m_highlighter->rehighlightBlock(block);
 }
 
-//void
-//StylesheetEditorPrivate::handleRehighlight()
+// void
+// StylesheetEditorPrivate::handleRehighlight()
 //{
 //  m_highlighter->rehighlight();
 //}
 
-//void
-//StylesheetEditorPrivate::handleRehighlightBlock(const QTextBlock& block)
+// void
+// StylesheetEditorPrivate::handleRehighlightBlock(const QTextBlock& block)
 //{
 //  m_highlighter->rehighlightBlock(block);
 //}
@@ -558,18 +607,18 @@ StylesheetEditor::handleParseComplete()
   m_highlighter->rehighlight();
   setLineNumber(1);
   m_parseComplete = true;
-  emit q_ptr->lineNumber(currentLineNumber());
-  emit q_ptr->lineCount(m_lineNumberArea->lineCount());
+  emit lineNumber(currentLineNumber());
+  emit lineCount(m_lineNumberArea->lineCount());
 }
 
-//void
-//StylesheetEditorPrivate::handleParseComplete()
+// void
+// StylesheetEditorPrivate::handleParseComplete()
 //{
 //  m_highlighter->rehighlight();
 //  setLineNumber(1);
 //  m_parseComplete = true;
-//  emit q_ptr->lineNumber(currentLineNumber());
-//  emit q_ptr->lineCount(m_lineNumberArea->lineCount());
+//  emit lineNumber(currentLineNumber());
+//  emit lineCount(m_lineNumberArea->lineCount());
 //}
 
 void
@@ -584,14 +633,14 @@ StylesheetEditor::showNewlineMarkers()
   return m_parser->showLineMarkers();
 }
 
-//void
-//StylesheetEditorPrivate::setShowNewlineMarkers(bool show)
+// void
+// StylesheetEditorPrivate::setShowNewlineMarkers(bool show)
 //{
 //  m_parser->setShowLineMarkers(show);
 //}
 
-//bool
-//StylesheetEditorPrivate::showLineMarkers()
+// bool
+// StylesheetEditorPrivate::showLineMarkers()
 //{
 //  return m_parser->showLineMarkers();
 //}
@@ -602,17 +651,17 @@ StylesheetEditor::styleSheet() const
   return m_stylesheet;
 }
 
-//QString
-//StylesheetEditorPrivate::styleSheet() const
+// QString
+// StylesheetEditorPrivate::styleSheet() const
 //{
 //  return m_stylesheet;
 //}
 
 bool
 StylesheetEditor::checkStylesheetColors(StylesheetData* data,
-                                               QColor& color1,
-                                               QColor& color2,
-                                               QColor& color3)
+                                        QColor& color1,
+                                        QColor& color2,
+                                        QColor& color3)
 {
   if (data->colors.count() == 1) {
     color1 = QColor(data->colors.at(0));
@@ -753,10 +802,11 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
     }
   }
 
-  m_highlighter->rehighlight();}
+  m_highlighter->rehighlight();
+}
 
-//void
-//StylesheetEditorPrivate::setStyleSheet(const QString& stylesheet)
+// void
+// StylesheetEditorPrivate::setStyleSheet(const QString& stylesheet)
 //{
 //  // TODO implement standard stylesheet shit.
 //  m_stylesheet = stylesheet;
@@ -839,8 +889,8 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
 //            continue;
 
 //          } else if (data->name == "propertymarker") {
-//            m_highlighter->setPropertyMarkerFormat(color1, color2, fontWeight);
-//            continue;
+//            m_highlighter->setPropertyMarkerFormat(color1, color2,
+//            fontWeight); continue;
 
 //          } else if (data->name == "value") {
 //            m_highlighter->setValueFormat(color1, color2, fontWeight);
@@ -884,8 +934,8 @@ StylesheetEditor::setValueFormat(QColor color,
   m_highlighter->setValueFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setValueFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setValueFormat(QColor color,
 //                                        QColor back,
 //                                        QFont::Weight weight)
 //{
@@ -900,8 +950,8 @@ StylesheetEditor::setWidgetFormat(QColor color,
   m_highlighter->setWidgetFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setWidgetFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setWidgetFormat(QColor color,
 //                                         QColor back,
 //                                         QFont::Weight weight)
 //{
@@ -916,8 +966,8 @@ StylesheetEditor::setPseudoStateFormat(QColor color,
   m_highlighter->setPseudoStateFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setPseudoStateFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setPseudoStateFormat(QColor color,
 //                                              QColor back,
 //                                              QFont::Weight weight)
 //{
@@ -932,8 +982,8 @@ StylesheetEditor::setPseudoStateMarkerFormat(QColor color,
   m_highlighter->setPseudoStateMarkerFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setPseudoStateMarkerFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setPseudoStateMarkerFormat(QColor color,
 //                                                    QColor back,
 //                                                    QFont::Weight weight)
 //{
@@ -947,8 +997,8 @@ StylesheetEditor::setSubControlFormat(QColor color,
 {
   m_highlighter->setSubControlFormat(color, back, weight);
 }
-//void
-//StylesheetEditorPrivate::setSubControlFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setSubControlFormat(QColor color,
 //                                             QColor back,
 //                                             QFont::Weight weight)
 //{
@@ -963,8 +1013,8 @@ StylesheetEditor::setSubControlMarkerFormat(QColor color,
   m_highlighter->setSubControlMarkerFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setSubControlMarkerFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setSubControlMarkerFormat(QColor color,
 //                                                   QColor back,
 //                                                   QFont::Weight weight)
 //{
@@ -979,8 +1029,8 @@ StylesheetEditor::setPropertyFormat(QColor color,
   m_highlighter->setPropertyFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setPropertyFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setPropertyFormat(QColor color,
 //                                           QColor back,
 //                                           QFont::Weight weight)
 //{
@@ -995,8 +1045,8 @@ StylesheetEditor::setPropertyMarkerFormat(QColor color,
   m_highlighter->setPropertyMarkerFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setPropertyMarkerFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setPropertyMarkerFormat(QColor color,
 //                                                 QColor back,
 //                                                 QFont::Weight weight)
 //{
@@ -1005,8 +1055,8 @@ StylesheetEditor::setPropertyMarkerFormat(QColor color,
 
 void
 StylesheetEditor::setPropertyEndMarkerFormat(QColor color,
-                                                    QColor back,
-                                                    QFont::Weight weight)
+                                             QColor back,
+                                             QFont::Weight weight)
 {
   m_highlighter->setPropertyMarkerFormat(color, back, weight);
 }
@@ -1021,8 +1071,8 @@ StylesheetEditor::setLineNumberFormat(QColor color,
   m_lineNumberArea->setWeight(weight);
 }
 
-//void
-//StylesheetEditorPrivate::setLineNumberFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setLineNumberFormat(QColor color,
 //                                             QColor back,
 //                                             QFont::Weight weight)
 //{
@@ -1039,8 +1089,8 @@ StylesheetEditor::setStartBraceFormat(QColor color,
   m_highlighter->setStartBraceFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setStartBraceFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setStartBraceFormat(QColor color,
 //                                             QColor back,
 //                                             QFont::Weight weight)
 //{
@@ -1055,8 +1105,8 @@ StylesheetEditor::setEndBraceFormat(QColor color,
   m_highlighter->setEndBraceFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setEndBraceFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setEndBraceFormat(QColor color,
 //                                           QColor back,
 //                                           QFont::Weight weight)
 //{
@@ -1071,8 +1121,8 @@ StylesheetEditor::setBraceMatchFormat(QColor color,
   m_highlighter->setBraceMatchFormat(color, back, weight);
 }
 
-//void
-//StylesheetEditorPrivate::setBraceMatchFormat(QColor color,
+// void
+// StylesheetEditorPrivate::setBraceMatchFormat(QColor color,
 //                                             QColor back,
 //                                             QFont::Weight weight)
 //{
@@ -1100,23 +1150,23 @@ StylesheetEditor::setMaxSuggestionCount(int maxSuggestionCount)
 void
 StylesheetEditor::mousePressEvent(QMouseEvent* event)
 {
-    auto tc = q_ptr->cursorForPosition(event->pos());
-    auto lineNumber = calculateLineNumber(tc);
-    if (lineNumber >= 1) {
-      setLineNumber(lineNumber);
-      q_ptr->update();
-    }
+  auto tc = cursorForPosition(event->pos());
+  auto lineNumber = calculateLineNumber(tc);
+  if (lineNumber >= 1) {
+    setLineNumber(lineNumber);
+    update();
+  }
   QPlainTextEdit::mousePressEvent(event);
 }
 
-//bool
-//StylesheetEditorPrivate::handleMousePress(QMouseEvent* event)
+// bool
+// StylesheetEditorPrivate::handleMousePress(QMouseEvent* event)
 //{
-//  auto tc = q_ptr->cursorForPosition(event->pos());
+//  auto tc = cursorForPosition(event->pos());
 //  auto lineNumber = calculateLineNumber(tc);
 //  if (lineNumber >= 1) {
 //    setLineNumber(lineNumber);
-//    q_ptr->update();
+//    update();
 //  }
 //  return false;
 //}
@@ -1128,7 +1178,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
   NodeSection* section = nullptr;
   QString hover;
   m_parser->nodeForPoint(pos, &section);
-  q_ptr->setToolTip(QString());
+  setToolTip(QString());
   if (section) {
     if (*section != *m_oldSection) {
       if (section->node) {
@@ -1144,23 +1194,26 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
             }
             case SectionType::WidgetSubControlMarker:
             case SectionType::WidgetSubControl: {
-              if (widget->isExtensionFuzzy()) {
-                setHoverFuzzySubControl(hover, widget->extensionName());
+              if (widget->isSubControlFuzzy()) {
+                setHoverFuzzySubControl(hover, widget->subControl()->name());
               } else if (widget->isExtensionBad()) {
                 setHoverBadSubControl(
-                  hover, widget->name(), widget->extensionName());
+                  hover, widget->name(), widget->subControl()->name());
               }
               break;
             }
             case SectionType::WidgetPseudoStateMarker:
             case SectionType::WidgetPseudoState: {
-              if (widget->isExtensionFuzzy()) {
-                if (widget->isPseudoState()) {
-                  setHoverFuzzyPseudoState(hover, widget->extensionName());
-                }
-              }
+//              if (widget->isSubControlFuzzy()) {
+//                if (widget->isPseudoState()) {
+//                  setHoverFuzzyPseudoState(hover, widget->extensionName());
+//                }
+//              }
               break;
             }
+            case WidgetStartBrace:
+            case WidgetEndBrace:
+              break;
             default: {
               qWarning();
               break;
@@ -1171,7 +1224,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
           switch (section->type) {
             case SectionType::PropertyName: {
               if (!property->isValidPropertyName()) {
-                hover.append(q_ptr->tr("Invalid property name <em>%1</em>")
+                hover.append(tr("Invalid property name <em>%1</em>")
                                .arg(property->name()));
               }
               if (!property->hasPropertyMarker()) {
@@ -1188,7 +1241,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
               } else if (!property->hasPropertyMarker()) {
                 setHoverBadPropertyMarker(hover);
               } else if (!property->isValueValid(section->position)) {
-                hover.append(q_ptr->tr("Invalid property value <em>%1</em>")
+                hover.append(tr("Invalid property value <em>%1</em>")
                                .arg(property->name()));
               }
               break;
@@ -1200,8 +1253,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
         }
       }
       if (!hover.isEmpty()) {
-        QToolTip::showText(
-          event->globalPos(), hover, q_ptr, q_ptr->viewport()->rect());
+        QToolTip::showText(event->globalPos(), hover, this, viewport()->rect());
       } else {
         QToolTip::hideText();
       }
@@ -1210,17 +1262,18 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
   } else {
     QToolTip::hideText();
     m_oldSection->clear();
-  }  QPlainTextEdit::mouseMoveEvent(event);
+  }
+  QPlainTextEdit::mouseMoveEvent(event);
 }
 
-//void
-//StylesheetEditorPrivate::handleMouseMove(QMouseEvent* event)
+// void
+// StylesheetEditorPrivate::handleMouseMove(QMouseEvent* event)
 //{
 //  auto pos = event->pos();
 //  NodeSection* section = nullptr;
 //  QString hover;
 //  m_parser->nodeForPoint(pos, &section);
-//  q_ptr->setToolTip(QString());
+//  setToolTip(QString());
 //  if (section) {
 //    if (*section != *m_oldSection) {
 //      if (section->node) {
@@ -1263,7 +1316,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
 //          switch (section->type) {
 //            case SectionType::PropertyName: {
 //              if (!property->isValidPropertyName()) {
-//                hover.append(q_ptr->tr("Invalid property name <em>%1</em>")
+//                hover.append(tr("Invalid property name <em>%1</em>")
 //                               .arg(property->name()));
 //              }
 //              if (!property->hasPropertyMarker()) {
@@ -1280,7 +1333,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
 //              } else if (!property->hasPropertyMarker()) {
 //                setHoverBadPropertyMarker(hover);
 //              } else if (!property->isValueValid(section->position)) {
-//                hover.append(q_ptr->tr("Invalid property value <em>%1</em>")
+//                hover.append(tr("Invalid property value <em>%1</em>")
 //                               .arg(property->name()));
 //              }
 //              break;
@@ -1293,7 +1346,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
 //      }
 //      if (!hover.isEmpty()) {
 //        QToolTip::showText(
-//          event->globalPos(), hover, q_ptr, q_ptr->viewport()->rect());
+//          event->globalPos(), hover, this, viewport()->rect());
 //      } else {
 //        QToolTip::hideText();
 //      }
@@ -1311,66 +1364,58 @@ StylesheetEditor::setHoverBadPropertyMarker(QString& hover)
   if (!hover.isEmpty()) {
     hover.append("\n");
   }
-  hover.append(q_ptr->tr("No property marker (<b>:</b>)"));
+  hover.append(tr("No property marker (<b>:</b>)"));
 }
 
 void
-StylesheetEditor::setHoverFuzzyWidgetName(QString& hover,
-                                                 const QString& name)
+StylesheetEditor::setHoverFuzzyWidgetName(QString& hover, const QString& name)
 {
   if (!hover.isEmpty()) {
     hover.append("\n");
   }
-  hover.append(
-    q_ptr->tr("Invalid <em>fuzzy</em> widget name <em>%1</em>").arg(name));
+  hover.append(tr("Invalid <em>fuzzy</em> widget name <em>%1</em>").arg(name));
 }
 
 void
-StylesheetEditor::setHoverFuzzySubControl(QString& hover,
-                                                 const QString& name)
+StylesheetEditor::setHoverFuzzySubControl(QString& hover, const QString& name)
 {
   if (!hover.isEmpty()) {
     hover.append("\n");
   }
-  hover.append(
-    q_ptr->tr("Invalid <em>fuzzy</em> subcontrol <em>%1</em>").arg(name));
+  hover.append(tr("Invalid <em>fuzzy</em> subcontrol <em>%1</em>").arg(name));
 }
 
 void
 StylesheetEditor::setHoverBadSubControl(QString& hover,
-                                               const QString& widget,
-                                               const QString& name)
-{
-  if (!hover.isEmpty()) {
-    hover.append("\n");
-  }
-  hover.append(q_ptr->tr("Invalid subcontrol <em>%1</em> for <em>%2</em>")
-                 .arg(name)
-                 .arg(widget));
-}
-
-void
-StylesheetEditor::setHoverFuzzyPseudoState(QString& hover,
-                                                  const QString& name)
+                                        const QString& widget,
+                                        const QString& name)
 {
   if (!hover.isEmpty()) {
     hover.append("\n");
   }
   hover.append(
-    q_ptr->tr("Invalid <em>fuzzy</em> pseudo state <em>%1</em>").arg(name));
+    tr("Invalid subcontrol <em>%1</em> for <em>%2</em>").arg(name).arg(widget));
 }
 
 void
-StylesheetEditor::setHoverBadPropertyEndMarker(
-  QString& hover,
-  const PropertyNode* property)
+StylesheetEditor::setHoverFuzzyPseudoState(QString& hover, const QString& name)
 {
-  auto text = q_ptr->toPlainText().mid(property->end());
+  if (!hover.isEmpty()) {
+    hover.append("\n");
+  }
+  hover.append(tr("Invalid <em>fuzzy</em> pseudo state <em>%1</em>").arg(name));
+}
+
+void
+StylesheetEditor::setHoverBadPropertyEndMarker(QString& hover,
+                                               const PropertyNode* property)
+{
+  auto text = toPlainText().mid(property->end());
   if (!checkForEmpty(text)) {
     if (!hover.isEmpty()) {
       hover.append("\n");
     }
-    hover.append(q_ptr->tr("No end marker (<b>;</b>)"));
+    hover.append(tr("No end marker (<b>;</b>)"));
   }
 }
 
@@ -1432,14 +1477,8 @@ StylesheetEditor::format()
   // TODO pretty print format
 }
 
-//void
-//StylesheetEditorPrivate::format()
-//{
-//  // TODO pretty print format
-//}
-
 QString
-StylesheetEditorPrivate::getValueAtCursor(int pos, const QString& text)
+StylesheetEditor::getValueAtCursor(int pos, const QString& text)
 {
   QChar c;
   QString value;
@@ -1489,8 +1528,8 @@ StylesheetEditor::updateLineNumberArea()
 //  //  d_ptr->updateLineNumberArea(rect, dy);
 //}
 
-//void
-//StylesheetEditorPrivate::updateLineNumberArea(int linenumber)
+// void
+// StylesheetEditorPrivate::updateLineNumberArea(int linenumber)
 //{
 //  m_lineNumberArea->setLineNumber(linenumber);
 //  m_lineNumberArea->update();
@@ -1499,8 +1538,8 @@ StylesheetEditor::updateLineNumberArea()
 ///*
 //   Calculates current line number and total line count.
 //*/
-//int
-//StylesheetEditorPrivate::calculateLineNumber(QTextCursor textCursor)
+// int
+// StylesheetEditorPrivate::calculateLineNumber(QTextCursor textCursor)
 //{
 //  QTextCursor cursor(textCursor);
 //  cursor.movePosition(QTextCursor::StartOfLine);
@@ -1537,7 +1576,7 @@ StylesheetEditor::updateLineNumberArea()
    Calculates the current text column.
 */
 int
-StylesheetEditorPrivate::calculateColumn(QTextCursor textCursor)
+StylesheetEditor::calculateColumn(QTextCursor textCursor)
 {
   QTextCursor cursor(textCursor);
   cursor.movePosition(QTextCursor::StartOfLine);
@@ -1550,8 +1589,8 @@ StylesheetEditor::cursorPositionHasChanged()
   m_parser->handleCursorPositionChanged(textCursor());
 }
 
-//void
-//StylesheetEditorPrivate::cursorPositionChanged(QTextCursor textCursor)
+// void
+// StylesheetEditorPrivate::cursorPositionChanged(QTextCursor textCursor)
 //{
 //  m_parser->handleCursorPositionChanged(textCursor);
 //}
@@ -1581,40 +1620,40 @@ StylesheetEditor::linenumberMenuRequested(QPoint pos)
 void
 StylesheetEditor::handleCustomMenuRequested(QPoint pos)
 {
-  QMenu* menu = new QMenu(q_ptr); // q_ptr->createStandardContextMenu();
+  QMenu* menu = new QMenu(this); // createStandardContextMenu();
 
-  auto act = new QAction(q_ptr->tr("&Undo"), q_ptr);
+  auto act = new QAction(tr("&Undo"), this);
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Z));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::undo);
+  connect(act, &QAction::triggered, this, &StylesheetEditor::undo);
   menu->addAction(act);
 
-  act = new QAction(q_ptr->tr("&Redo"), q_ptr);
+  act = new QAction(tr("&Redo"), this);
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Z));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::redo);
+  connect(act, &QAction::triggered, this, &StylesheetEditor::redo);
   menu->addAction(act);
 
   menu->addSeparator();
 
-  act = new QAction(q_ptr->tr("Cu&t"), q_ptr);
+  act = new QAction(tr("Cu&t"), this);
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_X));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::cut);
+  connect(act, &QAction::triggered, this, &StylesheetEditor::cut);
   menu->addAction(act);
 
-  act = new QAction(q_ptr->tr("&Copy"), q_ptr);
+  act = new QAction(tr("&Copy"), this);
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_C));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::copy);
+  connect(act, &QAction::triggered, this, &StylesheetEditor::copy);
   menu->addAction(act);
 
-  act = new QAction(q_ptr->tr("&Paste"), q_ptr);
+  act = new QAction(tr("&Paste"), this);
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_V));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::paste);
+  connect(act, &QAction::triggered, this, &StylesheetEditor::paste);
   menu->addAction(act);
 
   menu->addSeparator();
 
-  act = new QAction(q_ptr->tr("Select All"), q_ptr);
+  act = new QAction(tr("Select All"), this);
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_A));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::selectAll);
+  connect(act, &QAction::triggered, this, &StylesheetEditor::selectAll);
   menu->addAction(act);
 
   menu->addSeparator();
@@ -1623,17 +1662,17 @@ StylesheetEditor::handleCustomMenuRequested(QPoint pos)
 
   menu->addSeparator();
 
-  act = new QAction(q_ptr->tr("&Format"));
+  act = new QAction(tr("&Format"));
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
-  act->setStatusTip(q_ptr->tr("Prettyfy the stylesheet"));
-  q_ptr->connect(act, &QAction::triggered, q_ptr, &StylesheetEditor::format);
+  act->setStatusTip(tr("Prettyfy the stylesheet"));
+  connect(act, &QAction::triggered, this, &StylesheetEditor::format);
   menu->addAction(act);
 
-  menu->popup(q_ptr->viewport()->mapToGlobal(pos));
+  menu->popup(viewport()->mapToGlobal(pos));
 }
 
-//void
-//StylesheetEditorPrivate::suggestionMade(QAction* act)
+// void
+// StylesheetEditorPrivate::suggestionMade(QAction* act)
 //{
 //  m_parser->handleSuggestions(act);
 //}
@@ -1651,16 +1690,16 @@ StylesheetEditor::handleTextChanged()
   qWarning();
 }
 
-//void
-//StylesheetEditorPrivate::handleDocumentChanged(int pos,
+// void
+// StylesheetEditorPrivate::handleDocumentChanged(int pos,
 //                                               int charsRemoved,
 //                                               int charsAdded)
 //{
 //  m_parser->handleDocumentChanged(pos, charsRemoved, charsAdded);
 //}
 
-//void
-//StylesheetEditorPrivate::handleTextChanged()
+// void
+// StylesheetEditorPrivate::handleTextChanged()
 //{
 //  qWarning();
 //}
@@ -1683,8 +1722,8 @@ StylesheetEditor::bookmarkAreaWidth()
   return m_bookmarkArea->bookmarkAreaWidth();
 }
 
-//int
-//StylesheetEditorPrivate::bookmarkAreaWidth()
+// int
+// StylesheetEditorPrivate::bookmarkAreaWidth()
 //{
 //  return m_bookmarkArea->bookmarkAreaWidth();
 //}
@@ -1695,8 +1734,8 @@ StylesheetEditor::lineNumberAreaWidth()
   return m_lineNumberArea->lineNumberAreaWidth();
 }
 
-//int
-//StylesheetEditorPrivate::lineNumberAreaWidth()
+// int
+// StylesheetEditorPrivate::lineNumberAreaWidth()
 //{
 //  return m_lineNumberArea->lineNumberAreaWidth();
 //}
@@ -1707,8 +1746,8 @@ StylesheetEditor::bookmarks()
   return m_bookmarkArea->bookmarks();
 }
 
-//QMap<int, BookmarkData*>*
-//StylesheetEditorPrivate::bookmarks()
+// QMap<int, BookmarkData*>*
+// StylesheetEditorPrivate::bookmarks()
 //{
 //  return m_bookmarkArea->bookmarks();
 //}
@@ -1719,8 +1758,8 @@ StylesheetEditor::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
   m_bookmarkArea->setBookmarks(bookmarks);
 }
 
-//void
-//StylesheetEditorPrivate::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
+// void
+// StylesheetEditorPrivate::setBookmarks(QMap<int, BookmarkData*>* bookmarks)
 //{
 //  m_bookmarkArea->setBookmarks(bookmarks);
 //}
@@ -1738,8 +1777,8 @@ StylesheetEditor::insertBookmark(int bookmark, const QString& text)
   m_bookmarkArea->insertBookmark(bm, text);
 }
 
-//void
-//StylesheetEditorPrivate::insertBookmark(int bookmark, const QString& text)
+// void
+// StylesheetEditorPrivate::insertBookmark(int bookmark, const QString& text)
 //{
 //  int bm = (bookmark >= 0 ? bookmark : m_bookmarkLineNumber);
 //  m_bookmarkArea->insertBookmark(bm, text);
@@ -1751,8 +1790,8 @@ StylesheetEditor::toggleBookmark(int bookmark)
   m_bookmarkArea->toggleBookmark(bookmark);
 }
 
-//void
-//StylesheetEditorPrivate::toggleBookmark(int bookmark)
+// void
+// StylesheetEditorPrivate::toggleBookmark(int bookmark)
 //{
 //  m_bookmarkArea->toggleBookmark(bookmark);
 //}
@@ -1770,8 +1809,8 @@ StylesheetEditor::handleEditBookmark(bool)
   editBookmark();
 }
 
-//void
-//StylesheetEditorPrivate::editBookmark(int bookmark)
+// void
+// StylesheetEditorPrivate::editBookmark(int bookmark)
 //{
 //  int lineNumber = (bookmark >= 0 ? bookmark : m_bookmarkLineNumber);
 //  m_bookmarkArea->editBookmark(lineNumber);
@@ -1790,8 +1829,8 @@ StylesheetEditor::handleRemoveBookmark(bool)
   removeBookmark();
 }
 
-//void
-//StylesheetEditorPrivate::removeBookmark(int bookmark)
+// void
+// StylesheetEditorPrivate::removeBookmark(int bookmark)
 //{
 //  int lineNumber = (bookmark >= 0 ? bookmark : m_bookmarkLineNumber);
 //  m_bookmarkArea->removeBookmark(lineNumber);
@@ -1818,8 +1857,8 @@ StylesheetEditor::handleClearBookmarks(bool)
   }
 }
 
-//void
-//StylesheetEditorPrivate::clearBookmarks()
+// void
+// StylesheetEditorPrivate::clearBookmarks()
 //{
 //  m_bookmarkArea->clearBookmarks();
 //}
@@ -1830,8 +1869,8 @@ StylesheetEditor::hasBookmark(int bookmark)
   return m_bookmarkArea->hasBookmark(bookmark);
 }
 
-//bool
-//StylesheetEditorPrivate::hasBookmark(int linenumber)
+// bool
+// StylesheetEditorPrivate::hasBookmark(int linenumber)
 //{
 //  return m_bookmarkArea->hasBookmark(linenumber);
 //}
@@ -1842,8 +1881,8 @@ StylesheetEditor::hasBookmarkText(int bookmark)
   return m_bookmarkArea->hasBookmarkText(bookmark);
 }
 
-//bool
-//StylesheetEditorPrivate::hasBookmarkText(int bookmark)
+// bool
+// StylesheetEditorPrivate::hasBookmarkText(int bookmark)
 //{
 //  return m_bookmarkArea->hasBookmarkText(bookmark);
 //}
@@ -1854,8 +1893,8 @@ StylesheetEditor::bookmarkText(int bookmark)
   return m_bookmarkArea->bookmarkText(bookmark);
 }
 
-//QString
-//StylesheetEditorPrivate::bookmarkText(int bookmark)
+// QString
+// StylesheetEditorPrivate::bookmarkText(int bookmark)
 //{
 //  return m_bookmarkArea->bookmarkText(bookmark);
 //}
@@ -1909,14 +1948,14 @@ StylesheetEditor::handleGotoBookmark()
 //      m_contextMenu->exec(pos);
 //      break;
 //    }
-//    q_ptr->thread()->sleep(100);
+//    thread()->sleep(100);
 //  }
 //}
 
 // void
 // StylesheetEditorPrivate::handleBookmarkMenuEvent(QPoint pos)
 //{
-//  auto tc = q_ptr->cursorForPosition(pos);
+//  auto tc = cursorForPosition(pos);
 //  int lineNumber = calculateLineNumber(tc);
 //  setBookmarkLineNumber(lineNumber);
 
@@ -1944,139 +1983,139 @@ StylesheetEditor::handleGotoBookmark()
 //}
 
 QTextCursor
-StylesheetEditorPrivate::currentCursor() const
+StylesheetEditor::currentCursor() const
 {
   return m_parser->currentCursor();
 }
 
 void
-StylesheetEditorPrivate::setCurrentCursor(const QTextCursor& currentCursor)
+StylesheetEditor::setCurrentCursor(const QTextCursor& currentCursor)
 {
   m_parser->setCurrentCursor(currentCursor);
   setLineData(currentCursor);
 }
 
-void
-StylesheetEditorPrivate::setCurrentLineNumber(const int number)
-{
-  m_lineNumberArea->setLineNumber(number);
-}
+// void
+// StylesheetEditorPrivate::setCurrentLineNumber(const int number)
+//{
+//  m_lineNumberArea->setLineNumber(number);
+//}
 
 int
 StylesheetEditor::currentLineNumber() const
 {
-  return d_ptr->currentLineNumber();
-}
-
-int
-StylesheetEditorPrivate::currentLineNumber() const
-{
   return m_lineNumberArea->currentLineNumber();
 }
 
-int
-StylesheetEditorPrivate::currentLineCount() const
-{
-  return m_lineNumberArea->lineCount();
-}
+// int
+// StylesheetEditorPrivate::currentLineCount() const
+//{
+//  return m_lineNumberArea->lineCount();
+//}
 
 void
 StylesheetEditor::setLineNumber(int lineNumber)
 {
-  d_ptr->setLineNumber(lineNumber);
-}
-
-void
-StylesheetEditorPrivate::setLineNumber(int linenumber)
-{
   m_datastore->setManualMove(true);
-  QTextCursor cursor(q_ptr->document());
+  QTextCursor cursor(document());
   cursor.movePosition(QTextCursor::Start);
   cursor.movePosition(
-    QTextCursor::Down, QTextCursor::MoveAnchor, linenumber - 1);
-  q_ptr->setTextCursor(cursor);
-  q_ptr->setFocus(Qt::OtherFocusReason);
+    QTextCursor::Down, QTextCursor::MoveAnchor, lineNumber - 1);
+  setTextCursor(cursor);
+  setFocus(Qt::OtherFocusReason);
   setCurrentCursor(cursor);
   //  setLineData(cursor);
-  m_lineNumberArea->setLineNumber(linenumber);
+  m_lineNumberArea->setLineNumber(lineNumber);
   m_datastore->setManualMove(false);
 }
 
 void
 StylesheetEditor::up(int n)
 {
-  d_ptr->up(n);
+  m_datastore->setManualMove(true);
+  QTextCursor cursor(currentCursor());
+  cursor.movePosition(QTextCursor::Up, QTextCursor::MoveAnchor, n);
+  setTextCursor(cursor);
+  setCurrentCursor(cursor);
+  setLineData(cursor);
+  m_datastore->setManualMove(false);
 }
 
 void
-StylesheetEditorPrivate::setLineData(QTextCursor cursor)
+StylesheetEditor::setLineData(QTextCursor cursor)
 {
   // this handles display of linenumber, linecount and character column.
   int ln = calculateLineNumber(cursor);
   m_lineNumberArea->setLineNumber(ln);
 }
 
-void
-StylesheetEditorPrivate::up(int n)
-{
-  m_datastore->setManualMove(true);
-  QTextCursor cursor(currentCursor());
-  cursor.movePosition(QTextCursor::Up, QTextCursor::MoveAnchor, n);
-  q_ptr->setTextCursor(cursor);
-  setCurrentCursor(cursor);
-  setLineData(cursor);
-  m_datastore->setManualMove(false);
-}
+// void
+// StylesheetEditorPrivate::up(int n)
+//{
+//  m_datastore->setManualMove(true);
+//  QTextCursor cursor(currentCursor());
+//  cursor.movePosition(QTextCursor::Up, QTextCursor::MoveAnchor, n);
+//  setTextCursor(cursor);
+//  setCurrentCursor(cursor);
+//  setLineData(cursor);
+//  m_datastore->setManualMove(false);
+//}
 
 void
 StylesheetEditor::down(int n)
 {
-  d_ptr->down(n);
-}
-
-void
-StylesheetEditorPrivate::down(int n)
-{
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, n);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
 }
+
+// void
+// StylesheetEditorPrivate::down(int n)
+//{
+//  m_datastore->setManualMove(true);
+//  QTextCursor cursor(currentCursor());
+//  cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, n);
+//  setTextCursor(cursor);
+//  setCurrentCursor(cursor);
+//  setLineData(cursor);
+//  m_datastore->setManualMove(false);
+//}
 
 void
 StylesheetEditor::left(int n)
 {
-  d_ptr->left(n);
-}
-
-void
-StylesheetEditorPrivate::left(int n)
-{
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, n);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
 }
 
-void
-StylesheetEditor::right(int n)
-{
-  d_ptr->right(n);
-}
+// void
+// StylesheetEditorPrivate::left(int n)
+//{
+//  m_datastore->setManualMove(true);
+//  QTextCursor cursor(currentCursor());
+//  cursor.movePosition(QTextCursor::Left, QTextCursor::MoveAnchor, n);
+//  setTextCursor(cursor);
+//  setCurrentCursor(cursor);
+//  setLineData(cursor);
+//  m_datastore->setManualMove(false);
+//}
 
 void
-StylesheetEditorPrivate::right(int n)
+StylesheetEditor::right(int n)
 {
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, n);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
@@ -2085,16 +2124,10 @@ StylesheetEditorPrivate::right(int n)
 void
 StylesheetEditor::start()
 {
-  d_ptr->start();
-}
-
-void
-StylesheetEditorPrivate::start()
-{
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::Start);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
@@ -2103,16 +2136,10 @@ StylesheetEditorPrivate::start()
 void
 StylesheetEditor::end()
 {
-  d_ptr->end();
-}
-
-void
-StylesheetEditorPrivate::end()
-{
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::End);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
@@ -2121,16 +2148,10 @@ StylesheetEditorPrivate::end()
 void
 StylesheetEditor::startOfLine()
 {
-  d_ptr->startOfLine();
-}
-
-void
-StylesheetEditorPrivate::startOfLine()
-{
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::StartOfLine);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
@@ -2139,16 +2160,10 @@ StylesheetEditorPrivate::startOfLine()
 void
 StylesheetEditor::endOfLine()
 {
-  d_ptr->endOfLine();
-}
-
-void
-StylesheetEditorPrivate::endOfLine()
-{
   m_datastore->setManualMove(true);
   QTextCursor cursor(currentCursor());
   cursor.movePosition(QTextCursor::EndOfLine);
-  q_ptr->setTextCursor(cursor);
+  setTextCursor(cursor);
   setCurrentCursor(cursor);
   setLineData(cursor);
   m_datastore->setManualMove(false);
@@ -2157,17 +2172,11 @@ StylesheetEditorPrivate::endOfLine()
 void
 StylesheetEditor::goToLine(int lineNumber)
 {
-  d_ptr->setLineNumber(lineNumber);
+  setLineNumber(lineNumber);
 }
 
 int
 StylesheetEditor::bookmarkCount()
-{
-  return d_ptr->bookmarkCount();
-}
-
-int
-StylesheetEditorPrivate::bookmarkCount()
 {
   return m_bookmarkArea->count();
 }

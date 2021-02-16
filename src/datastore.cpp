@@ -629,18 +629,29 @@ WidgetModel::checkRepeat(const QString& value) const
 bool
 WidgetModel::checkUrl(const QString& value) const
 {
-  QFile file(value);
+  //  QFile file(value);
 
-  if (file.exists()) {
-    return true;
+  //  if (file.exists()) {
+  //    return true;
+  //  }
+  QString v = value.trimmed();
+  if (v.trimmed().startsWith("url")) {
+    v = v.mid(3).trimmed();
+  } else {
+    return false;
   }
-
-  // TODO add checking for valid Qt resource?
-  if (value.startsWith(":/")) {
-    return true;
+  if (v.startsWith("(")) {
+    v = v.mid(1).trimmed();
+  } else {
+    return false;
   }
-
-  return false;
+  if (v.endsWith(")")) {
+    v = v.mid(0, v.length() - 1).trimmed();
+  } else {
+    return false;
+  }
+  QUrl url(v);
+  return url.isValid();
 }
 
 bool
@@ -776,8 +787,7 @@ DataStore::initialiseWidgetModel()
 
 bool
 WidgetModel::checkPropertyValue(AttributeType propertyAttribute,
-                                const QString& valuename,
-                                StylesheetData* data)
+                                const QString& valuename)
 {
   switch (propertyAttribute) {
     case Alignment:
@@ -890,8 +900,8 @@ WidgetModel::checkPropertyValue(AttributeType propertyAttribute,
   return false;
 }
 
-//bool
-//DataStore::ifValidStylesheetValue(const QString& propertyname,
+// bool
+// DataStore::ifValidStylesheetValue(const QString& propertyname,
 //                                  const QString& valuename,
 //                                  StylesheetData* data)
 //{
@@ -913,7 +923,8 @@ DataStore::possibleWidgetsForSubControl(const QString& name)
   return m_widgetModel->possibleWidgetsForSubControl(name);
 }
 
-QStringList DataStore::possibleSubControlsForWidget(const QString &widget)
+QStringList
+DataStore::possibleSubControlsForWidget(const QString& widget)
 {
   return m_widgetModel->possibleSubControlsForWidget(widget);
 }
@@ -2001,8 +2012,8 @@ WidgetModel::initAttributeMap()
   m_attributes.insert("height", Length);
   m_attributes.insert("icon", Url);
   m_attributes.insert("icon-size", Length);
-  m_attributes.insert("image", Alignment);
-  m_attributes.insert("image-position", Url);
+  m_attributes.insert("image", Url);
+  m_attributes.insert("image-position", Alignment);
   m_attributes.insert("left", Length);
   m_attributes.insert("lineedit-password-character", Number);
   m_attributes.insert("lineedit-password-mask-delay", Number);
@@ -2228,12 +2239,11 @@ WidgetModel::isValidPropertyValueForProperty(const QString& propertyname,
   }
 
   AttributeType propertyAttribute = m_attributes.value(propertyname);
-  return (checkPropertyValue(propertyAttribute, valuename, nullptr) !=
-          NoAttributeValue);
+  return (checkPropertyValue(propertyAttribute, valuename) != NoAttributeValue);
 }
 
-//bool
-//WidgetModel::ifValidStylesheetValue(const QString& propertyname,
+// bool
+// WidgetModel::ifValidStylesheetValue(const QString& propertyname,
 //                                    const QString& valuename,
 //                                    StylesheetData* data)
 //{

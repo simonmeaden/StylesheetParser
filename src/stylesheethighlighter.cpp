@@ -36,19 +36,18 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
   //  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
   setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
   //  setSubControlFormat(QColor("pink"), m_back, QFont::Light);
-//  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-    setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
+  //  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
   setPropertyFormat(QColor("darkblue"), m_back, QFont::Light);
-  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  //  setPropertyMarkerFormat(QColor("darkcyan"), m_back, QFont::Light);
-  //  setPropertyEndMarkerFormat(QColor("mediumseagreen"), m_back,
-  //  QFont::Light);
+  //  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  //  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPropertyMarkerFormat(QColor("darkcyan"), m_back, QFont::Light);
+  setPropertyEndMarkerFormat(QColor("mediumseagreen"), m_back, QFont::Light);
   setValueFormat(QColor("orangered"), m_back, QFont::Light);
   //  setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   //  setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
   setStartBraceFormat(QColor("blue"), m_back, QFont::Light);
-  setEndBraceFormat(QColor("blue"), m_back, QFont::Light);
+  setEndBraceFormat(QColor("lightblue"), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
   setCommentFormat(QColor("darkmagenta"), m_back, QFont::Light);
 }
@@ -153,7 +152,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     }
   }
 
-  PropertyValueCheck check;
+  NodeCheck check;
   QString value;
 
   for (int i = 0; i < property->count(); i++) {
@@ -163,8 +162,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     length = value.length();
 
     if (isInBlock(position, length, blockStart, blockEnd)) {
-      if (check == PropertyValueCheck::GoodValue ||
-          check == PropertyValueCheck::ValidPropertyType) {
+      if (check == ValidPropertyValue) {
         formatVisiblePart(
           blockStart, blockEnd, position, length, m_valueFormat);
       } else {
@@ -243,28 +241,34 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         }
 
         if (widget->hasSubControl()) {
-          auto subcontrol = widget->subControl();
+          SubControl* subcontrol = nullptr;
+          for (auto s : *(widget->subControls())) {
+            if (s->isIn(position)) {
+              subcontrol = s;
+              break;
+            }
+          }
+          if (!subcontrol)
+            continue;
           auto extname = subcontrol->name();
           if (subcontrol->hasMarker()) {
-            position = subcontrol->markerPosition();
+            position = subcontrol->position();
             if (isInBlock(position, 2, blockStart, blockEnd)) {
-              if (!subcontrol->isFuzzy()/* &&
-                  widget->doesMarkerMatch(NodeCheck::SubControlCheck)*/) {
-                formatVisiblePart(
-                  blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
-              } else {
+              if (subcontrol->isFuzzy()) {
                 formatVisiblePart(blockStart,
                                   blockEnd,
                                   position,
                                   2,
                                   m_badSubControlMarkerFormat);
+              } else {
+                formatVisiblePart(
+                  blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
               }
             }
-//            auto subcontrol = widget->subControl();
             position = subcontrol->position();
             length = subcontrol->length();
             if (isInBlock(position, length, blockStart, blockEnd)) {
-              if (widget->isExtensionValid() && !widget->isExtensionBad()) {
+              if (subcontrol->isValid()) {
                 formatVisiblePart(
                   blockStart, blockEnd, position, length, m_subControlFormat);
               } else {
@@ -275,7 +279,47 @@ StylesheetHighlighter::highlightBlock(const QString& text)
                                   m_badSubControlFormat);
               }
             }
-          } else if (widget->isPseudoState() /*&& widget->doMarkersMatch()*/) {
+
+            if (subcontrol->hasPseudoStates()) {
+              for (auto state : *(subcontrol->pseudoStates())) {
+                if (state->hasMarker()) {
+                  position = state->position();
+                  if (!state->isValid()) {
+                    formatVisiblePart(blockStart,
+                                      blockEnd,
+                                      position,
+                                      1,
+                                      m_pseudoStateMarkerFormat);
+                  } else {
+                    formatVisiblePart(blockStart,
+                                      blockEnd,
+                                      position,
+                                      1,
+                                      m_badPseudoStateMarkerFormat);
+                  }
+
+                  position = state->position();
+                  length = state->length();
+                  if (isInBlock(position, length, blockStart, blockEnd)) {
+                    if (m_datastore->containsPseudoState(state->name())) {
+                      formatVisiblePart(blockStart,
+                                        blockEnd,
+                                        position,
+                                        length,
+                                        m_pseudoStateFormat);
+                    } else {
+                      formatVisiblePart(blockStart,
+                                        blockEnd,
+                                        position,
+                                        length,
+                                        m_badPseudoStateFormat);
+                    }
+                  }
+                }
+              }
+            }
+          } else if (widget->isPseudoState()) {
+
             //            position = widget->markerPosition();
             //            if (isInBlock(position, 1, blockStart, blockEnd)) {
             //              if (!widget->isExtensionFuzzy() &&

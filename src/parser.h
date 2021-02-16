@@ -136,7 +136,7 @@ private:
   void nodeAtCursorPosition(CursorData* data, int position);
 
   WidgetNode* stashWidget(QMap<QTextCursor, Node*>* nodes,
-                          int position,
+                          QTextCursor cursor,
                           const QString& block,
                           NodeCheck check = NodeCheck::WidgetCheck);
 //  void stashBadNode(QMap<QTextCursor, Node*>* nodes,
@@ -155,11 +155,11 @@ private:
                                  const QPoint& pos,
                                  QMenu** suggestionsMenu,
                                  QMap<int, QString> matches);
-  void updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+  void updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches, QPoint pos,
                                            PropertyNode* property,
                                            const QString& valueName,
                                            QMenu** suggestionsMenu);
-  void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+  void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches, QPoint pos,
                                              PropertyNode* property,
                                              const QString& valueName,
                                              QMenu** suggestionsMenu);
@@ -169,15 +169,16 @@ private:
     const QString& valueName,
     const QPoint& pos,
     QMenu** suggestionsMenu);
-  void updatePseudoStateMenu(WidgetNode* widget, QMenu** suggestionsMenu);
-  void updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu);
+  void updatePseudoStateMenu(WidgetNode* widget, QPoint pos, QMenu** suggestionsMenu);
+  void updateSubControlMenu(WidgetNode* widget, const QString &name, QPoint pos, QMenu** suggestionsMenu);
   void updateMenu(QStringList matches,
                   Node* nNode,
+                  QPoint pos,
                   QMenu** suggestionsMenu,
                   SectionType type,
                   const QString& oldName = QString());
   void updateMenu(QMap<int, QString> matches,
-                  Node* nNode,
+                  Node* nNode, QPoint pos,
                   QMenu** suggestionsMenu,
                   SectionType type,
                   const QString& oldName = QString());

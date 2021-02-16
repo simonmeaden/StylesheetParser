@@ -93,13 +93,16 @@ Parser::checkType(const QString& block, PropertyNode* property) const
                                           NodeCheck::WidgetCheck);
   } else if (m_datastore->containsProperty(block)) {
     return qMakePair<NodeType, NodeCheck>(NodeType::PropertyType,
-                                          NodeCheck::GoodPropertyCheck);
+                                          NodeCheck::ValidNameCheck);
   } else if (m_datastore->containsPseudoState(block)) {
     return qMakePair<NodeType, NodeCheck>(NodeType::PseudoStateType,
                                           NodeCheck::PseudoStateCheck);
   } else if (m_datastore->containsSubControl(block)) {
     return qMakePair<NodeType, NodeCheck>(NodeType::SubControlType,
                                           NodeCheck::SubControlCheck);
+  } else if (block == ",") {
+    return qMakePair<NodeType, NodeCheck>(NodeType::SubControlType,
+                                          NodeCheck::SubControlSeperatorCheck);
   } else if (block == ":") {
     return qMakePair<NodeType, NodeCheck>(NodeType::ColonType,
                                           NodeCheck::PseudoStateCheck);
@@ -168,7 +171,8 @@ Parser::parseText(const QString& text)
 
     switch (type) {
       case NodeType::WidgetType: {
-        auto widget = stashWidget(&nodes, start, block, check);
+        cursor = getCursorForPosition(start);
+        auto widget = stashWidget(&nodes, cursor, block, check);
         SubControl* subcontrol = nullptr;
         PseudoState* pseudostate = nullptr;
 
@@ -206,53 +210,76 @@ Parser::parseText(const QString& text)
                 subcontrol =
                   new SubControl(cursor, QTextCursor(), block, m_editor);
               } else {
-                subcontrol->setMarkerCursor(cursor);
+                subcontrol = widget->subControl(cursor);
+                subcontrol->setCursor(cursor);
               }
-              widget->setSubControl(subcontrol);
+              widget->addSubControl(subcontrol);
               break;
             case NodeType::SubControlType:
-              if (!widget->hasSubControl()) {
-                subcontrol =
-                  new SubControl(QTextCursor(), cursor, block, m_editor);
+              if (check == SubControlSeperatorCheck) {
+                // TODO this should seperate two subcontrols for a widget.
+                subcontrol = nullptr;
               } else {
-                subcontrol->setCursor(cursor);
-                subcontrol->setName(block);
-              }
-              if (!m_datastore->isValidSubControlForWidget(widget->name(),
-                                                           block)) {
-                subcontrol->setCheck(BadSubControlForWidgetCheck);
-              } else {
-                subcontrol->clearCheck(BadSubControlForWidgetCheck);
-              }
-              if (check == FuzzySubControlCheck) {
+                if (widget->hasSubControl()) {
+                  subcontrol = widget->subControl(cursor);
+                  subcontrol->setCursor(cursor);
+                  subcontrol->setName(block);
+                } else {
+                  subcontrol =
+                    new SubControl(QTextCursor(), cursor, block, m_editor);
+                }
                 subcontrol->setCheck(check);
+                if (m_datastore->isValidSubControlForWidget(widget->name(),
+                                                            block)) {
+                  subcontrol->clearCheck(BadSubControlForWidgetCheck);
+                } else {
+                  subcontrol->setCheck(BadSubControlForWidgetCheck);
+                }
+                subcontrol = nullptr;
               }
               continue;
             case NodeType::PseudoStateMarkerType:
-              //              pseudostate = new PseudoState(cursor);
-              //              widget->addPseudoState(pseudostate);
+              if (widget->hasSubControl()) {
+                subcontrol = widget->subControl(cursor);
+                pseudostate = subcontrol->pseudoState(cursor);
+                if (!pseudostate) {
+                  pseudostate =
+                    new PseudoState(cursor, QTextCursor(), QString(), m_editor);
+                }
+                subcontrol->addPseudoState(pseudostate);
+              } else {
+                pseudostate = widget->pseudoState(cursor);
+                if (!pseudostate) {
+                  pseudostate =
+                    new PseudoState(cursor, QTextCursor(), block, m_editor);
+                }
+                widget->addPseudoState(pseudostate);
+              }
               break;
             case NodeType::PseudoStateType:
-              //              pseudostate = widget->pseudoState(cursor);
-              //              if (!pseudostate) {
-              //                pseudostate = new PseudoState(QTextCursor(),
-              //                cursor, block);
-              //              } else {
-              //                pseudostate->setCursor(cursor);
-              //                pseudostate->setName(block);
-              //              }
-              //              if (widget->hasSubControl())
-              //              if
-              //              (!m_datastore->isValidSubControlForWidget(widget->name(),
-              //                                                           block))
-              //                                                           {
-              //                pseudostate->m_checks.setFlag(
-              //                  NodeCheck::BadSubControlForWidgetCheck, true);
-              //              } else {
-              //                pseudostate->m_checks.setFlag(
-              //                  NodeCheck::BadSubControlForWidgetCheck,
-              //                  false);
-              //              }
+              if (widget->hasSubControl()) {
+                subcontrol = widget->subControl(cursor);
+                if (!pseudostate) {
+                  pseudostate =
+                    new PseudoState(cursor, QTextCursor(), block, m_editor);
+                } else {
+                  pseudostate->setCursor(cursor);
+                  pseudostate->setName(block);
+                }
+              } else {
+                if (widget->hasPseudoStates()) {
+                  if (!pseudostate) {
+                    pseudostate =
+                      new PseudoState(cursor, QTextCursor(), block, m_editor);
+                  } else {
+                    pseudostate->setCursor(cursor);
+                    pseudostate->setName(block);
+                  }
+                }
+              }
+              pseudostate->setCheck(check);
+              subcontrol->addPseudoState(pseudostate);
+              pseudostate = nullptr;
               continue;
             case NodeType::CommentType:
               parseComment(&nodes, text, start, pos);
@@ -309,7 +336,8 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsPseudoState(nextBlock)) {
-              stashWidget(&nodes, start, block, check);
+              cursor = getCursorForPosition(start);
+              stashWidget(&nodes, cursor, block, check);
               continue;
 
             } else if (m_datastore->propertyValueAttribute(nextBlock) !=
@@ -330,8 +358,9 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsSubControl(nextBlock)) {
-              auto widget = stashWidget(&nodes, start, block, check);
-              if (!widget->isSubControlFuzzy()) {
+              cursor = getCursorForPosition(start);
+              auto widget = stashWidget(&nodes, cursor, block, check);
+              if (!widget->isSubControlFuzzy(cursor)) {
                 if (!m_datastore->isValidSubControlForWidget(nextBlock,
                                                              widget->name())) {
                   widget->setWidgetCheck(
@@ -343,7 +372,8 @@ Parser::parseText(const QString& text)
           }
           // step back
           pos = oldPos;
-          stashWidget(&nodes, start, block, check);
+          cursor = getCursorForPosition(start);
+          stashWidget(&nodes, cursor, block, check);
         } else { // anomalous type - see what comes next.
           int oldPos = pos;
           nextBlock = findNext(text, pos);
@@ -352,7 +382,8 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsPseudoState(nextBlock)) {
-              stashWidget(&nodes, start, block, check);
+              cursor = getCursorForPosition(start);
+              stashWidget(&nodes, cursor, block, check);
               continue;
 
             } else if (m_datastore->propertyValueAttribute(nextBlock) !=
@@ -373,7 +404,8 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsSubControl(nextBlock)) {
-              stashWidget(&nodes, start, block, check);
+              cursor = getCursorForPosition(start);
+              stashWidget(&nodes, cursor, block, check);
               continue;
             }
           }
@@ -436,7 +468,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
       if (validForProperty) {
         // valid property and valid value.
         property->addValue(block,
-                           PropertyValueCheck::GoodValue,
+                           ValidPropertyValue,
                            getCursorForPosition((pos - block.length())),
                            attributeType);
       } else {
@@ -455,7 +487,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
             }
             default:
               property->addValue(block,
-                                 PropertyValueCheck::BadValue,
+                                 BadNodeCheck,
                                  getCursorForPosition((pos - block.length())),
                                  attributeType);
           }
@@ -463,7 +495,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
           // invalid property name but this is a valid property attribute
           // anyway.
           property->addValue(block,
-                             PropertyValueCheck::ValidPropertyType,
+                             ValidPropertyValue,
                              getCursorForPosition((pos - block.length())),
                              attributeType);
         }
@@ -524,29 +556,37 @@ Parser::findNext(const QString& text, int& pos)
 {
   QString block;
   QChar c;
+  bool insideBrackets = false;
   skipBlanks(text, pos);
 
   if (pos < text.length()) {
-
+    c = text.at(pos);
     while (pos < text.length()) {
-      c = text.at(pos);
-
       if (c.isNull()) {
         return block;
       }
 
-      if (c.isLetterOrNumber() || c == '-') {
+      if (insideBrackets) {
+        if (c == ')') {
+          insideBrackets = false;
+          block += c;
+        } else { // end of url or gradient.
+          block += c;
+        }
+        pos++;
+      } else if (c.isLetterOrNumber() || c == '-') {
         if (!block.isEmpty()) {
           QChar b = block.back();
-
           if (b == '{' || b == '}' || b == ';' || b == ':') {
             return block;
           }
         }
-
         block += c;
         pos++;
-
+      } else if (c == '(') {
+        insideBrackets = true;
+        block += c;
+        pos++;
       } else if (m_showLineMarkers && c == '\n') {
         if (block.isEmpty()) {
           block += c;
@@ -554,7 +594,6 @@ Parser::findNext(const QString& text, int& pos)
         return block;
       } else if (c.isSpace() && !block.isEmpty()) {
         return block;
-
       } else if (c == '{' || c == '}' || c == ';' || c == ':') {
         if (!block.isEmpty()) {
           if (block.back().isLetterOrNumber()) {
@@ -593,7 +632,7 @@ Parser::findNext(const QString& text, int& pos)
     }
   }
 
-  return QString();
+  return block;
 }
 
 void
@@ -629,7 +668,7 @@ Parser::nodeForPoint(const QPoint& pos, NodeSection** nodeSection)
   auto values = m_datastore->nodes().values();
 
   for (auto& n : values) {
-    auto section = n->isIn(pos);
+    auto section = n->sectionIfIn(pos);
 
     if (section->type != SectionType::None) {
       section->node = n;
@@ -699,11 +738,10 @@ Parser::nodeAtCursorPosition(CursorData* data, int position)
 
 WidgetNode*
 Parser::stashWidget(QMap<QTextCursor, Node*>* nodes,
-                    int position,
+                    QTextCursor cursor,
                     const QString& block,
                     enum NodeCheck check)
 {
-  auto cursor = getCursorForPosition(position);
   auto widgetnode = new WidgetNode(block, cursor, m_editor, check, this);
   (*nodes).insert(cursor, widgetnode);
   return widgetnode;
@@ -730,40 +768,6 @@ Parser::stashNewline(QMap<QTextCursor, Node*>* nodes, int position)
   (*nodes).insert(cursor, newline);
 }
 
-// void
-// Parser::stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position)
-//{
-//  m_datastore->decrementBraceCount();
-//  auto cursor = getCursorForPosition(position);
-//  auto endbrace = new EndBraceNode(cursor, m_editor, this);
-//  //  m_datastore->insertNode(cursor, endbrace);
-//  (*nodes).insert(cursor, endbrace);
-//}
-
-// void
-// Parser::stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position)
-//{
-//  m_datastore->incrementBraceCount();
-//  auto cursor = getCursorForPosition(position);
-//  auto startbrace = new StartBraceNode(cursor, m_editor, this);
-//  //  m_datastore->insertNode(cursor, startbrace);
-//  (*nodes).insert(cursor, startbrace);
-//}
-
-// QMenu*
-// Parser::createContextMenu()
-//{
-//  QMenu* menu = m_editor->createStandardContextMenu();
-//  menu->addSeparator();
-//  m_suggestionsMenu = menu->addMenu(tr("&Suggestions"));
-//  menu->addSeparator();
-//  menu->addAction(m_formatAct);
-
-//  m_suggestionsMenu->setEnabled(false);
-
-//  return menu;
-//}
-
 void
 Parser::updateContextMenu(QMap<int, QString> matches,
                           WidgetNode* node,
@@ -786,7 +790,7 @@ Parser::updateContextMenu(QMap<int, QString> matches,
   act->setData(pos);
   (*suggestionsMenu)->addSeparator();
 
-  updateMenu(matches, node, suggestionsMenu, SectionType::WidgetName);
+  updateMenu(matches, node, pos, suggestionsMenu, SectionType::WidgetName);
 }
 
 void
@@ -807,7 +811,8 @@ Parser::updatePropertyContextMenu(
     act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     (*suggestionsMenu)->addSeparator();
-    updateMenu(matches, property, suggestionsMenu, SectionType::PropertyName);
+    updateMenu(
+      matches, property, pos, suggestionsMenu, SectionType::PropertyName);
   } else if (!property->hasPropertyMarker()) {
     act = new QAction(
       m_datastore->invalidIcon(),
@@ -816,6 +821,7 @@ Parser::updatePropertyContextMenu(
     (*suggestionsMenu)->addSeparator();
     act =
       new QAction(m_datastore->addColonIcon(), tr("Add property marker (:)"));
+    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     setMenuData(act, property, SectionType::PropertyMarker);
     m_editor->connect(
@@ -828,6 +834,7 @@ Parser::updatePropertyContextMenu(
     (*suggestionsMenu)->addSeparator();
     act = new QAction(m_datastore->addSemiColonIcon(),
                       tr("Add property end marker (;)"));
+    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     setMenuData(act, property, SectionType::PropertyEndMarker);
     m_editor->connect(
@@ -852,34 +859,36 @@ Parser::getWidgetAction(const QIcon& icon, const QString& text, QMenu* menu)
 }
 
 void
-Parser::updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu)
+Parser::updateSubControlMenu(WidgetNode* widget,
+                             const QString& name,
+                             QPoint pos,
+                             QMenu** suggestionsMenu)
 {
-  if (!widget->isExtensionValid()) {
-    if (widget->isSubControlFuzzy()) {
-      auto matches =
-        m_datastore->fuzzySearchSubControl(widget->subControl()->name());
+  if (!widget->isSubControlValid(pos)) {
+    if (widget->isSubControlFuzzy(pos)) {
+      auto matches = m_datastore->fuzzySearchSubControl(name);
       (*suggestionsMenu)->clear();
       auto widgetact = getWidgetAction(
         m_datastore->fuzzyIcon(),
-        tr("Fuzzy sub control %1.<br>Possible values showing below.")
-          .arg(widget->subControl()->name()),
+        tr("Fuzzy sub control %1.<br>Possible values showing below.").arg(name),
         *suggestionsMenu);
       (*suggestionsMenu)->addAction(widgetact);
       (*suggestionsMenu)->addSeparator();
-      updateMenu(
-        matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
-    } else if (widget->isExtensionBad()) {
+      updateMenu(matches,
+                 widget,
+                 pos,
+                 suggestionsMenu,
+                 SectionType::FuzzyWidgetSubControl);
+    } else if (widget->isSubControlBad(pos)) {
       if (widget->isSubControl()) {
-        auto matches =
-          m_datastore->fuzzySearchSubControl(widget->subControl()->name());
+        auto matches = m_datastore->fuzzySearchSubControl(name);
         (*suggestionsMenu)->clear();
-        auto widgetact =
-          getWidgetAction(m_datastore->fuzzyIcon(),
-                          tr("Sub control %1 does not match <br>"
-                             "supplied widget %2.<br>"
-                             "Possible sub controls are.")
-                            .arg(widget->subControl()->name(), widget->name()),
-                          *suggestionsMenu);
+        auto widgetact = getWidgetAction(m_datastore->fuzzyIcon(),
+                                         tr("Sub control %1 does not match <br>"
+                                            "supplied widget %2.<br>"
+                                            "Possible sub controls are.")
+                                           .arg(name, widget->name()),
+                                         *suggestionsMenu);
         (*suggestionsMenu)->addAction(widgetact);
         (*suggestionsMenu)->addSeparator();
         auto act = new QAction(m_datastore->addDColonIcon(),
@@ -891,30 +900,35 @@ Parser::updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu)
                           m_editor,
                           &StylesheetEditor::suggestionMade);
         (*suggestionsMenu)->addSeparator();
-        updateMenu(
-          matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
+        updateMenu(matches,
+                   widget,
+                   pos,
+                   suggestionsMenu,
+                   SectionType::FuzzyWidgetSubControl);
       } else if (widget->isPseudoState()) {
-        auto matches =
-          m_datastore->fuzzySearchSubControl(widget->subControl()->name());
+        auto matches = m_datastore->fuzzySearchSubControl(name);
         (*suggestionsMenu)->clear();
         auto widgetact =
           getWidgetAction(m_datastore->fuzzyIcon(),
                           tr("Pseudo state %1 does not match <br>"
                              "supplied widget %2.<br>"
                              "Possible states are.")
-                            .arg(widget->subControl()->name(), widget->name()),
+                            .arg(name, widget->name()),
                           *suggestionsMenu);
         (*suggestionsMenu)->addAction(widgetact);
         (*suggestionsMenu)->addSeparator();
-        updateMenu(
-          matches, widget, suggestionsMenu, SectionType::FuzzyWidgetSubControl);
+        updateMenu(matches,
+                   widget,
+                   pos,
+                   suggestionsMenu,
+                   SectionType::FuzzyWidgetSubControl);
       }
     } else if (!widget->doesMarkerMatch(SubControlCheck)) {
       (*suggestionsMenu)->clear();
       auto widgetact = getWidgetAction(
         m_datastore->badColonIcon(),
         tr("Sub control %1 does not match<br>pseudo state marker (::)")
-          .arg(widget->subControl()->name()),
+          .arg(name),
         *suggestionsMenu);
       (*suggestionsMenu)->addAction(widgetact);
       (*suggestionsMenu)->addSeparator();
@@ -925,7 +939,7 @@ Parser::updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu)
       m_editor->connect(
         act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
     }
-  } else if (widget->isExtensionBad()) {
+  } else if (widget->isSubControlBad(pos)) {
     auto subcontrols =
       m_datastore->possibleSubControlsForWidget(widget->name());
     (*suggestionsMenu)->clear();
@@ -933,56 +947,64 @@ Parser::updateSubControlMenu(WidgetNode* widget, QMenu** suggestionsMenu)
       getWidgetAction(m_datastore->invalidIcon(),
                       tr("Sub control %1 does not match widget %2<br>"
                          "possible sub controls are:")
-                        .arg(widget->subControl()->name())
+                        .arg(name)
                         .arg(widget->name()),
                       *suggestionsMenu);
     (*suggestionsMenu)->addAction(widgetact);
     (*suggestionsMenu)->addSeparator();
-    updateMenu(
-      subcontrols, widget, suggestionsMenu, SectionType::BadWidgetSubControl);
+    updateMenu(subcontrols,
+               widget,
+               pos,
+               suggestionsMenu,
+               SectionType::BadWidgetSubControl);
   }
 }
 
 void
-Parser::updatePseudoStateMenu(WidgetNode* widget, QMenu** suggestionsMenu)
+Parser::updatePseudoStateMenu(WidgetNode* widget,
+                              QPoint pos,
+                              QMenu** suggestionsMenu)
 {
-  //  if (!widget->isExtensionValid()) {
-  //    if (widget->isSubControlFuzzy()) {
-  //      auto matches =
-  //        m_datastore->fuzzySearchPseudoStates(widget->extensionName());
-  //      (*suggestionsMenu)->clear();
-  //      auto widgetact = getWidgetAction(
-  //        m_datastore->fuzzyIcon(),
-  //        tr("Fuzzy pseudo state name.<br>Possible values showing below.")
-  //          .arg(widget->extensionName()),
-  //        *suggestionsMenu);
-  //      (*suggestionsMenu)->addAction(widgetact);
-  //      (*suggestionsMenu)->addSeparator();
-  //      updateMenu(
-  //        matches, widget, suggestionsMenu,
-  //        SectionType::FuzzyWidgetPseudoState);
-  //    } else if (!widget->doesMarkerMatch(PseudoStateCheck)) {
-  //      (*suggestionsMenu)->clear();
-  //      auto widgetact = getWidgetAction(
-  //        m_datastore->badDColonIcon(),
-  //        tr("Pseudo state %1 does not match<br>sub control marker (:)")
-  //          .arg(widget->extensionName()),
-  //        *suggestionsMenu);
-  //      (*suggestionsMenu)->addAction(widgetact);
-  //      (*suggestionsMenu)->addSeparator();
-  //      auto act = new QAction(m_datastore->addColonIcon(),
-  //                             tr("Change to pseudo state marker (:)"));
-  //      (*suggestionsMenu)->addAction(act);
-  //      setMenuData(act, widget, SectionType::WidgetPseudoStateMarker);
-  //      m_editor->connect(
-  //        act, &QAction::triggered, m_editor,
-  //        &StylesheetEditor::suggestionMade);
-  //    }
-  //  }
+  auto pseudoState = widget->pseudoState(pos);
+  if (pseudoState) {
+    auto name = pseudoState->name();
+    if (widget->isSubControlFuzzy(pos)) {
+      auto matches = m_datastore->fuzzySearchPseudoStates(name);
+      (*suggestionsMenu)->clear();
+      auto widgetact = getWidgetAction(
+        m_datastore->fuzzyIcon(),
+        tr("Fuzzy pseudo state name.<br>Possible values showing below.")
+          .arg(name),
+        *suggestionsMenu);
+      (*suggestionsMenu)->addAction(widgetact);
+      (*suggestionsMenu)->addSeparator();
+      updateMenu(matches,
+                 widget,
+                 pos,
+                 suggestionsMenu,
+                 SectionType::FuzzyWidgetPseudoState);
+    } else if (!widget->doesMarkerMatch(PseudoStateCheck)) {
+      (*suggestionsMenu)->clear();
+      auto widgetact = getWidgetAction(
+        m_datastore->badDColonIcon(),
+        tr("Pseudo state %1 does not match<br>sub control marker (:)")
+          .arg(name),
+        *suggestionsMenu);
+      (*suggestionsMenu)->addAction(widgetact);
+      (*suggestionsMenu)->addSeparator();
+      auto act = new QAction(m_datastore->addColonIcon(),
+                             tr("Change to pseudo state marker (:)"));
+      (*suggestionsMenu)->addAction(act);
+      setMenuData(act, widget, SectionType::WidgetPseudoStateMarker);
+      m_editor->connect(
+        act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
+    }
+  }
 }
 
 void
 Parser::updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                            QPoint pos,
                                             PropertyNode* property,
                                             const QString& valueName,
                                             QMenu** suggestionsMenu)
@@ -1002,7 +1024,7 @@ Parser::updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
   (*suggestionsMenu)->addAction(act);
   (*suggestionsMenu)->addSeparator();
 
-  updateMenu(matches, property, suggestionsMenu, SectionType::None);
+  updateMenu(matches, property, pos, suggestionsMenu, SectionType::None);
 }
 
 void
@@ -1022,6 +1044,7 @@ Parser::setMenuData(QAction* act,
 
 void
 Parser::updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                              QPoint pos,
                                               PropertyNode* property,
                                               const QString& valueName,
                                               QMenu** suggestionsMenu)
@@ -1041,8 +1064,12 @@ Parser::updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
   (*suggestionsMenu)->addAction(act);
   (*suggestionsMenu)->addSeparator();
 
-  updateMenu(
-    matches, property, suggestionsMenu, SectionType::PropertyValue, valueName);
+  updateMenu(matches,
+             property,
+             pos,
+             suggestionsMenu,
+             SectionType::PropertyValue,
+             valueName);
 }
 
 void
@@ -1086,6 +1113,7 @@ Parser::updateInvalidNameAndPropertyValueContextMenu(
 void
 Parser::updateMenu(QStringList matches,
                    Node* nNode,
+                   QPoint pos,
                    QMenu** suggestionsMenu,
                    SectionType type,
                    const QString& oldName)
@@ -1102,6 +1130,7 @@ Parser::updateMenu(QStringList matches,
 
   for (auto& match : reversed) {
     act = new QAction(match);
+    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     setMenuData(act, nNode, type, oldName);
     m_editor->connect(
@@ -1116,6 +1145,7 @@ Parser::updateMenu(QStringList matches,
 void
 Parser::updateMenu(QMap<int, QString> matches,
                    Node* nNode,
+                   QPoint pos,
                    QMenu** suggestionsMenu,
                    SectionType type,
                    const QString& oldName)
@@ -1132,6 +1162,7 @@ Parser::updateMenu(QMap<int, QString> matches,
 
   for (auto& key : reversed) {
     act = new QAction(matches.value(key));
+    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
     setMenuData(act, nNode, type, oldName);
     m_editor->connect(
@@ -1421,12 +1452,13 @@ Parser::handleMouseClicked(const QPoint& pos)
               auto widgetact = getWidgetAction(
                 m_datastore->fuzzyIcon(),
                 tr("Fuzzy widget name.<br>Possible values showing below.")
-                  .arg(widget->subControl()->name()),
+                  .arg(widget->subControl(pos)->name()),
                 suggestionsMenu);
               suggestionsMenu->addAction(widgetact);
               suggestionsMenu->addSeparator();
               updateMenu(matches,
                          widget,
+                         pos,
                          &suggestionsMenu,
                          SectionType::FuzzyWidgetName);
             } else {
@@ -1434,20 +1466,22 @@ Parser::handleMouseClicked(const QPoint& pos)
             }
             break;
           }
-          case WidgetSubControl: {
-            updateSubControlMenu(widget, &suggestionsMenu);
+          case WidgetSubControlName: {
+            auto name = widget->subControl(pos)->name();
+            updateSubControlMenu(widget, name, pos, &suggestionsMenu);
             break;
           }
           case SectionType::WidgetSubControlMarker: {
-            updateSubControlMenu(widget, &suggestionsMenu);
+            auto name = widget->subControl(pos)->name();
+            updateSubControlMenu(widget, name, pos, &suggestionsMenu);
             break;
           }
           case WidgetPseudoState: {
-            updatePseudoStateMenu(widget, &suggestionsMenu);
+            updatePseudoStateMenu(widget, pos, &suggestionsMenu);
             break;
           }
           case SectionType::WidgetPseudoStateMarker: {
-            updatePseudoStateMenu(widget, &suggestionsMenu);
+            updatePseudoStateMenu(widget, pos, &suggestionsMenu);
             break;
           }
           case WidgetPropertyName: {
@@ -1490,12 +1524,12 @@ Parser::handleMouseClicked(const QPoint& pos)
                 auto matches = m_datastore->fuzzySearchPropertyValue(
                   property->name(), valName);
                 updateValidPropertyValueContextMenu(
-                  matches, property, valName, &suggestionsMenu);
+                  matches, pos, property, valName, &suggestionsMenu);
               } else {
                 auto matches = m_datastore->fuzzySearchPropertyValue(
                   property->name(), valName);
                 updateInvalidPropertyValueContextMenu(
-                  matches, property, valName, &suggestionsMenu);
+                  matches, pos, property, valName, &suggestionsMenu);
               }
             } else {
               auto matches = m_datastore->fuzzySearchProperty(property->name());
@@ -1584,7 +1618,7 @@ Parser::actionPropertyNameChange(PropertyNode* property, const QString& newName)
   else if (!m_datastore->fuzzySearchProperty(newName).isEmpty()) {
     property->setPropertyNameCheck(NodeCheck::FuzzyPropertyCheck);
   } else {
-    property->setPropertyNameCheck(NodeCheck::InvalidNameCheck);
+    property->setPropertyNameCheck(NodeCheck::BadNodeCheck);
   }
   property->setName(newName);
   property->setCursor(cursor);
@@ -1602,7 +1636,7 @@ Parser::actionPropertyValueChange(PropertyNode* property,
   updateTextChange(cursor, oldName, newName);
 
   property->setValue(index, newName);
-  property->setCheck(index, PropertyValueCheck::GoodValue);
+  property->setCheck(index, ValidPropertyValue);
   property->setValueCursor(index, cursor);
   emit rehighlightBlock(property->cursor().block());
 }
@@ -1641,6 +1675,7 @@ Parser::handleSuggestions(QAction* act)
   auto node = menuData.node;
   auto type = menuData.type;
   auto oldName = menuData.oldName;
+  QPoint pos = act->data().toPoint();
 
   if (node) {
     auto newName = act->text();
@@ -1653,11 +1688,12 @@ Parser::handleSuggestions(QAction* act)
         widget->setName(newName);
         widget->setWidgetCheck(NodeCheck::WidgetCheck);
         if (widget->hasSubControl()) {
-          auto [type, check] = checkType(widget->subControl()->name());
+          auto subcontrol = widget->subControl(pos);
+          auto [type, check] = checkType(subcontrol->name());
           switch (check) {
             case NodeCheck::SubControlCheck:
             case NodeCheck::FuzzySubControlCheck:
-              widget->setSubControlMarkerCursor(widget->subControl()->cursor());
+              widget->setSubControlMarkerCursor(subcontrol->cursor());
               widget->setWidgetCheck(check);
               break;
             case NodeCheck::PseudoStateCheck:
@@ -1676,25 +1712,50 @@ Parser::handleSuggestions(QAction* act)
       case FuzzyWidgetPseudoState:
       case FuzzyWidgetSubControl: {
         auto widget = qobject_cast<WidgetNode*>(node);
-        oldName = widget->subControl()->name();
-        auto cursor = widget->subControl()->cursor();
-        updateTextChange(cursor, oldName, newName);
-        widget->subControl()->setName(newName);
+        auto subcontrol = widget->subControl(pos);
+        if (subcontrol) {
+          oldName = subcontrol->name();
+          auto cursor = subcontrol->cursor();
+          updateTextChange(cursor, oldName, newName);
+          subcontrol->setName(newName);
+        }
         break;
       }
       case WidgetPseudoStateMarker: {
         auto widget = qobject_cast<WidgetNode*>(node);
-        if (widget->hasSubControl()) {
-          auto cursor = widget->subControl()->markerCursor();
-          updateTextChange(cursor, "::", ":");
+        if (widget->hasPseudoStates()) {
+          auto pseudostate = widget->pseudoState(pos);
+          if (pseudostate) {
+            auto cursor = pseudostate->cursor();
+            updateTextChange(cursor, "::", ":");
+          }
+        }
+        break;
+      }
+      case WidgetSubControlPseudoStateMarker: {
+        auto widget = qobject_cast<WidgetNode*>(node);
+        if (widget->hasSubControls()) {
+          auto subcontrol = widget->subControl(pos);
+          if (subcontrol) {
+            if (subcontrol->hasPseudoStates()) {
+              auto pseudostate = widget->pseudoState(pos);
+              if (pseudostate) {
+                auto cursor = pseudostate->cursor();
+                updateTextChange(cursor, "::", ":");
+              }
+            }
+          }
         }
         break;
       }
       case WidgetSubControlMarker: {
         auto widget = qobject_cast<WidgetNode*>(node);
-        if (widget->hasSubControl()) {
-          auto cursor = widget->subControl()->markerCursor();
-          updateTextChange(cursor, ":", "::");
+        if (widget->hasSubControls()) {
+          auto subcontrol = widget->subControl(pos);
+          if (subcontrol) {
+            auto cursor = subcontrol->cursor();
+            updateTextChange(cursor, ":", "::");
+          }
         }
         break;
       }

@@ -130,8 +130,7 @@ MainWindow::initGui()
         << "comment"
         << "bad";
   m_editor->addCustomWidgetProperties("StylesheetEdit", list1);
-  m_editor->addCustomWidgetPropertyValues(
-    "StylesheetEdit", "widget", list1);
+  m_editor->addCustomWidgetPropertyValues("StylesheetEdit", "widget", list1);
   list1.clear();
   m_editor->addCustomWidgetPropertyValues(
     "StylesheetEdit", "subcontrol", list1);
@@ -141,20 +140,15 @@ MainWindow::initGui()
     "StylesheetEdit", "subcontrolmarker", list1);
   m_editor->addCustomWidgetPropertyValues(
     "StylesheetEdit", "pseudostatemarker", list1);
-  m_editor->addCustomWidgetPropertyValues(
-    "StylesheetEdit", "property", list1);
+  m_editor->addCustomWidgetPropertyValues("StylesheetEdit", "property", list1);
   m_editor->addCustomWidgetPropertyValues(
     "StylesheetEdit", "propertymarker", list1);
-  m_editor->addCustomWidgetPropertyValues(
-    "StylesheetEdit", "value", list1);
+  m_editor->addCustomWidgetPropertyValues("StylesheetEdit", "value", list1);
   m_editor->addCustomWidgetPropertyValues(
     "StylesheetEdit", "startbrace", list1);
-  m_editor->addCustomWidgetPropertyValues(
-    "StylesheetEdit", "endbrace", list1);
-  m_editor->addCustomWidgetPropertyValues(
-    "StylesheetEdit", "comment", list1);
-  m_editor->addCustomWidgetPropertyValues(
-    "StylesheetEdit", "bad", list1);
+  m_editor->addCustomWidgetPropertyValues("StylesheetEdit", "endbrace", list1);
+  m_editor->addCustomWidgetPropertyValues("StylesheetEdit", "comment", list1);
+  m_editor->addCustomWidgetPropertyValues("StylesheetEdit", "bad", list1);
 
   QString text;
 
@@ -201,26 +195,36 @@ MainWindow::initGui()
     //    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
     //    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
     //    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
-//    "QTabWidget:branch {\n" // Bad pseudostate - is subcontrol
+    //    "QTabWidget:branch {\n" // Bad pseudostate - is subcontrol
     //    "  color: green\n"              // No end marker
     //    "  color: rd;\n"                // bad color value
     //    "  border: gren slid 1py\n"     // bad property values
     //    "  bckground-color: green; \n"  // bar property name
-//    "}\n"
-//    "QTabWidget::active {\n" // Bad subcontrol - is pseudostate
-   //    "  color: green\n"              // No end marker
+    //    "}\n"
+    //    "QTabWidget::active {\n" // Bad subcontrol - is pseudostate
+    //    "  color: green\n"              // No end marker
     //    "  color: rd;\n"                // bad color value
     //    "  border: gren slid 1py\n"     // bad property values
     //    "  bckground-color: green; \n"  // bar property name
-//    "}\n"
+    //    "}\n"
     // End of errors
-//      "QTabBar::close-button {\n"
-//      "    image: url(close.png)\n"
-//      "    subcontrol-position: left;\n"
-//      "}\n"
-      "QTabBar::close-button:hover {\n"
-//      "    image: url(close-hover.png)\n"
-      "}"
+    //    "QTabBar::close-button {\n"
+    //    "    image: url(close.png);\n"
+    //    "    subcontrol-position: left;\n"
+    //    "}\n"
+    //    "QTabBar::close-button:hover {\n"
+    //    "    image: url(close-hover.png)\n"
+    //    "}\n"
+    "QTabBar::tab:selected, QTabBar::tab:hover {\n"
+    "background: qlineargradient(\n"
+    "x1: 0, y1: 0, x2: 0, y2: 1,\n"
+    "stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
+    "stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
+    "}\n"
+    //    "QTreeView::item:selected:active{\n"
+    //    "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0
+    //    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "}"
     ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
   //    MISSING END

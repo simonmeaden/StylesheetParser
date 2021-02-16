@@ -396,7 +396,7 @@ const QChar StylesheetEditor::m_arrow = QChar(0x2BC8);
 StylesheetEditor::StylesheetEditor(QWidget* parent)
   : QPlainTextEdit(parent)
   , m_parseComplete(false)
-  , m_oldSection(new NodeSection())
+  , m_oldSection(new NodeSection(this))
 {
   setMouseTracking(true);
 }
@@ -1193,24 +1193,29 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
               break;
             }
             case SectionType::WidgetSubControlMarker:
-            case SectionType::WidgetSubControl: {
-              if (widget->isSubControlFuzzy()) {
-                setHoverFuzzySubControl(hover, widget->subControl()->name());
-              } else if (widget->isExtensionBad()) {
-                setHoverBadSubControl(
-                  hover, widget->name(), widget->subControl()->name());
-              }
+            case SectionType::WidgetSubControlName: {
+//              if (widget->isSubControlFuzzy()) {
+//                setHoverFuzzySubControl(hover, widget->subControls()->name());
+//              } else if (widget->isSubControlBad()) {
+//                setHoverBadSubControl(
+//                  hover, widget->name(), widget->subControls()->name());
+//              }
               break;
             }
             case SectionType::WidgetPseudoStateMarker:
             case SectionType::WidgetPseudoState: {
-//              if (widget->isSubControlFuzzy()) {
-//                if (widget->isPseudoState()) {
-//                  setHoverFuzzyPseudoState(hover, widget->extensionName());
-//                }
-//              }
+              //              if (widget->isSubControlFuzzy()) {
+              //                if (widget->isPseudoState()) {
+              //                  setHoverFuzzyPseudoState(hover,
+              //                  widget->extensionName());
+              //                }
+              //              }
               break;
             }
+            case WidgetPropertyName:
+              break;
+            case WidgetPropertyValue:
+              break;
             case WidgetStartBrace:
             case WidgetEndBrace:
               break;

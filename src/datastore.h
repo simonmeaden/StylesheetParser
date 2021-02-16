@@ -208,8 +208,7 @@ private:
   void initAttributeMap();
 
   bool checkPropertyValue(AttributeType propertyAttribute,
-                          const QString& valuename,
-                          StylesheetData* data = nullptr);
+                          const QString& valuename);
   bool checkAlignment(const QString& value) const;
   bool checkAttachment(const QString& value) const;
   bool checkBackground(const QString& value) const;

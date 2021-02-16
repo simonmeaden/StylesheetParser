@@ -67,9 +67,17 @@ enum SectionType
   PropertyEndMarker,
   WidgetName,
   FuzzyWidgetName,
+  PseudoStateName,
+  PseudoStateMarker,
+  SubControlPseudoStateName,
+  SubControlPseudoStateMarker,
+  WidgetSubControlPseudoStateName,
+  WidgetSubControlPseudoStateMarker,
   WidgetPseudoState,
   FuzzyWidgetPseudoState,
-  WidgetSubControl,
+  SubControlName,
+  SubControlMarker,
+  WidgetSubControlName,
   FuzzyWidgetSubControl,
   BadWidgetSubControl,
   WidgetPropertyName,
@@ -83,10 +91,12 @@ enum SectionType
   Comment,
 };
 
-struct NodeSection
+class NodeSection : public QObject
 {
-  NodeSection(SectionType t = None, int p = -1, int i = -1)
-    : type(t)
+public:
+  NodeSection(QObject* parent, SectionType t = None, int p = -1, int i = -1)
+    : QObject(parent)
+    , type(t)
     , position(p)
     , node(nullptr)
     , propertyIndex(i)
@@ -115,7 +125,7 @@ struct NodeSection
       case WidgetSubControlMarker:
       case FuzzyWidgetSubControl:
       case WidgetPseudoState:
-      case WidgetSubControl:
+      case WidgetSubControlName:
       case WidgetPropertyName:
       case WidgetPropertyValue:
       case WidgetPropertyMarker:
@@ -143,6 +153,7 @@ struct NodeSection
         return false;
     }
   }
+
   friend bool operator==(NodeSection& left, NodeSection& right);
   friend bool operator!=(NodeSection& left, NodeSection& right);
   SectionType type;
@@ -239,9 +250,10 @@ enum NodeCheck
   PropertyMarkerCheck = 0x1,
   PropertyEndMarkerCheck = 0x2,
   ValidNameCheck = 0x4,
-  FuzzyPropertyCheck = 0x8,
-  InvalidNameCheck = 0x10,
-  GoodPropertyCheck = 0x7,
+  ValidPropertyValue = 0x8,
+  FuzzyPropertyCheck = 0x10,
+  FuzzyPropertyNameCheck = 0x20,
+  GoodPropertyCheck = 0xF,
   //
   //  WidgetExtensionCheck = 0x10,
   //
@@ -249,32 +261,32 @@ enum NodeCheck
   FuzzySubControlCheck = 0x200,
   SubControlMarkerCheck = 0x400,
   BadSubControlForWidgetCheck = 0x800,
+  SubControlSeperatorCheck = 0x1000,
   //
-  PseudoStateCheck = 0x1000,
-  FuzzyPseudoStateCheck = 0x2000,
-  PseudoStateMarkerCheck = 0x4000,
+  PseudoStateCheck = 0x10000,
+  FuzzyPseudoStateCheck = 0x20000,
+  PseudoStateMarkerCheck = 0x40000,
   //
-  StartBraceCheck = 0x10000,
-  EndBraceCheck = 0x20000,
+  StartBraceCheck = 0x100000,
+  EndBraceCheck = 0x200000,
   //
-  WidgetCheck = 0x100000,
-  FuzzyWidgetCheck = 0x200000,
+  WidgetCheck = 0x1000000,
+  FuzzyWidgetCheck = 0x2000000,
   //
-  CommentCheck = 0x1000000,
-  //
-  NewLineCheck = 0x10000000,
+  CommentCheck = 0x10000000,
+  NewLineCheck = 0x20000000,
 
 };
 Q_DECLARE_FLAGS(NodeChecks, NodeCheck);
 Q_DECLARE_OPERATORS_FOR_FLAGS(NodeChecks)
 
-enum PropertyValueCheck
-{
-  NoCheck,
-  GoodValue,
-  ValidPropertyType,
-  BadValue,
-};
+// enum PropertyValueCheck
+//{
+//  NoCheck,
+//  GoodValue,
+//  ValidPropertyType,
+//  BadValue,
+//};
 
 enum NodeIsIn
 {

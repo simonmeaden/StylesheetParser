@@ -78,77 +78,86 @@ Parser::stepBack(int& pos, const QString& block)
   pos -= block.length();
 }
 
-QPair<enum NodeType, enum NodeCheck>
-Parser::checkType(const QString& block, PropertyNode* property) const
+QPair<enum NodeType, enum NodeState>
+Parser::checkType(const QString& block,
+                  enum NodeState lastState,
+                  PropertyNode* property) const
 {
+  if (lastState == IdSelectorMarkerState) {
+    return qMakePair<NodeType, NodeState>(NodeType::IdSelectorType,
+                                          NodeState::IdSelectorState);
+  }
   if (property) {
     if (m_datastore->isValidPropertyValueForProperty(property->name(), block)) {
-      return qMakePair<NodeType, NodeCheck>(NodeType::PropertyValueType,
-                                            NodeCheck::GoodPropertyCheck);
+      return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
+                                            NodeState::GoodPropertyState);
     }
   }
 
   if (m_datastore->containsWidget(block)) {
-    return qMakePair<NodeType, NodeCheck>(NodeType::WidgetType,
-                                          NodeCheck::WidgetCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::WidgetType,
+                                          NodeState::WidgetState);
   } else if (m_datastore->containsProperty(block)) {
-    return qMakePair<NodeType, NodeCheck>(NodeType::PropertyType,
-                                          NodeCheck::ValidNameCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::PropertyType,
+                                          NodeState::ValidNameState);
   } else if (m_datastore->containsPseudoState(block)) {
-    return qMakePair<NodeType, NodeCheck>(NodeType::PseudoStateType,
-                                          NodeCheck::PseudoStateCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::PseudoStateType,
+                                          NodeState::PseudostateState);
   } else if (m_datastore->containsSubControl(block)) {
-    return qMakePair<NodeType, NodeCheck>(NodeType::SubControlType,
-                                          NodeCheck::SubControlCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::SubControlType,
+                                          NodeState::SubControlState);
   } else if (block == ",") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::SubControlType,
-                                          NodeCheck::SubControlSeperatorCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::SubControlType,
+                                          NodeState::SubControlSeperatorState);
   } else if (block == ":") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::ColonType,
-                                          NodeCheck::PseudoStateCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::ColonType,
+                                          NodeState::PseudostateState);
   } else if (block == "::") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::SubControlMarkerType,
-                                          NodeCheck::SubControlCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::SubControlMarkerType,
+                                          NodeState::SubControlState);
+  } else if (block == "#") {
+    return qMakePair<NodeType, NodeState>(NodeType::IdSelectorMarkerType,
+                                          NodeState::IdSelectorMarkerState);
   } else if (block == "/*") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::CommentType,
-                                          NodeCheck::CommentCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::CommentType,
+                                          NodeState::CommentState);
   } else if (block == "{") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::StartBraceType,
-                                          NodeCheck::StartBraceCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::StartBraceType,
+                                          NodeState::StartBraceState);
   } else if (block == "}") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::EndBraceType,
-                                          NodeCheck::EndBraceCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::EndBraceType,
+                                          NodeState::EndBraceState);
   } else if (block == "\n") {
-    return qMakePair<NodeType, NodeCheck>(NodeType::NewlineType,
-                                          NodeCheck::NewLineCheck);
+    return qMakePair<NodeType, NodeState>(NodeType::NewlineType,
+                                          NodeState::NewLineState);
   } else {
     QMultiMap<int, QString> possibilities;
     if (property) {
       possibilities =
         m_datastore->fuzzySearchPropertyValue(property->name(), block);
       if (possibilities.size() > 0)
-        return qMakePair<NodeType, NodeCheck>(NodeType::PropertyValueType,
-                                              NodeCheck::FuzzyPropertyCheck);
+        return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
+                                              NodeState::FuzzyPropertyState);
     }
     possibilities = m_datastore->fuzzySearchProperty(block);
     if (possibilities.size() > 0)
-      return qMakePair<NodeType, NodeCheck>(NodeType::PropertyType,
-                                            NodeCheck::FuzzyPropertyCheck);
+      return qMakePair<NodeType, NodeState>(NodeType::PropertyType,
+                                            NodeState::FuzzyPropertyState);
     possibilities = m_datastore->fuzzySearchWidgets(block);
     if (possibilities.size() > 0)
-      return qMakePair<NodeType, NodeCheck>(NodeType::WidgetType,
-                                            NodeCheck::FuzzyWidgetCheck);
+      return qMakePair<NodeType, NodeState>(NodeType::WidgetType,
+                                            NodeState::FuzzyWidgetState);
     possibilities = m_datastore->fuzzySearchPseudoStates(block);
     if (possibilities.size() > 0)
-      return qMakePair<NodeType, NodeCheck>(NodeType::PseudoStateType,
-                                            NodeCheck::FuzzyPseudoStateCheck);
+      return qMakePair<NodeType, NodeState>(NodeType::PseudoStateType,
+                                            NodeState::FuzzyPseudostateState);
     possibilities = m_datastore->fuzzySearchSubControl(block);
     if (possibilities.size() > 0)
-      return qMakePair<NodeType, NodeCheck>(NodeType::SubControlType,
-                                            NodeCheck::FuzzySubControlCheck);
+      return qMakePair<NodeType, NodeState>(NodeType::SubControlType,
+                                            NodeState::FuzzySubControlState);
   }
-  return qMakePair<NodeType, NodeCheck>(NodeType::NoType,
-                                        NodeCheck::BadNodeCheck);
+  return qMakePair<NodeType, NodeState>(NodeType::NoType,
+                                        NodeState::BadNodeState);
 }
 
 QMap<QTextCursor, Node*>
@@ -167,21 +176,30 @@ Parser::parseText(const QString& text)
     start = pos - block.length();
     QTextCursor cursor;
 
-    auto [type, check] = checkType(block);
+    NodeState lastState = BadNodeState;
+    auto [type, state] = checkType(block, lastState);
+    WidgetNodes* widgetnodes = nullptr;
 
     switch (type) {
       case NodeType::WidgetType: {
         cursor = getCursorForPosition(start);
-        auto widget = stashWidget(&nodes, cursor, block, check);
+        if (!widgetnodes) {
+          widgetnodes = new WidgetNodes(cursor, m_editor, this);
+          nodes.insert(cursor, widgetnodes);
+        }
+
+        auto widget = new WidgetNode(block, cursor, m_editor, state, this);
+        widgetnodes->addWidget(widget);
         SubControl* subcontrol = nullptr;
         PseudoState* pseudostate = nullptr;
+        IDSelector* idselector = nullptr;
 
         while (!(block = findNext(text, pos)).isEmpty()) {
           start = pos - block.length();
           cursor = getCursorForPosition(start);
-          auto leaveWidget = false;
+          //          auto leaveWidget = false;
 
-          auto [type, check] = checkType(block);
+          auto [type, state] = checkType(block, lastState);
           if (type == NodeType::ColonType) {
             // a single colon could be either a pseudo state marker or a
             // property marker. if a property is detected then it should be
@@ -190,123 +208,182 @@ Parser::parseText(const QString& text)
             type = NodeType::PseudoStateMarkerType;
           }
           switch (type) {
-            case NodeType::WidgetType:
+            case NodeType::WidgetType: {
               // if we find another widget than accept that the previous one is
               // incomplete.
-              stepBack(pos, block);
-              leaveWidget = true;
-              break;
+              widget = new WidgetNode(block, cursor, m_editor, state, this);
+              widgetnodes->addWidget(widget);
+              subcontrol = nullptr;
+              pseudostate = nullptr;
+              idselector = nullptr;
+              lastState = state;
+              continue;
+            }
             case NodeType::PropertyType: {
               PropertyNode* property =
-                new PropertyNode(block, cursor, m_editor, check, this);
-              property->setWidget(widget);
-              widget->addProperty(property);
+                new PropertyNode(block, cursor, m_editor, state, this);
+              property->setWidgetNodes(widgetnodes);
+              widgetnodes->addProperty(property);
               parsePropertyWithValues(
                 &nodes, property, text, start, pos, block);
+              lastState = state;
               continue;
             }
             case NodeType::SubControlMarkerType:
               if (!widget->hasSubControl()) {
-                subcontrol =
-                  new SubControl(cursor, QTextCursor(), block, m_editor);
+                subcontrol = new SubControl(
+                  cursor, QTextCursor(), QString(), m_editor, this);
               } else {
                 subcontrol = widget->subControl(cursor);
                 subcontrol->setCursor(cursor);
               }
               widget->addSubControl(subcontrol);
+              lastState = state;
               break;
             case NodeType::SubControlType:
-              if (check == SubControlSeperatorCheck) {
-                // TODO this should seperate two subcontrols for a widget.
+              if (state == SubControlSeperatorState) {
+                // TODO this should seperate sets of widget controls.
+                widgetnodes->addSeperatorCursor(cursor);
                 subcontrol = nullptr;
+                pseudostate = nullptr;
+                idselector = nullptr;
+                widget = nullptr;
+                lastState = state;
+                continue;
               } else {
-                if (widget->hasSubControl()) {
-                  subcontrol = widget->subControl(cursor);
-                  subcontrol->setCursor(cursor);
-                  subcontrol->setName(block);
+                if (subcontrol) {
+                  if (subcontrol->hasMarker()) {
+                    // check that this block follows the marker.
+                    int markerPos = subcontrol->position() + 2;
+                    auto s = text.mid(markerPos, start - markerPos);
+                    if (s.trimmed().isEmpty()) {
+                      subcontrol->setNameCursor(cursor);
+                      subcontrol->setName(block);
+                      subcontrol->setStateFlag(state);
+                      if (m_datastore->isValidSubControlForWidget(
+                            widget->name(), block)) {
+                        subcontrol->clearStateFlag(BadSubControlForWidgetState);
+                      } else {
+                        subcontrol->setStateFlag(BadSubControlForWidgetState);
+                      }
+                    }
+                  } else {
+                    qWarning();
+                    subcontrol = new SubControl(
+                      QTextCursor(), cursor, QString(), m_editor, this);
+                  }
                 } else {
-                  subcontrol =
-                    new SubControl(QTextCursor(), cursor, block, m_editor);
+                  // TODO
+                  qWarning();
                 }
-                subcontrol->setCheck(check);
-                if (m_datastore->isValidSubControlForWidget(widget->name(),
-                                                            block)) {
-                  subcontrol->clearCheck(BadSubControlForWidgetCheck);
-                } else {
-                  subcontrol->setCheck(BadSubControlForWidgetCheck);
-                }
-                subcontrol = nullptr;
               }
+              lastState = state;
               continue;
             case NodeType::PseudoStateMarkerType:
-              if (widget->hasSubControl()) {
-                subcontrol = widget->subControl(cursor);
+              if (lastState == IdSelectorState) {
+                idselector = widget->idSelector();
+                if (!idselector) {
+                  idselector = new IDSelector(
+                    cursor, QTextCursor(), QString(), m_editor, this);
+                }
+                pseudostate = idselector->pseudoState(cursor);
+                if (!pseudostate) {
+                  pseudostate = new PseudoState(
+                    cursor, QTextCursor(), QString(), m_editor, this);
+                }
+                idselector->addPseudoState(pseudostate);
+              } else if (lastState == SubControlState) {
+                if (!subcontrol) {
+                  if (widget->hasSubControl()) {
+                    subcontrol = widget->subControl(cursor);
+                  }
+                }
                 pseudostate = subcontrol->pseudoState(cursor);
                 if (!pseudostate) {
-                  pseudostate =
-                    new PseudoState(cursor, QTextCursor(), QString(), m_editor);
+                  pseudostate = new PseudoState(
+                    cursor, QTextCursor(), QString(), m_editor, this);
                 }
                 subcontrol->addPseudoState(pseudostate);
-              } else {
-                pseudostate = widget->pseudoState(cursor);
-                if (!pseudostate) {
-                  pseudostate =
-                    new PseudoState(cursor, QTextCursor(), block, m_editor);
-                }
-                widget->addPseudoState(pseudostate);
               }
               break;
             case NodeType::PseudoStateType:
-              if (widget->hasSubControl()) {
-                subcontrol = widget->subControl(cursor);
-                if (!pseudostate) {
-                  pseudostate =
-                    new PseudoState(cursor, QTextCursor(), block, m_editor);
-                } else {
-                  pseudostate->setCursor(cursor);
-                  pseudostate->setName(block);
-                }
-              } else {
-                if (widget->hasPseudoStates()) {
-                  if (!pseudostate) {
-                    pseudostate =
-                      new PseudoState(cursor, QTextCursor(), block, m_editor);
-                  } else {
-                    pseudostate->setCursor(cursor);
-                    pseudostate->setName(block);
-                  }
-                }
+              if (!pseudostate) {
+                pseudostate =
+                  new PseudoState(cursor, QTextCursor(), block, m_editor, this);
               }
-              pseudostate->setCheck(check);
-              subcontrol->addPseudoState(pseudostate);
-              pseudostate = nullptr;
+              pseudostate->setNameCursor(cursor);
+              pseudostate->setName(block);
+              pseudostate->setStateFlag(state);
+              if (lastState == SubControlState) {
+                subcontrol->addPseudoState(pseudostate);
+              } else if (lastState == IdSelectorState) {
+                idselector->addPseudoState(pseudostate);
+              } else {
+                // TODO pseudostate not on subcontrol.
+                qWarning();
+              }
+              pseudostate = nullptr; // finished with pseudostate.
+              lastState = state;
+              continue;
+            case NodeType::IdSelectorMarkerType:
+              idselector = widget->idSelector();
+              if (!idselector) {
+                idselector = new IDSelector(
+                  cursor, QTextCursor(), QString(), m_editor, this);
+              }
+              widget->setIdSelector(idselector);
+              lastState = state;
+              continue;
+            case NodeType::IdSelectorType:
+              if (!idselector) {
+                idselector = new IDSelector(
+                  cursor, QTextCursor(), QString(), m_editor, this);
+              }
+              idselector->setNameCursor(cursor);
+              idselector->setName(block);
+              idselector->setStateFlag(state);
+              if (widget)
+                widget->setIdSelector(idselector);
+              else
+                // TODO idselector not on widget.
+                qWarning();
+              idselector = nullptr; // finished with pseudostate.
+              lastState = state;
               continue;
             case NodeType::CommentType:
               parseComment(&nodes, text, start, pos);
+              lastState = state;
               continue;
             case NodeType::StartBraceType:
-              widget->setStartBraceCursor(cursor);
-              break;
+              widgetnodes->setStartBraceCursor(cursor);
+              lastState = state;
+              continue;
             case NodeType::EndBraceType:
-              widget->setEndBraceCursor(cursor);
-              leaveWidget = true;
+              widgetnodes->setEndBraceCursor(cursor);
+              widgetnodes = nullptr;
+              //              leaveWidget = true;
+              lastState = state;
               break;
             case NodeType::NewlineType:
               stashNewline(&nodes, pos++);
+              lastState = state;
               break;
             default:
               // TODO error
+              lastState = state;
               break;
           }
-          if (leaveWidget)
+          if (/*leaveWidget*/ !widgetnodes) {
+            lastState = state;
             break;
+          }
         }
         continue;
       }
       case NodeType::PropertyType: {
         cursor = getCursorForPosition(start);
         PropertyNode* property =
-          new PropertyNode(block, cursor, m_editor, check, this);
+          new PropertyNode(block, cursor, m_editor, state, this);
         nodes.insert(cursor, property);
         parsePropertyWithValues(&nodes, property, text, start, pos, block);
         continue;
@@ -326,7 +403,6 @@ Parser::parseText(const QString& text)
       default:
         QString nextBlock;
 
-        //        if (!m_datastore->isNodesEmpty()) {
         if (nodes.isEmpty()) {
           auto oldPos = pos;
           nextBlock = findNext(text, pos);
@@ -337,14 +413,16 @@ Parser::parseText(const QString& text)
 
             if (m_datastore->containsPseudoState(nextBlock)) {
               cursor = getCursorForPosition(start);
-              stashWidget(&nodes, cursor, block, check);
+              auto widget =
+                new WidgetNode(block, cursor, m_editor, state, this);
+              widgetnodes->addWidget(widget);
               continue;
 
             } else if (m_datastore->propertyValueAttribute(nextBlock) !=
                        NoAttributeValue) {
               cursor = getCursorForPosition(start);
               PropertyNode* property =
-                new PropertyNode(block, cursor, m_editor, check, this);
+                new PropertyNode(block, cursor, m_editor, state, this);
               property->setPropertyMarker(true);
               property->setPropertyMarkerCursor(getCursorForPosition(colonPos));
               nodes.insert(cursor, property);
@@ -359,12 +437,14 @@ Parser::parseText(const QString& text)
 
             if (m_datastore->containsSubControl(nextBlock)) {
               cursor = getCursorForPosition(start);
-              auto widget = stashWidget(&nodes, cursor, block, check);
+              auto widget =
+                new WidgetNode(block, cursor, m_editor, state, this);
+              widgetnodes->addWidget(widget);
               if (!widget->isSubControlFuzzy(cursor)) {
                 if (!m_datastore->isValidSubControlForWidget(nextBlock,
                                                              widget->name())) {
                   widget->setWidgetCheck(
-                    NodeCheck::BadSubControlForWidgetCheck);
+                    NodeState::BadSubControlForWidgetState);
                 }
               }
               continue;
@@ -373,7 +453,8 @@ Parser::parseText(const QString& text)
           // step back
           pos = oldPos;
           cursor = getCursorForPosition(start);
-          stashWidget(&nodes, cursor, block, check);
+          auto widget = new WidgetNode(block, cursor, m_editor, state, this);
+          widgetnodes->addWidget(widget);
         } else { // anomalous type - see what comes next.
           int oldPos = pos;
           nextBlock = findNext(text, pos);
@@ -383,14 +464,16 @@ Parser::parseText(const QString& text)
 
             if (m_datastore->containsPseudoState(nextBlock)) {
               cursor = getCursorForPosition(start);
-              stashWidget(&nodes, cursor, block, check);
+              auto widget =
+                new WidgetNode(block, cursor, m_editor, state, this);
+              widgetnodes->addWidget(widget);
               continue;
 
             } else if (m_datastore->propertyValueAttribute(nextBlock) !=
                        NoAttributeValue) {
               cursor = getCursorForPosition(start);
               PropertyNode* property =
-                new PropertyNode(block, cursor, m_editor, check, this);
+                new PropertyNode(block, cursor, m_editor, state, this);
               property->setPropertyMarker(true);
               property->setPropertyMarkerCursor(getCursorForPosition(oldPos));
               nodes.insert(cursor, property);
@@ -405,7 +488,9 @@ Parser::parseText(const QString& text)
 
             if (m_datastore->containsSubControl(nextBlock)) {
               cursor = getCursorForPosition(start);
-              stashWidget(&nodes, cursor, block, check);
+              auto widget =
+                new WidgetNode(block, cursor, m_editor, state, this);
+              widgetnodes->addWidget(widget);
               continue;
             }
           }
@@ -468,13 +553,13 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
       if (validForProperty) {
         // valid property and valid value.
         property->addValue(block,
-                           ValidPropertyValue,
+                           ValidPropertyValueState,
                            getCursorForPosition((pos - block.length())),
                            attributeType);
       } else {
         if (attributeType == NoAttributeValue) {
           // not a valid value for any property
-          auto [type, check] = checkType(block, property);
+          auto [type, check] = checkType(block, BadNodeState, property);
           switch (type) {
             case NodeType::WidgetType:
               stepBack(pos, block);
@@ -487,7 +572,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
             }
             default:
               property->addValue(block,
-                                 BadNodeCheck,
+                                 BadNodeState,
                                  getCursorForPosition((pos - block.length())),
                                  attributeType);
           }
@@ -495,7 +580,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
           // invalid property name but this is a valid property attribute
           // anyway.
           property->addValue(block,
-                             ValidPropertyValue,
+                             ValidPropertyValueState,
                              getCursorForPosition((pos - block.length())),
                              attributeType);
         }
@@ -577,7 +662,7 @@ Parser::findNext(const QString& text, int& pos)
       } else if (c.isLetterOrNumber() || c == '-') {
         if (!block.isEmpty()) {
           QChar b = block.back();
-          if (b == '{' || b == '}' || b == ';' || b == ':') {
+          if (b == '{' || b == '}' || b == ';' || b == ':' || b == '#') {
             return block;
           }
         }
@@ -594,7 +679,8 @@ Parser::findNext(const QString& text, int& pos)
         return block;
       } else if (c.isSpace() && !block.isEmpty()) {
         return block;
-      } else if (c == '{' || c == '}' || c == ';' || c == ':') {
+      } else if (c == '{' || c == '}' || c == ';' || c == ':' || c == ',' ||
+                 c == '#') {
         if (!block.isEmpty()) {
           if (block.back().isLetterOrNumber()) {
             // a possibly correct name/number string
@@ -736,16 +822,16 @@ Parser::nodeAtCursorPosition(CursorData* data, int position)
   }
 }
 
-WidgetNode*
-Parser::stashWidget(QMap<QTextCursor, Node*>* nodes,
-                    QTextCursor cursor,
-                    const QString& block,
-                    enum NodeCheck check)
-{
-  auto widgetnode = new WidgetNode(block, cursor, m_editor, check, this);
-  (*nodes).insert(cursor, widgetnode);
-  return widgetnode;
-}
+// WidgetNode*
+// Parser::stashWidget(QMap<QTextCursor, Node*>* nodes,
+//                    QTextCursor cursor,
+//                    const QString& block,
+//                    enum NodeCheck check)
+//{
+//  auto widgetnode = new WidgetNode(block, cursor, m_editor, check, this);
+//  (*nodes).insert(cursor, widgetnode);
+//  return widgetnode;
+//}
 
 // void
 // Parser::stashBadNode(QMap<QTextCursor, Node*>* nodes,
@@ -923,7 +1009,7 @@ Parser::updateSubControlMenu(WidgetNode* widget,
                    suggestionsMenu,
                    SectionType::FuzzyWidgetSubControl);
       }
-    } else if (!widget->doesMarkerMatch(SubControlCheck)) {
+    } else if (!widget->doesMarkerMatch(SubControlState)) {
       (*suggestionsMenu)->clear();
       auto widgetact = getWidgetAction(
         m_datastore->badColonIcon(),
@@ -983,7 +1069,7 @@ Parser::updatePseudoStateMenu(WidgetNode* widget,
                  pos,
                  suggestionsMenu,
                  SectionType::FuzzyWidgetPseudoState);
-    } else if (!widget->doesMarkerMatch(PseudoStateCheck)) {
+    } else if (!widget->doesMarkerMatch(PseudostateState)) {
       (*suggestionsMenu)->clear();
       auto widgetact = getWidgetAction(
         m_datastore->badDColonIcon(),
@@ -1099,7 +1185,7 @@ Parser::updateInvalidNameAndPropertyValueContextMenu(
     auto act = new QAction(s.arg(pair.first, pair.second));
     (*suggestionsMenu)->addAction(act);
     QVariant v;
-    v.setValue(qMakePair<Node*, QPoint>(nNode, pos));
+    v.setValue(qMakePair<NamedNode*, QPoint>(nNode, pos));
     act->setData(v);
     m_editor->connect(
       act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
@@ -1269,9 +1355,7 @@ Parser::getStylesheetProperty(const QString& sheet, int& pos)
 }
 
 void
-Parser::handleDocumentChanged(int /*offset*/,
-                              int /*charsRemoved*/,
-                              int /*charsAdded*/)
+Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
 {
   // If there is no text then nothing to be done.
   if (m_editor->toPlainText().trimmed().isEmpty()) {
@@ -1614,11 +1698,11 @@ Parser::actionPropertyNameChange(PropertyNode* property, const QString& newName)
   updateTextChange(cursor, oldName, newName);
 
   if (m_datastore->containsProperty(newName))
-    property->setPropertyNameCheck(NodeCheck::ValidNameCheck);
+    property->setPropertyNameCheck(NodeState::ValidNameState);
   else if (!m_datastore->fuzzySearchProperty(newName).isEmpty()) {
-    property->setPropertyNameCheck(NodeCheck::FuzzyPropertyCheck);
+    property->setPropertyNameCheck(NodeState::FuzzyPropertyState);
   } else {
-    property->setPropertyNameCheck(NodeCheck::BadNodeCheck);
+    property->setPropertyNameCheck(NodeState::BadNodeState);
   }
   property->setName(newName);
   property->setCursor(cursor);
@@ -1636,7 +1720,7 @@ Parser::actionPropertyValueChange(PropertyNode* property,
   updateTextChange(cursor, oldName, newName);
 
   property->setValue(index, newName);
-  property->setCheck(index, ValidPropertyValue);
+  property->setStateFlag(index, ValidPropertyValueState);
   property->setValueCursor(index, cursor);
   emit rehighlightBlock(property->cursor().block());
 }
@@ -1686,18 +1770,18 @@ Parser::handleSuggestions(QAction* act)
         auto cursor = widget->cursor();
         updateTextChange(cursor, widget->name(), newName);
         widget->setName(newName);
-        widget->setWidgetCheck(NodeCheck::WidgetCheck);
+        widget->setWidgetCheck(NodeState::WidgetState);
         if (widget->hasSubControl()) {
           auto subcontrol = widget->subControl(pos);
-          auto [type, check] = checkType(subcontrol->name());
-          switch (check) {
-            case NodeCheck::SubControlCheck:
-            case NodeCheck::FuzzySubControlCheck:
+          auto [type, state] = checkType(subcontrol->name(), BadNodeState);
+          switch (state) {
+            case NodeState::SubControlState:
+            case NodeState::FuzzySubControlState:
               widget->setSubControlMarkerCursor(subcontrol->cursor());
-              widget->setWidgetCheck(check);
+              widget->setWidgetCheck(state);
               break;
-            case NodeCheck::PseudoStateCheck:
-            case NodeCheck::FuzzyPseudoStateCheck:
+            case NodeState::PseudostateState:
+            case NodeState::FuzzyPseudostateState:
               //              widget->setPseudoStateMarkerCursor(widget->extensionCursor());
               //              widget->setWidgetCheck(check);
               break;

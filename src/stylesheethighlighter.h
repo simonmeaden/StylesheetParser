@@ -39,6 +39,7 @@ public:
   void highlightBlock(const QString& text);
 
   void setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setSeperatorFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPseudoStateFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPseudoStateMarkerFormat(QBrush color,
                                   QBrush back,
@@ -98,7 +99,8 @@ private:
   QTextCharFormat m_baseFormat;
   QTextCharFormat m_widgetFormat;
   QTextCharFormat m_badWidgetFormat;
-  QTextCharFormat m_nameFormat;
+  QTextCharFormat m_seperatorFormat;
+  QTextCharFormat m_badSeperatorFormat;
   QTextCharFormat m_valueFormat;
   QTextCharFormat m_badValueFormat;
   QTextCharFormat m_pseudoStateFormat;

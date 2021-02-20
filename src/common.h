@@ -172,6 +172,7 @@ enum NodeType
   NoType,
   //  NodeType,
   WidgetType,
+  WidgetsType,
   //  FuzzyWidgetType,
   PseudoStateType,
   //  FuzzyPseudoStateType,
@@ -179,6 +180,8 @@ enum NodeType
   SubControlType,
   //  FuzzySubControlType,
   SubControlMarkerType,
+  IdSelectorType,
+  IdSelectorMarkerType,
   ColonType, //! Either a PropertyMarkerType or a PseudoStateMarkerType
   StartBraceType,
   EndBraceType,
@@ -244,49 +247,43 @@ enum AttributeType
 Q_DECLARE_FLAGS(AttributeTypes, AttributeType);
 Q_DECLARE_OPERATORS_FOR_FLAGS(AttributeTypes)
 
-enum NodeCheck
+enum NodeState
 {
-  BadNodeCheck = 0,
-  PropertyMarkerCheck = 0x1,
-  PropertyEndMarkerCheck = 0x2,
-  ValidNameCheck = 0x4,
-  ValidPropertyValue = 0x8,
-  FuzzyPropertyCheck = 0x10,
-  FuzzyPropertyNameCheck = 0x20,
-  GoodPropertyCheck = 0xF,
+  BadNodeState = 0,
+  PropertyMarkerState = 0x1,
+  PropertyEndMarkerState = 0x2,
+  ValidNameState = 0x4,
+  ValidPropertyValueState = 0x8,
+  FuzzyPropertyState = 0x10,
+  FuzzyPropertyNameState = 0x20,
+  GoodPropertyState = 0xF,
   //
   //  WidgetExtensionCheck = 0x10,
   //
-  SubControlCheck = 0x100,
-  FuzzySubControlCheck = 0x200,
-  SubControlMarkerCheck = 0x400,
-  BadSubControlForWidgetCheck = 0x800,
-  SubControlSeperatorCheck = 0x1000,
+  SubControlState = 0x100,
+  FuzzySubControlState = 0x200,
+  SubControlMarkerState = 0x400,
+  BadSubControlForWidgetState = 0x800,
+  SubControlSeperatorState = 0x1000,
+  IdSelectorState = 0x2000,
   //
-  PseudoStateCheck = 0x10000,
-  FuzzyPseudoStateCheck = 0x20000,
-  PseudoStateMarkerCheck = 0x40000,
+  PseudostateState = 0x10000,
+  FuzzyPseudostateState = 0x20000,
+  PseudostateMarkerState = 0x40000,
+  IdSelectorMarkerState = 0x80000,
   //
-  StartBraceCheck = 0x100000,
-  EndBraceCheck = 0x200000,
+  StartBraceState = 0x100000,
+  EndBraceState = 0x200000,
   //
-  WidgetCheck = 0x1000000,
-  FuzzyWidgetCheck = 0x2000000,
+  WidgetState = 0x1000000,
+  FuzzyWidgetState = 0x2000000,
   //
-  CommentCheck = 0x10000000,
-  NewLineCheck = 0x20000000,
+  CommentState = 0x10000000,
+  NewLineState = 0x20000000,
 
 };
-Q_DECLARE_FLAGS(NodeChecks, NodeCheck);
-Q_DECLARE_OPERATORS_FOR_FLAGS(NodeChecks)
-
-// enum PropertyValueCheck
-//{
-//  NoCheck,
-//  GoodValue,
-//  ValidPropertyType,
-//  BadValue,
-//};
+Q_DECLARE_FLAGS(NodeStates, NodeState);
+Q_DECLARE_OPERATORS_FOR_FLAGS(NodeStates)
 
 enum NodeIsIn
 {

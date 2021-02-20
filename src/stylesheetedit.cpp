@@ -40,7 +40,7 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
   qRegisterMetaType<QTextCursor>("QTextCursor");
   qRegisterMetaType<MenuData>("MenuData");
   qRegisterMetaType<NodeType>("NodeType");
-  qRegisterMetaType<NodeCheck>("NodeCheck");
+  qRegisterMetaType<NodeState>("NodeCheck");
 
   m_editor->setup(m_bookmarkArea, m_linenumberArea);
 
@@ -432,11 +432,11 @@ StylesheetEditor::setup(BookmarkArea* bookmarkArea,
           &QPlainTextEdit::cursorPositionChanged,
           this,
           &StylesheetEditor::cursorPositionHasChanged);
-  connect(document(),
-          &QTextDocument::contentsChange,
-          this,
-          &StylesheetEditor::documentChanged,
-          Qt::UniqueConnection);
+//  connect(document(),
+//          &QTextDocument::contentsChange,
+//          this,
+//          &StylesheetEditor::documentChanged,
+//          Qt::UniqueConnection);
 }
 
 // StylesheetEditorPrivate::StylesheetEditorPrivate(StylesheetEditor* parent)
@@ -1187,7 +1187,7 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
           auto widget = qobject_cast<WidgetNode*>(node);
           switch (section->type) {
             case SectionType::WidgetName: {
-              if (widget->isNameFuzzy()) {
+              if (widget && widget->isNameFuzzy()) {
                 setHoverFuzzyWidgetName(hover, widget->name());
               }
               break;

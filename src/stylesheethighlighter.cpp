@@ -31,9 +31,11 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
   m_back = QColor("white"); /*editor->palette().brush(QPalette::Background)*/
   //  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
   setWidgetFormat(QColor("olive"), m_back, QFont::Light);
+  setSeperatorFormat(QColor("pink"), m_back, QFont::Light);
+  //  setSeperatorFormat(Qt::black, m_back, QFont::Light);
   setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
-  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  //  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
+  //  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
   setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
   //  setSubControlFormat(QColor("pink"), m_back, QFont::Light);
   //  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
@@ -152,7 +154,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     }
   }
 
-  NodeCheck check;
+  NodeState check;
   QString value;
 
   for (int i = 0; i < property->count(); i++) {
@@ -162,7 +164,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     length = value.length();
 
     if (isInBlock(position, length, blockStart, blockEnd)) {
-      if (check == ValidPropertyValue) {
+      if (check == ValidPropertyValueState) {
         formatVisiblePart(
           blockStart, blockEnd, position, length, m_valueFormat);
       } else {
@@ -223,190 +225,154 @@ StylesheetHighlighter::highlightBlock(const QString& text)
         break;
 
         //      case NodeType::FuzzyWidgetType:
-      case NodeType::WidgetType: {
-        WidgetNode* widget = qobject_cast<WidgetNode*>(node);
-
-        position = widget->position();
-        length = widget->name().length();
-        if (isInBlock(position, length, blockStart, blockEnd)) {
-          if (widget->isNameValid()) {
-            formatVisiblePart(
-              blockStart, blockEnd, position, length, m_widgetFormat);
-          } else {
-            if (widget->position() < blockEnd) {
-              formatVisiblePart(
-                blockStart, blockEnd, position, length, m_badWidgetFormat);
-            }
-          }
-        }
-
-        if (widget->hasSubControl()) {
-          SubControl* subcontrol = nullptr;
-          for (auto s : *(widget->subControls())) {
-            if (s->isIn(position)) {
-              subcontrol = s;
-              break;
-            }
-          }
-          if (!subcontrol)
-            continue;
-          auto extname = subcontrol->name();
-          if (subcontrol->hasMarker()) {
-            position = subcontrol->position();
-            if (isInBlock(position, 2, blockStart, blockEnd)) {
-              if (subcontrol->isFuzzy()) {
-                formatVisiblePart(blockStart,
-                                  blockEnd,
-                                  position,
-                                  2,
-                                  m_badSubControlMarkerFormat);
-              } else {
-                formatVisiblePart(
-                  blockStart, blockEnd, position, 2, m_subControlMarkerFormat);
-              }
-            }
-            position = subcontrol->position();
-            length = subcontrol->length();
+      case WidgetsType: {
+        auto widgets = qobject_cast<WidgetNodes*>(node);
+        if (widgets) {
+          for (auto widget : widgets->widgets()) {
+            position = widget->position();
+            length = widget->name().length();
             if (isInBlock(position, length, blockStart, blockEnd)) {
-              if (subcontrol->isValid()) {
+              if (widget->isNameValid()) {
                 formatVisiblePart(
-                  blockStart, blockEnd, position, length, m_subControlFormat);
+                  blockStart, blockEnd, position, length, m_widgetFormat);
               } else {
-                formatVisiblePart(blockStart,
-                                  blockEnd,
-                                  position,
-                                  length,
-                                  m_badSubControlFormat);
+                if (widget->position() < blockEnd) {
+                  formatVisiblePart(
+                    blockStart, blockEnd, position, length, m_badWidgetFormat);
+                }
               }
             }
 
-            if (subcontrol->hasPseudoStates()) {
-              for (auto state : *(subcontrol->pseudoStates())) {
-                if (state->hasMarker()) {
-                  position = state->position();
-                  if (!state->isValid()) {
+            if (widget->hasSubControl()) {
+              for (auto subcontrol : *(widget->subControls())) {
+                position = subcontrol->position();
+                length = 2;
+                if (isInBlock(position, length, blockStart, blockEnd)) {
+                  if (subcontrol->hasMarker()) {
                     formatVisiblePart(blockStart,
                                       blockEnd,
                                       position,
-                                      1,
-                                      m_pseudoStateMarkerFormat);
+                                      2,
+                                      m_subControlMarkerFormat);
                   } else {
                     formatVisiblePart(blockStart,
                                       blockEnd,
                                       position,
-                                      1,
-                                      m_badPseudoStateMarkerFormat);
+                                      2,
+                                      m_badSubControlMarkerFormat);
                   }
+                }
 
-                  position = state->position();
-                  length = state->length();
-                  if (isInBlock(position, length, blockStart, blockEnd)) {
-                    if (m_datastore->containsPseudoState(state->name())) {
-                      formatVisiblePart(blockStart,
-                                        blockEnd,
-                                        position,
-                                        length,
-                                        m_pseudoStateFormat);
-                    } else {
-                      formatVisiblePart(blockStart,
-                                        blockEnd,
-                                        position,
-                                        length,
-                                        m_badPseudoStateFormat);
+                position = subcontrol->namePosition();
+                length = subcontrol->name().length();
+                if (isInBlock(position, length, blockStart, blockEnd)) {
+                  if (subcontrol->isValid()) {
+                    formatVisiblePart(blockStart,
+                                      blockEnd,
+                                      position,
+                                      length,
+                                      m_subControlFormat);
+                  } else {
+                    formatVisiblePart(blockStart,
+                                      blockEnd,
+                                      position,
+                                      length,
+                                      m_badSubControlFormat);
+                  }
+                }
+
+                if (subcontrol->hasPseudoStates()) {
+                  for (auto state : *(subcontrol->pseudoStates())) {
+                    if (state->hasMarker()) {
+                      position = state->position();
+                      if (state->isValid()) {
+                        formatVisiblePart(blockStart,
+                                          blockEnd,
+                                          position,
+                                          1,
+                                          m_pseudoStateMarkerFormat);
+                      } else {
+                        formatVisiblePart(blockStart,
+                                          blockEnd,
+                                          position,
+                                          1,
+                                          m_badPseudoStateMarkerFormat);
+                      }
+
+                      position = state->namePosition();
+                      length = state->name().length();
+                      if (isInBlock(position, length, blockStart, blockEnd)) {
+                        if (m_datastore->containsPseudoState(state->name())) {
+                          formatVisiblePart(blockStart,
+                                            blockEnd,
+                                            position,
+                                            length,
+                                            m_pseudoStateFormat);
+                        } else {
+                          formatVisiblePart(blockStart,
+                                            blockEnd,
+                                            position,
+                                            length,
+                                            m_badPseudoStateFormat);
+                        }
+                      }
                     }
                   }
                 }
               }
             }
-          } else if (widget->isPseudoState()) {
-
-            //            position = widget->markerPosition();
-            //            if (isInBlock(position, 1, blockStart, blockEnd)) {
-            //              if (!widget->isExtensionFuzzy() &&
-            //                  widget->doesMarkerMatch(NodeCheck::PseudoStateCheck))
-            //                  {
-            //                formatVisiblePart(
-            //                  blockStart, blockEnd, position, 1,
-            //                  m_pseudoStateMarkerFormat);
-            //              } else {
-            //                formatVisiblePart(blockStart,
-            //                                  blockEnd,
-            //                                  position,
-            //                                  2,
-            //                                  m_badPseudoStateMarkerFormat);
-            //              }
-            //            }
-            //            auto subcontrol = widget->subControl();
-            //            auto position = subcontrol->position();
-            //            length = subcontrol->length();
-            //            if (isInBlock(position, length, blockStart, blockEnd))
-            //            {
-            //              if (widget->isExtensionValid()) {
-            //                formatVisiblePart(
-            //                  blockStart, blockEnd, position, length,
-            //                  m_pseudoStateFormat);
-            //              } else {
-            //                formatVisiblePart(blockStart,
-            //                                  blockEnd,
-            //                                  position,
-            //                                  length,
-            //                                  m_badPseudoStateFormat);
-            //              }
-            //            }
-          } else {
-            //            formatVisiblePart(blockStart,
-            //                              blockEnd,
-            //                              widget->extensionPosition(),
-            //                              widget->subControlLength(),
-            //                              m_badSubControlFormat);
           }
-        }
 
-        bool hasstart = widget->hasStartBrace();
-        bool hasend = widget->hasEndBrace();
-
-        if (hasstart) {
-          if (hasend) {
-            formatVisiblePart(blockStart,
-                              blockEnd,
-                              widget->startBracePosition(),
-                              1,
-                              m_startBraceFormat);
-          } else {
-            formatVisiblePart(blockStart,
-                              blockEnd,
-                              widget->startBracePosition(),
-                              1,
-                              m_badStartBraceFormat);
-          }
-        }
-
-        for (int i = 0; i < widget->propertyCount(); i++) {
-          auto property = widget->property(i);
-          if (property) {
-            formatProperty(property, blockStart, blockEnd);
-          }
-        }
-
-        if (hasend) {
-          position = widget->endBracePosition();
-          if (isInBlock(position, 1, blockStart, blockEnd)) {
-            if (hasstart) {
+          for (auto seperator : widgets->seperators()) {
+            position = seperator.anchor();
+            length = 1;
+            if (isInBlock(position, length, blockStart, blockEnd)) {
               formatVisiblePart(
-                blockStart, blockEnd, position, 1, m_endBraceFormat);
+                blockStart, blockEnd, position, length, m_seperatorFormat);
+            }
+          }
+
+          bool hasstart = widgets->hasStartBrace();
+          bool hasend = widgets->hasEndBrace();
+          if (hasstart) {
+            if (hasend) {
+              formatVisiblePart(blockStart,
+                                blockEnd,
+                                widgets->startBracePosition(),
+                                1,
+                                m_startBraceFormat);
             } else {
-              formatVisiblePart(
-                blockStart, blockEnd, position, 1, m_badEndBraceFormat);
+              formatVisiblePart(blockStart,
+                                blockEnd,
+                                widgets->startBracePosition(),
+                                1,
+                                m_badStartBraceFormat);
+            }
+          }
+
+          for (int i = 0; i < widgets->propertyCount(); i++) {
+            auto property = widgets->property(i);
+            if (property) {
+              formatProperty(property, blockStart, blockEnd);
+            }
+          }
+
+          if (hasend) {
+            position = widgets->endBracePosition();
+            if (isInBlock(position, 1, blockStart, blockEnd)) {
+              if (hasstart) {
+                formatVisiblePart(
+                  blockStart, blockEnd, position, 1, m_endBraceFormat);
+              } else {
+                formatVisiblePart(
+                  blockStart, blockEnd, position, 1, m_badEndBraceFormat);
+              }
             }
           }
         }
 
         break;
       }
-
-      case NodeType::BadNodeType:
-        setFormat(nodeStart, node->length(), m_badValueFormat);
-        break;
 
       case NodeType::CommentType:
         formatVisiblePart(blockStart,
@@ -481,6 +447,21 @@ StylesheetHighlighter::setWidgetFormat(QBrush color,
   m_badWidgetFormat = QTextCharFormat(m_widgetFormat);
   m_badWidgetFormat.setUnderlineColor(QColor(Qt::red));
   m_badWidgetFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+}
+
+void
+StylesheetHighlighter::setSeperatorFormat(QBrush color,
+                                          QBrush back,
+                                          QFont::Weight weight)
+{
+  m_seperatorFormat.setFontWeight(weight);
+  m_seperatorFormat.setForeground(color);
+  m_seperatorFormat.setBackground(back);
+  m_badSeperatorFormat.setFontWeight(weight);
+  m_badSeperatorFormat.setForeground(color);
+  m_badSeperatorFormat.setBackground(back);
+  m_badSeperatorFormat.setUnderlineColor(QColor(Qt::red));
+  m_badSeperatorFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
 void

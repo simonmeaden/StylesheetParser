@@ -44,8 +44,6 @@ class StylesheetEditor;
 class StylesheetData;
 class Node;
 class WidgetNode;
-// class StartBraceNode;
-// class EndBraceNode;
 
 class Property
 {
@@ -291,11 +289,11 @@ public:
   void addPseudoState(const QString& state);
   void removePseudoState(const QString& state);
 
-  QMap<QTextCursor, Node*> nodes();
+  QMap<QTextCursor, Node *> nodes();
   void insertNode(QTextCursor cursor, Node* node);
   bool isNodesEmpty();
   void clearNodes();
-  void setNodes(QMap<QTextCursor, Node*> nodes);
+  void setNodes(QMap<QTextCursor, Node *> nodes);
 
   int braceCount();
   void setBraceCount(int value);

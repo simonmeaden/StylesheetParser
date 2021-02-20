@@ -41,6 +41,7 @@ class StartBraceNode;
 class EndBraceNode;
 class WidgetNode;
 class NewlineNode;
+class Node;
 
 class IconLabel : public QWidget
 {
@@ -85,7 +86,7 @@ public:
   void parseInitialText(const QString& text);
 
   StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
-  void handleDocumentChanged(int, int, int);
+  void handleDocumentChanged(int offset, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
   QMenu* handleMouseClicked(const QPoint& pos);
   QTextCursor currentCursor() const;
@@ -135,17 +136,17 @@ private:
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
 
-  WidgetNode* stashWidget(QMap<QTextCursor, Node*>* nodes,
-                          QTextCursor cursor,
-                          const QString& block,
-                          NodeCheck check = NodeCheck::WidgetCheck);
-//  void stashBadNode(QMap<QTextCursor, Node*>* nodes,
-//                    int position,
-//                    const QString& block,
-//                    ParserState::Error error);
+  //  WidgetNode* stashWidget(QMap<QTextCursor, Node *> *nodes,
+  //                          QTextCursor cursor,
+  //                          const QString& block,
+  //                          NodeCheck check = NodeCheck::WidgetCheck);
+  //  void stashBadNode(QMap<QTextCursor, Node*>* nodes,
+  //                    int position,
+  //                    const QString& block,
+  //                    ParserState::Error error);
   void stashNewline(QMap<QTextCursor, Node*>* nodes, int position);
-//  void stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position);
-//  void stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position);
+  //  void stashEndBrace(QMap<QTextCursor, Node*>* nodes, int position);
+  //  void stashStartBrace(QMap<QTextCursor, Node*>* nodes, int position);
 
   void updateContextMenu(QMap<int, QString> matches,
                          WidgetNode* node,
@@ -155,11 +156,13 @@ private:
                                  const QPoint& pos,
                                  QMenu** suggestionsMenu,
                                  QMap<int, QString> matches);
-  void updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches, QPoint pos,
+  void updateValidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                           QPoint pos,
                                            PropertyNode* property,
                                            const QString& valueName,
                                            QMenu** suggestionsMenu);
-  void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches, QPoint pos,
+  void updateInvalidPropertyValueContextMenu(QMultiMap<int, QString> matches,
+                                             QPoint pos,
                                              PropertyNode* property,
                                              const QString& valueName,
                                              QMenu** suggestionsMenu);
@@ -169,8 +172,13 @@ private:
     const QString& valueName,
     const QPoint& pos,
     QMenu** suggestionsMenu);
-  void updatePseudoStateMenu(WidgetNode* widget, QPoint pos, QMenu** suggestionsMenu);
-  void updateSubControlMenu(WidgetNode* widget, const QString &name, QPoint pos, QMenu** suggestionsMenu);
+  void updatePseudoStateMenu(WidgetNode* widget,
+                             QPoint pos,
+                             QMenu** suggestionsMenu);
+  void updateSubControlMenu(WidgetNode* widget,
+                            const QString& name,
+                            QPoint pos,
+                            QMenu** suggestionsMenu);
   void updateMenu(QStringList matches,
                   Node* nNode,
                   QPoint pos,
@@ -178,7 +186,8 @@ private:
                   SectionType type,
                   const QString& oldName = QString());
   void updateMenu(QMap<int, QString> matches,
-                  Node* nNode, QPoint pos,
+                  Node* nNode,
+                  QPoint pos,
                   QMenu** suggestionsMenu,
                   SectionType type,
                   const QString& oldName = QString());
@@ -193,8 +202,9 @@ private:
   void actionPropertyMarker(PropertyNode* property);
   void actionPropertyEndMarker(PropertyNode* property);
   void stepBack(int& pos, const QString& block);
-  QPair<NodeType, NodeCheck> checkType(const QString& block,
-                          PropertyNode* property = nullptr) const;
+  QPair<NodeType, NodeState> checkType(const QString& block,
+                                       NodeState lastState,
+                                       PropertyNode* property = nullptr) const;
   QWidgetAction* getWidgetAction(const QIcon& icon,
                                  const QString& text,
                                  QMenu* suggestionsMenu);

@@ -494,7 +494,12 @@ WidgetModel::checkFontWeight(const QString& value) const
 bool
 WidgetModel::checkGradient(const QString& value) const
 {
-  return m_gradient.contains(value);
+  auto v = value;
+  if (v.contains("(")) {
+    auto l = v.split("(");
+    v = l.first();
+  }
+  return m_gradient.contains(v);
 }
 
 bool
@@ -1030,7 +1035,7 @@ DataStore::nodes()
 }
 
 void
-DataStore::insertNode(QTextCursor cursor, Node* node)
+DataStore::insertNode(QTextCursor cursor, Node *node)
 {
   QMutexLocker locker(&m_mutex);
   m_nodes.insert(cursor, node);

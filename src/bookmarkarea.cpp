@@ -23,8 +23,8 @@
 
 #include "hoverwidget.h"
 #include "stylesheetedit_p.h"
-#include "stylesheetparser/labelledlineedit.h"
-#include "stylesheetparser/labelledspinbox.h"
+#include "sm_widgets/labelledlineedit.h"
+#include "sm_widgets/labelledspinbox.h"
 
 BookmarkArea::BookmarkArea(StylesheetEditor* editor)
   : QWidget(editor)

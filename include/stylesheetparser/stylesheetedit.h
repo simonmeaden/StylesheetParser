@@ -166,6 +166,9 @@ public:
   //! Pretty print the text.
   void format();
 
+  //! Displays the editor options dialog.
+  void options();
+
   //! Returns the current line number
   int currentLineNumber() const;
   //! Moves n lines up, defaults to 1 line.
@@ -219,10 +222,15 @@ signals:
   void handleDocumentChanged(int, int, int);
 
 protected:
+  StylesheetEditor* editor() {
+    return m_editor;
+  }
 private:
   StylesheetEditor* m_editor;
   LineNumberArea* m_linenumberArea;
   BookmarkArea* m_bookmarkArea;
+
+  friend class StylesheetEditDialog;
 };
 
 #endif // STYLESHEETEDIT_H

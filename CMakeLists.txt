@@ -32,8 +32,11 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledwidget.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/labelledlineedit.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/labelledspinbox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledspinbox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledlineedit.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledtextfield.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledspinbox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledcombobox.h>
 
       $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetedit.h>
@@ -41,8 +44,11 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
       $<INSTALL_INTERFACE:include/stylesheetparser/x11colors.h>
       $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledwidget.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/labelledlineedit.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/labelledspinbox.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledspinbox.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/labelledlineedit.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/labelledtextfield.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/labelledspinbox.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/labelledcombobox.h>
 
    PRIVATE
       src/main.cpp
@@ -67,8 +73,11 @@ target_sources(tst_parser
       src/common.cpp
       src/x11colors.cpp
       src/abstractlabelledwidget.cpp
+      src/abstractlabelledspinbox.cpp
+      src/labelledtextfield.cpp
       src/labelledlineedit.cpp
       src/labelledspinbox.cpp
+      src/labelledcombobox.cpp
       src/fts_fuzzy_match.h
 
    )

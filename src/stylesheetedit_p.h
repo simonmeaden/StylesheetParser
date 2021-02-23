@@ -34,13 +34,15 @@
 #include <QThread>
 #include <QWidget>
 
+Q_DECLARE_METATYPE(QTextCharFormat)
+
 #include "common.h"
 #include "datastore.h"
 #include "node.h"
 #include "parserstate.h"
 #include "stylesheethighlighter.h"
-#include "stylesheetparser/labelledlineedit.h"
-#include "stylesheetparser/labelledspinbox.h"
+#include "sm_widgets/labelledlineedit.h"
+#include "sm_widgets/labelledspinbox.h"
 
 /// \cond DO_NOT_DOCUMENT
 
@@ -57,6 +59,7 @@ class StylesheetEditor : public QPlainTextEdit
 public:
   explicit StylesheetEditor(QWidget* parent = nullptr);
 
+  StylesheetHighlighter *highlighter();
   void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
 
   void setPlainText(const QString& text);
@@ -122,6 +125,7 @@ public:
   void setBookmarkLineNumber(int bookmarkLineNumber);
 
   void format();
+  void options();
 
   void up(int n = 1);
   void down(int n = 1);

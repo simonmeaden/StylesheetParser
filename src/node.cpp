@@ -781,11 +781,13 @@ WidgetNodes::sectionIfIn(QPoint pos)
   }
 
   if (isInStartBrace(pos)) {
+    section = new NodeSection(this);
     section->type = SectionType::WidgetStartBrace;
     return section;
   }
 
   if (isInEndBrace(pos)) {
+    section = new NodeSection(this);
     section->type = SectionType::WidgetEndBrace;
     return section;
   }
@@ -1399,7 +1401,7 @@ MarkerBase::length() const
   return (m_markerCursor.position() - NamedNode::position() + name().length());
 }
 
-SubControl::SubControl(QTextCursor markerCursor,
+ControlBase::ControlBase(QTextCursor markerCursor,
                        QTextCursor nameCursor,
                        const QString& name,
                        StylesheetEditor* editor,
@@ -1414,13 +1416,13 @@ SubControl::SubControl(QTextCursor markerCursor,
 }
 
 QList<PseudoState*>*
-SubControl::pseudoStates() const
+ControlBase::pseudoStates() const
 {
   return m_pseudoStates;
 }
 
 bool
-SubControl::hasPseudoStates()
+ControlBase::hasPseudoStates()
 {
   if (m_pseudoStates && !m_pseudoStates->isEmpty()) {
     return true;
@@ -1429,7 +1431,7 @@ SubControl::hasPseudoStates()
 }
 
 PseudoState*
-SubControl::pseudoState(QTextCursor cursor)
+ControlBase::pseudoState(QTextCursor cursor)
 {
   if (m_pseudoStates) {
     for (auto state : *(m_pseudoStates)) {
@@ -1444,7 +1446,7 @@ SubControl::pseudoState(QTextCursor cursor)
 }
 
 void
-SubControl::addPseudoState(PseudoState* state)
+ControlBase::addPseudoState(PseudoState* state)
 {
   if (!m_pseudoStates)
     m_pseudoStates = new QList<PseudoState*>();
@@ -1456,10 +1458,14 @@ SubControl::addPseudoState(PseudoState* state)
   }
 }
 
-bool SubControl::hasMarker() { return (state().testFlag(SubControlMarkerState)); }
+bool
+ControlBase::hasMarker()
+{
+  return (state().testFlag(SubControlMarkerState));
+}
 
 int
-SubControl::length() const
+ControlBase::length() const
 {
   if (m_pseudoStates && !m_pseudoStates->isEmpty()) {
     auto state = m_pseudoStates->last();
@@ -1470,13 +1476,13 @@ SubControl::length() const
 }
 
 bool
-SubControl::isFuzzy() const
+ControlBase::isFuzzy() const
 {
   return (state().testFlag(FuzzySubControlState));
 }
 
 bool
-SubControl::isValid() const
+ControlBase::isValid() const
 {
   if (m_state.testFlag(FuzzySubControlState) ||
       !m_state.testFlag(SubControlMarkerState) ||
@@ -1487,7 +1493,7 @@ SubControl::isValid() const
 }
 
 NodeSection*
-SubControl::sectionIfIn(QPoint pos)
+ControlBase::sectionIfIn(QPoint pos)
 {
   auto section = NamedNode::sectionIfIn(pos);
   if (section->type == Name) {
@@ -1526,7 +1532,7 @@ SubControl::sectionIfIn(QPoint pos)
 }
 
 int
-SubControl::pointWidth(const QString& text) const
+ControlBase::pointWidth(const QString& text) const
 {
   auto s = text;
   auto charSize = length() - 2; // remove marker
@@ -1642,16 +1648,38 @@ PseudoState::pointWidth(const QString& text) const
   return fm.horizontalAdvance(s);
 }
 
+SubControl::SubControl(QTextCursor markerCursor,
+                       QTextCursor nameCursor,
+                       const QString& name,
+                       StylesheetEditor* editor,
+                       QObject* parent,
+                       enum NodeType type)
+  : ControlBase(markerCursor, nameCursor, name, editor, parent, type)
+{
+  m_marker = "::";
+  if (!markerCursor.isNull()) {
+    setStateFlag(IdSelectorMarkerState);
+  }
+}
+
 IDSelector::IDSelector(QTextCursor markerCursor,
                        QTextCursor nameCursor,
                        const QString& name,
                        StylesheetEditor* editor,
                        QObject* parent,
                        enum NodeType type)
-  : SubControl(markerCursor, nameCursor, name, editor, parent, type)
+  : ControlBase(markerCursor, nameCursor, name, editor, parent, type)
 {
   m_marker = "#";
   if (!markerCursor.isNull()) {
     setStateFlag(IdSelectorMarkerState);
   }
+}
+
+bool IDSelector::isValid() const
+{
+  if (m_marker == "#" && m_name.length() > 0) {
+    return true;
+  }
+  return false;
 }

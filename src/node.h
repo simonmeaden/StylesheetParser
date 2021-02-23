@@ -153,11 +153,11 @@ class ControlBase : public MarkerBase
 {
 public:
   ControlBase(QTextCursor markerCursor,
-             QTextCursor nameCursor,
-             const QString& name,
-             StylesheetEditor* editor,
-             QObject* parent,
-             enum NodeType type = SubControlType);
+              QTextCursor nameCursor,
+              const QString& name,
+              StylesheetEditor* editor,
+              QObject* parent,
+              enum NodeType type = SubControlType);
 
   QList<PseudoState*>* pseudoStates() const;
   bool hasPseudoStates();
@@ -166,7 +166,7 @@ public:
   bool hasMarker();
   int length() const;
   bool isFuzzy() const override;
-  bool isValid() const;
+  virtual bool isValid() const;
   virtual NodeSection* sectionIfIn(QPoint pos);
 
 protected:
@@ -186,7 +186,6 @@ public:
              StylesheetEditor* editor,
              QObject* parent,
              enum NodeType type = IdSelectorType);
-
 };
 
 class IDSelector : public ControlBase
@@ -200,6 +199,7 @@ public:
              QObject* parent,
              enum NodeType type = IdSelectorType);
 
+  bool isValid() const override;
 };
 
 class PropertyNode;
@@ -427,9 +427,7 @@ public:
   {}
 
   void addWidget(WidgetNode* widget) { m_widgets.append(widget); }
-  QList<WidgetNode*> widgets() {
-    return m_widgets;
-  }
+  QList<WidgetNode*> widgets() { return m_widgets; }
 
   bool hasStartBrace() const;
   void setStartBraceCursor(QTextCursor cursor);

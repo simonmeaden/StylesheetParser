@@ -28,6 +28,7 @@
 #include "parser.h"
 #include "stylesheetedit_p.h"
 #include "stylesheethighlighter.h"
+#include "stylesheetparser/stylesheeteditdialog.h"
 
 #include <QtDebug>
 
@@ -41,6 +42,7 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
   qRegisterMetaType<MenuData>("MenuData");
   qRegisterMetaType<NodeType>("NodeType");
   qRegisterMetaType<NodeState>("NodeCheck");
+  qRegisterMetaType<QTextCharFormat>("QTextCharFormat");
 
   m_editor->setup(m_bookmarkArea, m_linenumberArea);
 
@@ -398,7 +400,14 @@ StylesheetEditor::StylesheetEditor(QWidget* parent)
   , m_parseComplete(false)
   , m_oldSection(new NodeSection(this))
 {
+  setFont(QFont("Source Code Pro", 9));
   setMouseTracking(true);
+}
+
+StylesheetHighlighter*
+StylesheetEditor::highlighter()
+{
+  return m_highlighter;
 }
 
 void
@@ -432,11 +441,11 @@ StylesheetEditor::setup(BookmarkArea* bookmarkArea,
           &QPlainTextEdit::cursorPositionChanged,
           this,
           &StylesheetEditor::cursorPositionHasChanged);
-//  connect(document(),
-//          &QTextDocument::contentsChange,
-//          this,
-//          &StylesheetEditor::documentChanged,
-//          Qt::UniqueConnection);
+  //  connect(document(),
+  //          &QTextDocument::contentsChange,
+  //          this,
+  //          &StylesheetEditor::documentChanged,
+  //          Qt::UniqueConnection);
 }
 
 // StylesheetEditorPrivate::StylesheetEditorPrivate(StylesheetEditor* parent)
@@ -1194,12 +1203,14 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
             }
             case SectionType::WidgetSubControlMarker:
             case SectionType::WidgetSubControlName: {
-//              if (widget->isSubControlFuzzy()) {
-//                setHoverFuzzySubControl(hover, widget->subControls()->name());
-//              } else if (widget->isSubControlBad()) {
-//                setHoverBadSubControl(
-//                  hover, widget->name(), widget->subControls()->name());
-//              }
+              //              if (widget->isSubControlFuzzy()) {
+              //                setHoverFuzzySubControl(hover,
+              //                widget->subControls()->name());
+              //              } else if (widget->isSubControlBad()) {
+              //                setHoverBadSubControl(
+              //                  hover, widget->name(),
+              //                  widget->subControls()->name());
+              //              }
               break;
             }
             case SectionType::WidgetPseudoStateMarker:
@@ -1482,6 +1493,22 @@ StylesheetEditor::format()
   // TODO pretty print format
 }
 
+void
+StylesheetEdit::options()
+{
+  m_editor->options();
+}
+
+void
+StylesheetEditor::options()
+{
+  auto dlg = new StylesheetEditDialog(this, this);
+
+  if (dlg->exec() == QDialog::Accepted) {
+    // make changes.
+  }
+}
+
 QString
 StylesheetEditor::getValueAtCursor(int pos, const QString& text)
 {
@@ -1527,56 +1554,6 @@ StylesheetEditor::updateLineNumberArea()
   m_lineNumberArea->update();
 }
 
-// void
-// StylesheetEditor::updateLeftArea(const QRect& rect, int dy)
-//{
-//  //  d_ptr->updateLineNumberArea(rect, dy);
-//}
-
-// void
-// StylesheetEditorPrivate::updateLineNumberArea(int linenumber)
-//{
-//  m_lineNumberArea->setLineNumber(linenumber);
-//  m_lineNumberArea->update();
-//}
-
-///*
-//   Calculates current line number and total line count.
-//*/
-// int
-// StylesheetEditorPrivate::calculateLineNumber(QTextCursor textCursor)
-//{
-//  QTextCursor cursor(textCursor);
-//  cursor.movePosition(QTextCursor::StartOfLine);
-
-//  int lines = 1;
-
-//  while (cursor.positionInBlock() > 0) {
-//    cursor.movePosition(QTextCursor::Up);
-//    lines++;
-//  }
-
-//  QTextBlock block = cursor.block().previous();
-
-//  while (block.isValid()) {
-//    lines += block.lineCount();
-//    block = block.previous();
-//  }
-
-//  int count = lines;
-
-//  block = cursor.block().next();
-
-//  while (block.isValid()) {
-//    count += block.lineCount();
-//    block = block.next();
-//  }
-
-//  m_lineNumberArea->setLineCount(count);
-
-//  return lines;
-//}
-
 /*
    Calculates the current text column.
 */
@@ -1593,12 +1570,6 @@ StylesheetEditor::cursorPositionHasChanged()
 {
   m_parser->handleCursorPositionChanged(textCursor());
 }
-
-// void
-// StylesheetEditorPrivate::cursorPositionChanged(QTextCursor textCursor)
-//{
-//  m_parser->handleCursorPositionChanged(textCursor);
-//}
 
 void
 StylesheetEditor::suggestionMade(bool)
@@ -1671,6 +1642,12 @@ StylesheetEditor::handleCustomMenuRequested(QPoint pos)
   act->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_F));
   act->setStatusTip(tr("Prettyfy the stylesheet"));
   connect(act, &QAction::triggered, this, &StylesheetEditor::format);
+  menu->addAction(act);
+
+  menu->addSeparator();
+
+  act = new QAction(tr("&Options..."));
+  connect(act, &QAction::triggered, this, &StylesheetEditor::options);
   menu->addAction(act);
 
   menu->popup(viewport()->mapToGlobal(pos));

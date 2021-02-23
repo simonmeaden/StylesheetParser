@@ -40,6 +40,10 @@ public:
 
   void setWidgetFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setSeperatorFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setIdSelectorFormat(QBrush color, QBrush back, QFont::Weight weight);
+  void setIDSelectorMarkerFormat(QBrush color,
+                                  QBrush back,
+                                  QFont::Weight weight);
   void setPseudoStateFormat(QBrush color, QBrush back, QFont::Weight weight);
   void setPseudoStateMarkerFormat(QBrush color,
                                   QBrush back,
@@ -93,6 +97,24 @@ public:
 
   QTextCharFormat::UnderlineStyle underlinestyle() const;
 
+  QTextCharFormat widgetFormat() const;
+  QTextCharFormat seperatorFormat() const;
+  QTextCharFormat valueFormat() const;
+  QTextCharFormat idSelectorFormat() const;
+  QTextCharFormat idSelectorMarkerFormat() const;
+  QTextCharFormat pseudoStateFormat() const;
+  QTextCharFormat pseudoStateMarkerFormat() const;
+  QTextCharFormat subControlFormat() const;
+  QTextCharFormat subControlMarkerFormat() const;
+  QTextCharFormat propertyFormat() const;
+  QTextCharFormat propertyMarkerFormat() const;
+  QTextCharFormat startBraceFormat() const;
+  QTextCharFormat endBraceFormat() const;
+  QTextCharFormat braceMatchFormat() const;
+  QTextCharFormat commentFormat() const;
+
+  QTextCharFormat propertyEndMarkerFormat() const;
+
 private:
   StylesheetEditor* m_editor;
   DataStore* m_datastore;
@@ -103,6 +125,10 @@ private:
   QTextCharFormat m_badSeperatorFormat;
   QTextCharFormat m_valueFormat;
   QTextCharFormat m_badValueFormat;
+  QTextCharFormat m_idSelectorFormat;
+  QTextCharFormat m_badIdSelectorFormat;
+  QTextCharFormat m_idSelectorMarkerFormat;
+  QTextCharFormat m_badIdSelectorMarkerFormat;
   QTextCharFormat m_pseudoStateFormat;
   QTextCharFormat m_badPseudoStateFormat;
   QTextCharFormat m_pseudoStateMarkerFormat;
@@ -127,30 +153,24 @@ private:
 
   int setNodeEnd(int nodeEnd, int blockEnd);
   int setNodeStart(int nodeStart, int blockStart);
-  //  void formatProperty(PropertyNode* property);
-  //  NodeIsIn nodeInBlock(const QTextBlock &block, Node *node, int&
-  //  blockEnd,int &nodeStart);
-  //  int getPositionRelToBlock(Node* node,
-  //                            QTextBlock block,
-  //                            int offset = 0);
   bool isInBlock(int position, int length, int blockStart, int blockEnd);
   void formatVisiblePart(int blockStart,
                          int blockEnd,
                          int position,
                          int length,
                          QTextCharFormat format);
-  //  int getLengthRelToBlock(Node* node,
-  //                          QTextBlock block,
-  //                          int position = -1,
-  //                          int length = -1);
   void formatPosition(int position,
                       int length,
                       int blockEnd,
                       QTextCharFormat format);
+  void formatPseudoState(PseudoState *state, int blockStart, int blockEnd);
+  void formatSubControl(SubControl *subcontrol, int blockStart, int blockEnd);
+  void formatIdSelector(IDSelector *selector, int blockStart, int blockEnd);
   void formatProperty(PropertyNode* property,
                       int blockStart,
                       int blockEnd, bool finalBlock=false);
   bool checkForEmpty(const QString & text);
+  void formatControlBase(ControlBase *control, int blockStart, int blockEnd, QTextCharFormat goodFormat, QTextCharFormat badFormat, QTextCharFormat goodMarkerFormat, QTextCharFormat badMarkerFormat);
 };
 
 #endif // STYLESHEETHIGHLIGHTER_H

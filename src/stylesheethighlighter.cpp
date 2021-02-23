@@ -28,26 +28,19 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
   , m_editor(editor)
   , m_datastore(datastore)
 {
-  m_back = QColor("white"); /*editor->palette().brush(QPalette::Background)*/
-  //  setWidgetFormat(QColor("#800080"), m_back, QFont::Light);
-  setWidgetFormat(QColor("olive"), m_back, QFont::Light);
-  setSeperatorFormat(QColor("pink"), m_back, QFont::Light);
-  //  setSeperatorFormat(Qt::black, m_back, QFont::Light);
-  setPseudoStateFormat(QColor("#808000"), m_back, QFont::Light);
-  //  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPseudoStateMarkerFormat(QColor("orange"), m_back, QFont::Light);
-  setSubControlFormat(QColor("#CE5C00"), m_back, QFont::Light);
-  //  setSubControlFormat(QColor("pink"), m_back, QFont::Light);
-  //  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setSubControlMarkerFormat(QColor("orange"), m_back, QFont::Light);
+  m_back = editor->palette().brush(QPalette::Base);
+  setWidgetFormat(QColor(0x80, 0, 0x80), m_back, QFont::Light);
+  setSeperatorFormat(Qt::black, m_back, QFont::Light);
+  setPseudoStateFormat(QColor(0x80, 0x80, 0), m_back, QFont::Light);
+  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setIdSelectorFormat(QColor("darkviolet"), m_back, QFont::Light);
+  setIDSelectorMarkerFormat(Qt::black, m_back, QFont::Light);
+  setSubControlFormat(QColor(0xCE, 0x5C, 0), m_back, QFont::Light);
+  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
   setPropertyFormat(QColor("darkblue"), m_back, QFont::Light);
-  //  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  //  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPropertyMarkerFormat(QColor("darkcyan"), m_back, QFont::Light);
-  setPropertyEndMarkerFormat(QColor("mediumseagreen"), m_back, QFont::Light);
-  setValueFormat(QColor("orangered"), m_back, QFont::Light);
-  //  setStartBraceFormat(QColor(Qt::black), m_back, QFont::Light);
-  //  setEndBraceFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
+  setValueFormat(QColor("firebrick"), m_back, QFont::Light);
   setStartBraceFormat(QColor("blue"), m_back, QFont::Light);
   setEndBraceFormat(QColor("lightblue"), m_back, QFont::Light);
   setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
@@ -129,6 +122,100 @@ StylesheetHighlighter::formatPosition(int position,
   if (position < blockEnd) {
     setFormat(position, length, format);
   }
+}
+
+void
+StylesheetHighlighter::formatPseudoState(PseudoState* state,
+                                         int blockStart,
+                                         int blockEnd)
+{
+  int position, length;
+  if (state->hasMarker()) {
+    position = state->position();
+    if (state->isValid()) {
+      formatVisiblePart(
+        blockStart, blockEnd, position, 1, m_pseudoStateMarkerFormat);
+    } else {
+      formatVisiblePart(
+        blockStart, blockEnd, position, 1, m_badPseudoStateMarkerFormat);
+    }
+
+    position = state->namePosition();
+    length = state->name().length();
+    if (isInBlock(position, length, blockStart, blockEnd)) {
+      if (m_datastore->containsPseudoState(state->name())) {
+        formatVisiblePart(
+          blockStart, blockEnd, position, length, m_pseudoStateFormat);
+      } else {
+        formatVisiblePart(
+          blockStart, blockEnd, position, length, m_badPseudoStateFormat);
+      }
+    }
+  }
+}
+
+void
+StylesheetHighlighter::formatControlBase(ControlBase* control,
+                                         int blockStart,
+                                         int blockEnd,
+                                         QTextCharFormat goodFormat,
+                                         QTextCharFormat badFormat,
+                                         QTextCharFormat goodMarkerFormat,
+                                         QTextCharFormat badMarkerFormat)
+{
+  auto position = control->position();
+  auto length = 2;
+  if (isInBlock(position, length, blockStart, blockEnd)) {
+    if (control->hasMarker()) {
+      formatVisiblePart(blockStart, blockEnd, position, 2, goodMarkerFormat);
+    } else {
+      formatVisiblePart(blockStart, blockEnd, position, 2, badMarkerFormat);
+    }
+  }
+
+  position = control->namePosition();
+  length = control->name().length();
+  if (isInBlock(position, length, blockStart, blockEnd)) {
+    if (control->isValid()) {
+      formatVisiblePart(blockStart, blockEnd, position, length, goodFormat);
+    } else {
+      formatVisiblePart(blockStart, blockEnd, position, length, badFormat);
+    }
+  }
+
+  if (control->hasPseudoStates()) {
+    for (auto state : *(control->pseudoStates())) {
+      formatPseudoState(state, blockStart, blockEnd);
+    }
+  }
+}
+
+void
+StylesheetHighlighter::formatSubControl(SubControl* subcontrol,
+                                        int blockStart,
+                                        int blockEnd)
+{
+  formatControlBase(subcontrol,
+                    blockStart,
+                    blockEnd,
+                    m_subControlFormat,
+                    m_badSubControlFormat,
+                    m_subControlMarkerFormat,
+                    m_badSubControlMarkerFormat);
+}
+
+void
+StylesheetHighlighter::formatIdSelector(IDSelector* selector,
+                                        int blockStart,
+                                        int blockEnd)
+{
+  formatControlBase(selector,
+                    blockStart,
+                    blockEnd,
+                    m_idSelectorFormat,
+                    m_badIdSelectorFormat,
+                    m_idSelectorMarkerFormat,
+                    m_badIdSelectorMarkerFormat);
 }
 
 void
@@ -243,82 +330,19 @@ StylesheetHighlighter::highlightBlock(const QString& text)
               }
             }
 
+            if (widget->hasIdSelector()) {
+              auto selector = widget->idSelector();
+              formatIdSelector(selector, blockStart, blockEnd);
+              if (selector->hasPseudoStates()) {
+                for (auto state : *(selector->pseudoStates())) {
+                  formatPseudoState(state, blockStart, blockEnd);
+                }
+              }
+            }
+
             if (widget->hasSubControl()) {
               for (auto subcontrol : *(widget->subControls())) {
-                position = subcontrol->position();
-                length = 2;
-                if (isInBlock(position, length, blockStart, blockEnd)) {
-                  if (subcontrol->hasMarker()) {
-                    formatVisiblePart(blockStart,
-                                      blockEnd,
-                                      position,
-                                      2,
-                                      m_subControlMarkerFormat);
-                  } else {
-                    formatVisiblePart(blockStart,
-                                      blockEnd,
-                                      position,
-                                      2,
-                                      m_badSubControlMarkerFormat);
-                  }
-                }
-
-                position = subcontrol->namePosition();
-                length = subcontrol->name().length();
-                if (isInBlock(position, length, blockStart, blockEnd)) {
-                  if (subcontrol->isValid()) {
-                    formatVisiblePart(blockStart,
-                                      blockEnd,
-                                      position,
-                                      length,
-                                      m_subControlFormat);
-                  } else {
-                    formatVisiblePart(blockStart,
-                                      blockEnd,
-                                      position,
-                                      length,
-                                      m_badSubControlFormat);
-                  }
-                }
-
-                if (subcontrol->hasPseudoStates()) {
-                  for (auto state : *(subcontrol->pseudoStates())) {
-                    if (state->hasMarker()) {
-                      position = state->position();
-                      if (state->isValid()) {
-                        formatVisiblePart(blockStart,
-                                          blockEnd,
-                                          position,
-                                          1,
-                                          m_pseudoStateMarkerFormat);
-                      } else {
-                        formatVisiblePart(blockStart,
-                                          blockEnd,
-                                          position,
-                                          1,
-                                          m_badPseudoStateMarkerFormat);
-                      }
-
-                      position = state->namePosition();
-                      length = state->name().length();
-                      if (isInBlock(position, length, blockStart, blockEnd)) {
-                        if (m_datastore->containsPseudoState(state->name())) {
-                          formatVisiblePart(blockStart,
-                                            blockEnd,
-                                            position,
-                                            length,
-                                            m_pseudoStateFormat);
-                        } else {
-                          formatVisiblePart(blockStart,
-                                            blockEnd,
-                                            position,
-                                            length,
-                                            m_badPseudoStateFormat);
-                        }
-                      }
-                    }
-                  }
-                }
+                formatSubControl(subcontrol, blockStart, blockEnd);
               }
             }
           }
@@ -462,6 +486,36 @@ StylesheetHighlighter::setSeperatorFormat(QBrush color,
   m_badSeperatorFormat.setBackground(back);
   m_badSeperatorFormat.setUnderlineColor(QColor(Qt::red));
   m_badSeperatorFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+}
+
+void
+StylesheetHighlighter::setIdSelectorFormat(QBrush color,
+                                           QBrush back,
+                                           QFont::Weight weight)
+{
+  m_idSelectorFormat.setFontWeight(weight);
+  m_idSelectorFormat.setForeground(color);
+  m_idSelectorFormat.setBackground(back);
+  m_badIdSelectorFormat.setFontWeight(weight);
+  m_badIdSelectorFormat.setForeground(color);
+  m_badIdSelectorFormat.setBackground(back);
+  m_badIdSelectorFormat.setUnderlineColor(QColor(Qt::red));
+  m_badIdSelectorFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+}
+
+void
+StylesheetHighlighter::setIDSelectorMarkerFormat(QBrush color,
+                                                  QBrush back,
+                                                  QFont::Weight weight)
+{
+  m_idSelectorMarkerFormat.setFontWeight(weight);
+  m_idSelectorMarkerFormat.setForeground(color);
+  m_idSelectorMarkerFormat.setBackground(back);
+  m_badIdSelectorMarkerFormat.setFontWeight(weight);
+  m_badIdSelectorMarkerFormat.setForeground(color);
+  m_badIdSelectorMarkerFormat.setBackground(back);
+  m_badIdSelectorMarkerFormat.setUnderlineColor(QColor(Qt::red));
+  m_badIdSelectorMarkerFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
 }
 
 void
@@ -800,4 +854,84 @@ QTextCharFormat::UnderlineStyle
 StylesheetHighlighter::underlinestyle() const
 {
   return m_badValueFormat.underlineStyle();
+}
+
+QTextCharFormat StylesheetHighlighter::widgetFormat() const
+{
+  return m_widgetFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::seperatorFormat() const
+{
+  return m_seperatorFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::valueFormat() const
+{
+  return m_valueFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::idSelectorFormat() const
+{
+  return m_idSelectorFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::idSelectorMarkerFormat() const
+{
+  return m_idSelectorMarkerFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::pseudoStateFormat() const
+{
+  return m_pseudoStateFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::pseudoStateMarkerFormat() const
+{
+  return m_pseudoStateMarkerFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::subControlFormat() const
+{
+  return m_subControlFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::subControlMarkerFormat() const
+{
+  return m_subControlMarkerFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::propertyFormat() const
+{
+  return m_propertyFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::propertyMarkerFormat() const
+{
+  return m_propertyMarkerFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::startBraceFormat() const
+{
+  return m_startBraceFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::endBraceFormat() const
+{
+  return m_endBraceFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::braceMatchFormat() const
+{
+  return m_braceMatchFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::commentFormat() const
+{
+  return m_commentFormat;
+}
+
+QTextCharFormat StylesheetHighlighter::propertyEndMarkerFormat() const
+{
+  return m_propertyEndMarkerFormat;
 }

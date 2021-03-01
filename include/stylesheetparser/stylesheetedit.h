@@ -36,7 +36,6 @@
 #include <QTextStream>
 #include <QSettings>
 
-//#include "metafiles/meta_qtextcharformat.h"
 #include "common.h"
 
 class LineNumberArea;
@@ -44,6 +43,7 @@ class StylesheetEditorPrivate;
 class BookmarkArea;
 class BookmarkData;
 class StylesheetEditor;
+
 
 class StylesheetEdit : public QWidget
 {

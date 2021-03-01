@@ -23,7 +23,7 @@ find_package(Qt5 COMPONENTS Core REQUIRED)
 # TODO remove later when I combine this with sm_widgets
 
 find_package(yaml-cpp REQUIRED)
-find_package(qyamlcpp REQUIRED)
+#find_package(qyamlcpp REQUIRED)
 
 add_executable(tst_parser "")
 target_sources(tst_parser
@@ -54,7 +54,6 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/sm_widgets/labelledcombobox.h>
 
    PRIVATE
-      src/metafiles/meta_qtextcharformat.h
       src/main.cpp
       src/parser.h
       src/parser.cpp
@@ -94,7 +93,7 @@ target_include_directories(tst_parser
 )
 
 target_link_libraries(tst_parser PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets)
-target_link_libraries(tst_parser PRIVATE yaml-cpp qyamlcpp)
+target_link_libraries(tst_parser PRIVATE yaml-cpp)# qyamlcpp)
 #target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libmemprims.a")
 #target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libsafec-1.0.a")
 #target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libsafeccore.a")

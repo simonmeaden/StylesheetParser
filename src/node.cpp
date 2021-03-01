@@ -854,6 +854,7 @@ WidgetNodes::isInEndBrace(QPoint pos)
       return true;
     }
   }
+  return false;
 }
 
 PropertyNode::PropertyNode(const QString& name,
@@ -1231,9 +1232,9 @@ CommentNode::CommentNode(QTextCursor start,
 
 CommentNode::CommentNode(const CommentNode& other)
   : Node(other.cursor(),
-               other.m_editor, // TODO set actual comment check value
-               other.parent(),
-               other.type())
+         other.m_editor, // TODO set actual comment check value
+         other.parent(),
+         other.type())
 {}
 
 CommentNode::~CommentNode() {}

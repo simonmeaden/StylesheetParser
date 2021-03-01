@@ -337,8 +337,8 @@ public:
   void setEndCommentCursor(QTextCursor cursor);
 
   NodeSection* sectionIfIn(QPoint pos) override;
-  bool isIn(int pos) override {}
-  bool isIn(QPoint pos) override {}
+  bool isIn(int pos) override {return false;}
+  bool isIn(QPoint pos) override {return false;}
 
 private:
   bool m_validComment = true;

@@ -28,6 +28,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QTextCharFormat>
 #include <QTextCursor>
 
+class Node;
+//#include "node.h"
+
 template<typename T>
 class asKeyValueRange
 {
@@ -44,7 +47,6 @@ private:
   T& m_data;
 };
 
-class Node;
 
 class StylesheetData
 {

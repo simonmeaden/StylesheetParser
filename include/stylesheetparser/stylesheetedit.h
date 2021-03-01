@@ -22,6 +22,7 @@
 #ifndef STYLESHEETEDIT_H
 #define STYLESHEETEDIT_H
 
+#include <QObject>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QKeySequence>
@@ -32,14 +33,16 @@
 #include <QTextBlock>
 #include <QTextCursor>
 #include <QToolTip>
+#include <QTextStream>
+#include <QSettings>
 
+//#include "metafiles/meta_qtextcharformat.h"
 #include "common.h"
 
 class LineNumberArea;
 class StylesheetEditorPrivate;
 class BookmarkArea;
 class BookmarkData;
-class WidgetNode;
 class StylesheetEditor;
 
 class StylesheetEdit : public QWidget
@@ -60,69 +63,183 @@ public:
   //! Reimplemented from QPlainText::setStylesheet()
   void setStyleSheet(const QString& stylesheet);
 
-  //! Sets a new foreground/background/fontweight for the highlighter value
-  //! format
-  void setValueFormat(QColor color,
-                      QColor back,
-                      QFont::Weight weight = QFont::Normal);
   //! Sets a new foreground/background/fontweight for the highlighter widget
   //! format
-  void setWidgetFormat(QColor color,
-                       QColor back,
-                       QFont::Weight weight = QFont::Normal);
+  void setWidgetFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  //! Sets a new foreground/background/fontweight for the highlighter widget
+  //! format
+  void setBadWidgetFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setSeperatorFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setIdSelectorFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadIdSelectorFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setIDSelectorMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadIDSelectorMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter
   //! pseudo-state format
-  void setPseudoStateFormat(QColor color,
-                            QColor back,
-                            QFont::Weight weight = QFont::Normal);
+  void setPseudoStateFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadPseudoStateFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter
   //! pseude-state marker (::) format
-  void setPseudoStateMarkerFormat(QColor color,
-                                  QColor back,
-                                  QFont::Weight weight = QFont::Normal);
+  void setPseudoStateMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadPseudoStateMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter subcontrol
   //! format
-  void setSubControlFormat(QColor color,
-                           QColor back,
-                           QFont::Weight weight = QFont::Normal);
+  void setSubControlFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadSubControlFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter subcontrol
   //! marker (:) format
-  void setSubControlMarkerFormat(QColor color,
-                                 QColor back,
-                                 QFont::Weight weight = QFont::Normal);
+  void setSubControlMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadSubControlMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  //! Sets a new foreground/background/fontweight for the highlighter value
+  //! format
+  void setValueFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadValueFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter property
   //! name format
-  void setPropertyFormat(QColor color,
-                         QColor back,
-                         QFont::Weight weight = QFont::Normal);
+  void setPropertyFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadPropertyFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter property
   //! marker (:) format
-  void setPropertyMarkerFormat(QColor color,
-                               QColor back,
-                               QFont::Weight weight = QFont::Normal);
+  void setPropertyMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setPropertyEndMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter line
   //! numbers format
-  void setLineNumberFormat(QColor color,
-                           QColor back,
-                           QFont::Weight weight = QFont::Light);
-  //  //! Sets a new foreground/background/fontweight for the highlighter bad
-  //  value format void setBadValueFormat(QColor color, QColor back,
-  //  QFont::Weight weight = QFont::Light, bool underline = true,
-  //                         QTextCharFormat::UnderlineStyle underlineStyle =
-  //                         QTextCharFormat::WaveUnderline, QColor
-  //                         underlineColor = QColor("red"));
+  void setLineNumberFormat(QBrush color, QBrush back, QFont font);
   //! Sets a new foreground/background/fontweight for the highlighter start
   //! curly brace ({) format
-  void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  void setStartBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadStartBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter end curly
   //! brace (}) format
-  void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
+  void setEndBraceFormat(QBrush color, QBrush back, QFont font,
+                         QBrush underline = QBrush(),
+                         QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadEndBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter brace
   //! match format
-  void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
-
-  //  //! Returns the list of nodes.
-  //  QMap<QTextCursor, Node*> nodes();
+  void setBraceMatchFormat(QBrush color, QBrush back, QFont font,
+                           QBrush underline = QBrush(),
+                           QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
 
   //! Returns the bookmarks with associated text, if any.
   //!
@@ -199,18 +316,26 @@ public:
   //!
   //! This will allow a user to add any of their own widgets to
   //! the list of supported widget names.
-  bool addCustomWidget(const QString& name, const QString &parent);
+  bool addCustomWidget(const QString& name, const QString& parent);
 
   //! Returns a list of the widget names that are supported.
   //!
-  //! This will include all the standard QWidget subclasses plus any added widgets.
+  //! This will include all the standard QWidget subclasses plus any added
+  //! widgets.
   QStringList widgets();
 
-  bool addCustomWidgetPseudoStates(const QString& name, const QStringList& states);
-  bool addCustomWidgetSubControls(const QString& name, const QStringList& controls);
-  bool addCustomWidgetProperties(const QString& name, const QStringList& properties);
-  bool addCustomWidgetPropertyValue(const QString& widget, const QString& property, const QString& value);
-  bool addCustomWidgetPropertyValues(const QString& widget, const QString& property, QStringList values);
+  bool addCustomWidgetPseudoStates(const QString& name,
+                                   const QStringList& states);
+  bool addCustomWidgetSubControls(const QString& name,
+                                  const QStringList& controls);
+  bool addCustomWidgetProperties(const QString& name,
+                                 const QStringList& properties);
+  bool addCustomWidgetPropertyValue(const QString& widget,
+                                    const QString& property,
+                                    const QString& value);
+  bool addCustomWidgetPropertyValues(const QString& widget,
+                                     const QString& property,
+                                     QStringList values);
 
 signals:
   void lineNumber(int);
@@ -222,9 +347,8 @@ signals:
   void handleDocumentChanged(int, int, int);
 
 protected:
-  StylesheetEditor* editor() {
-    return m_editor;
-  }
+  StylesheetEditor* editor() { return m_editor; }
+
 private:
   StylesheetEditor* m_editor;
   LineNumberArea* m_linenumberArea;

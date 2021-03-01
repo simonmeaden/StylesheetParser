@@ -27,6 +27,10 @@
 #include "stylesheetedit_p.h"
 #include "stylesheetparser/stylesheetedit.h"
 
+const QFont DataStore::NORMALFONT = QFont("Source Code Pro", 9, QFont::Normal, false);
+const QFont DataStore::LIGHTFONT = QFont("Source Code Pro", 9, QFont::Light, false);
+const QFont DataStore::BOLDFONT = QFont("Source Code Pro", 9, QFont::Bold, false);
+
 DataStore::DataStore(QObject* parent)
   : QObject(parent)
   , m_invalidIcon(":/icons/invalid")
@@ -139,6 +143,37 @@ DataStore::fuzzySearchSubControl(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
   return m_widgetModel->fuzzySearchSubControl(name);
+}
+
+bool DataStore::addCustomWidget(const QString &name, const QString &parent)
+{
+  return m_widgetModel->addCustomWidget(name, parent);
+}
+
+bool DataStore::addCustomWidgetPseudoStates(const QString &name, const QStringList &states)
+{
+  return m_widgetModel->addCustomWidgetPseudoStates(name, states);
+}
+
+bool DataStore::addCustomWidgetSubControls(const QString &name, const QStringList &controls)
+{
+  return m_widgetModel->addCustomWidgetSubControls(name, controls);
+}
+
+bool DataStore::addCustomWidgetProperties(const QString &name, const QStringList &properties)
+{
+  return m_widgetModel->addCustomWidgetProperties(name, properties);
+}
+
+bool DataStore::addCustomWidgetPropertyValue(const QString &widget, const QString &property, const QString &value)
+{
+  return m_widgetModel->addCustomWidgetPropertyValue(widget, property, value);
+}
+
+bool DataStore::addCustomWidgetPropertyValues(const QString &widget, const QString &property, QStringList values)
+{
+  return m_widgetModel->addCustomWidgetPropertyValues(
+        widget, property, values);
 }
 
 bool

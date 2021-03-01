@@ -34,15 +34,14 @@
 #include <QThread>
 #include <QWidget>
 
-Q_DECLARE_METATYPE(QTextCharFormat)
 
 #include "common.h"
 #include "datastore.h"
 #include "node.h"
 #include "parserstate.h"
-#include "stylesheethighlighter.h"
 #include "sm_widgets/labelledlineedit.h"
 #include "sm_widgets/labelledspinbox.h"
+#include "stylesheethighlighter.h"
 
 /// \cond DO_NOT_DOCUMENT
 
@@ -59,8 +58,10 @@ class StylesheetEditor : public QPlainTextEdit
 public:
   explicit StylesheetEditor(QWidget* parent = nullptr);
 
-  StylesheetHighlighter *highlighter();
+  StylesheetHighlighter* highlighter();
   void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
+  void saveConfig(const QString& filename=QString());
+  void loadConfig(const QString& filename=QString());
 
   void setPlainText(const QString& text);
 
@@ -75,46 +76,145 @@ public:
                              QColor& color2,
                              QColor& color3);
 
-  void setValueFormat(QColor color,
-                      QColor back,
-                      QFont::Weight weight = QFont::Normal);
-  void setWidgetFormat(QColor color,
-                       QColor back,
-                       QFont::Weight weight = QFont::Normal);
-  void setPseudoStateFormat(QColor color,
-                            QColor back,
-                            QFont::Weight weight = QFont::Normal);
-  void setPseudoStateMarkerFormat(QColor color,
-                                  QColor back,
-                                  QFont::Weight weight = QFont::Normal);
-  void setSubControlFormat(QColor color,
-                           QColor back,
-                           QFont::Weight weight = QFont::Normal);
-  void setSubControlMarkerFormat(QColor color,
-                                 QColor back,
-                                 QFont::Weight weight = QFont::Normal);
-  void setPropertyFormat(QColor color,
-                         QColor back,
-                         QFont::Weight weight = QFont::Normal);
-  void setPropertyMarkerFormat(QColor color,
-                               QColor back,
-                               QFont::Weight weight = QFont::Normal);
-  void setPropertyEndMarkerFormat(QColor color,
-                                  QColor back,
-                                  QFont::Weight weight = QFont::Normal);
-  void setLineNumberFormat(QColor foreground,
-                           QColor back,
-                           QFont::Weight weight = QFont::Light);
-  void setStartBraceFormat(QColor color, QColor back, QFont::Weight weight);
-  void setEndBraceFormat(QColor color, QColor back, QFont::Weight weight);
-  void setBraceMatchFormat(QColor color, QColor back, QFont::Weight weight);
+  void setWidgetFormat(
+    QBrush color,
+    QBrush back,
+    QFont weight,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadWidgetFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underlineColor = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setSeperatorFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setIdSelectorFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadIdSelectorFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setIDSelectorMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadIDSelectorMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+
+  void setPseudoStateFormat(QBrush color, QBrush back, QFont weight,
+                            QBrush underline = QBrush(),
+                            QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadPseudoStateFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setPseudoStateMarkerFormat(QBrush color, QBrush back, QFont weight,
+                                  QBrush underline = QBrush(),
+                                  QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadPseudoStateMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setSubControlFormat(QBrush color, QBrush back, QFont weight,
+                           QBrush underline = QBrush(),
+                           QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadSubControlFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setSubControlMarkerFormat(QBrush color, QBrush back, QFont weight,
+                                 QBrush underline = QBrush(Qt::red),
+                                 QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setBadSubControlMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setValueFormat(
+    QBrush color,
+    QBrush back,
+    QFont weight,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadValueFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setPropertyFormat(QBrush color, QBrush back, QFont weight,
+                         QBrush underline = QBrush(),
+                         QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadPropertyFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setPropertyMarkerFormat(QBrush color, QBrush back, QFont weight,
+                               QBrush underline = QBrush(),
+                               QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setPropertyEndMarkerFormat(QBrush color, QBrush back, QFont weight,
+                                  QBrush underline = QBrush(),
+                                  QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setLineNumberFormat(QBrush foreground, QBrush back, QFont weight);
+  void setStartBraceFormat(QBrush color, QBrush back, QFont weight,
+                           QBrush underline = QBrush(),
+                           QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadStartBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+  void setEndBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBadEndBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(Qt::red),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
+
+  void setBraceMatchFormat(QBrush color, QBrush back, QFont font,
+                           QBrush underline = QBrush(),
+                           QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
 
   QMap<int, BookmarkData*>* bookmarks();
   void setBookmarks(QMap<int, BookmarkData*>* bookmarks);
   void insertBookmark(int bookmark = -1, const QString& text = QString());
   void toggleBookmark(int bookmark);
   void editBookmark(int bookmark = -1);
-  void removeBookmark(int bookmark=-1);
+  void removeBookmark(int bookmark = -1);
   void clearBookmarks();
   bool hasBookmark(int linenumber);
   bool hasBookmarkText(int bookmark);
@@ -160,7 +260,7 @@ public:
                              const QString& name);
   void setHoverFuzzyPseudoState(QString& hover, const QString& name);
   void setHoverBadPropertyEndMarker(QString& hover,
-                                    const PropertyNode* property);
+                                    int end);
 
   // These should not be documented as they are only removing protected status.
   QTextBlock firstVisibleBlock() { return QPlainTextEdit::firstVisibleBlock(); }
@@ -212,11 +312,13 @@ private:
   QString m_stylesheet;
   bool m_parseComplete;
   int m_bookmarkLineNumber;
+  QString m_configDir;
+  QString m_configFile;
 
   QMenu *m_contextMenu, *m_suggestionsMenu;
   NodeSection* m_oldSection;
 
-//  void initActions();
+  //  void initActions();
   //  void initMenus();
   void handleParseComplete();
   void handleRehighlight();
@@ -231,11 +333,20 @@ private:
   void handleTextChanged();
   void handleCustomMenuRequested(QPoint pos);
 
+  QByteArray formatToByteArray(QTextCharFormat format);
+
   //  void updateLeftArea(const QRect& rect, int dy);
   void updateLineNumberArea();
   QTextCursor currentCursor() const;
   void setCurrentCursor(const QTextCursor& currentCursor);
   void setLineData(QTextCursor cursor);
+
+//  QByteArray formatToByteArray(QTextCharFormat format);
+//  QByteArray byteArrayToFormat(QByteArray array);
+
+  void setFormatValues(QSettings *settings, QTextCharFormat format, QString dataset);
+
+  QTextCharFormat loadFormatValues(QSettings *settings,  QString dataset);
 
 public:
   static const QChar m_arrow;

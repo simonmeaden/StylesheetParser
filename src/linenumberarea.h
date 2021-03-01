@@ -32,12 +32,12 @@ public:
 
   QSize sizeHint() const override;
 
-  QColor foreSelected() const;
-  void setForeSelected(const QColor& fore);
-  QColor foreUnselected() const;
-  void setForeUnselected(const QColor& fore);
-  QColor back() const;
-  void setBack(const QColor& back);
+  QBrush foreSelected() const;
+  void setForeSelected(const QBrush &fore);
+  QBrush foreUnselected() const;
+  void setForeUnselected(const QBrush& fore);
+  QBrush back() const;
+  void setBack(const QBrush &back);
 
   void setLineNumber(int lineNumber);
   int currentLineNumber() const;
@@ -60,7 +60,7 @@ protected:
 
 private:
   StylesheetEditor* m_editor;
-  QColor m_foreSelected, m_foreUnselected, m_back;
+  QBrush m_foreSelected, m_foreUnselected, m_back;
   QFont::Weight m_weight;
   int m_currentLineNumber, m_left, m_lineCount;
 };

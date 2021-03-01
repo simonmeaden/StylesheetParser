@@ -20,6 +20,7 @@
    SOFTWARE.
 */
 #include "stylesheethighlighter.h"
+#include "node.h"
 #include "stylesheetedit_p.h"
 
 StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
@@ -29,22 +30,37 @@ StylesheetHighlighter::StylesheetHighlighter(StylesheetEditor* editor,
   , m_datastore(datastore)
 {
   m_back = editor->palette().brush(QPalette::Base);
-  setWidgetFormat(QColor(0x80, 0, 0x80), m_back, QFont::Light);
-  setSeperatorFormat(Qt::black, m_back, QFont::Light);
-  setPseudoStateFormat(QColor(0x80, 0x80, 0), m_back, QFont::Light);
-  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setIdSelectorFormat(QColor("darkviolet"), m_back, QFont::Light);
-  setIDSelectorMarkerFormat(Qt::black, m_back, QFont::Light);
-  setSubControlFormat(QColor(0xCE, 0x5C, 0), m_back, QFont::Light);
-  setSubControlMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPropertyFormat(QColor("darkblue"), m_back, QFont::Light);
-  setPropertyMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, QFont::Light);
-  setValueFormat(QColor("firebrick"), m_back, QFont::Light);
-  setStartBraceFormat(QColor("blue"), m_back, QFont::Light);
-  setEndBraceFormat(QColor("lightblue"), m_back, QFont::Light);
-  setBraceMatchFormat(QColor(Qt::red), QColor("lightgreen"), QFont::Normal);
-  setCommentFormat(QColor("darkmagenta"), m_back, QFont::Light);
+  setWidgetFormat(QColor(0x80, 0, 0x80), m_back, DataStore::LIGHTFONT);
+  setBadWidgetFormat(QColor(0x80, 0, 0x80), m_back, DataStore::LIGHTFONT);
+  setSeperatorFormat(Qt::black, m_back, DataStore::LIGHTFONT);
+  setPseudoStateFormat(QColor(0x80, 0x80, 0), m_back, DataStore::LIGHTFONT);
+  setBadPseudoStateFormat(QColor(0x80, 0x80, 0), m_back, DataStore::LIGHTFONT);
+  setPseudoStateMarkerFormat(QColor(Qt::black), m_back, DataStore::LIGHTFONT);
+  setBadPseudoStateMarkerFormat(
+    QColor(Qt::black), m_back, DataStore::LIGHTFONT);
+  setIdSelectorFormat(QColor("darkviolet"), m_back, DataStore::LIGHTFONT);
+  setBadIdSelectorFormat(QColor("darkviolet"), m_back, DataStore::LIGHTFONT);
+  setIDSelectorMarkerFormat(Qt::black, m_back, DataStore::LIGHTFONT);
+  setBadIDSelectorMarkerFormat(Qt::black, m_back, DataStore::LIGHTFONT);
+  setSubControlFormat(QColor(0xCE, 0x5C, 0), m_back, DataStore::LIGHTFONT);
+  setBadSubControlFormat(QColor(0xCE, 0x5C, 0), m_back, DataStore::LIGHTFONT);
+  setSubControlMarkerFormat(QColor(Qt::black), m_back, DataStore::LIGHTFONT);
+  setBadSubControlMarkerFormat(QColor(Qt::black), m_back, DataStore::LIGHTFONT);
+  setPropertyFormat(QColor("darkblue"), m_back, DataStore::LIGHTFONT);
+  setBadPropertyFormat(QColor("darkblue"), m_back, DataStore::LIGHTFONT);
+  setPropertyMarkerFormat(QColor(Qt::black), m_back, DataStore::LIGHTFONT);
+  setPropertyEndMarkerFormat(QColor(Qt::black), m_back, DataStore::LIGHTFONT);
+  setPropertyValueFormat(QColor("firebrick"), m_back, DataStore::LIGHTFONT);
+  setBadPropertyValueFormat(QColor("firebrick"), m_back, DataStore::LIGHTFONT);
+  setStartBraceFormat(QColor("blue"), m_back, DataStore::LIGHTFONT);
+  setBadStartBraceFormat(QColor("blue"), m_back, DataStore::LIGHTFONT);
+  setEndBraceFormat(QColor("lightblue"), m_back, DataStore::LIGHTFONT);
+  setBadEndBraceFormat(QColor("lightblue"), m_back, DataStore::LIGHTFONT);
+  setBraceMatchFormat(
+    QColor(Qt::red), QColor("lightgreen"), DataStore::NORMALFONT);
+  setBadBraceMatchFormat(
+    QColor(Qt::red), QColor("lightgreen"), DataStore::NORMALFONT);
+  setCommentFormat(QColor("darkmagenta"), m_back, DataStore::LIGHTFONT);
 }
 
 int
@@ -463,391 +479,587 @@ StylesheetHighlighter::highlightBlock(const QString& text)
 void
 StylesheetHighlighter::setWidgetFormat(QBrush color,
                                        QBrush back,
-                                       QFont::Weight weight)
+                                       QFont font,
+                                       QBrush underline,
+                                       QTextCharFormat::UnderlineStyle style)
 {
-  m_widgetFormat.setFontWeight(weight);
-  m_widgetFormat.setForeground(color);
-  m_widgetFormat.setBackground(back);
-  m_badWidgetFormat = QTextCharFormat(m_widgetFormat);
-  m_badWidgetFormat.setUnderlineColor(QColor(Qt::red));
-  m_badWidgetFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_widgetFormat.setFont(font);
+  m_widgetFormat.setForeground(color.color());
+  m_widgetFormat.setBackground(back.color());
+  m_widgetFormat.setUnderlineColor(underline.color());
+  m_widgetFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setWidgetFormat(QTextCharFormat format)
+{
+  m_widgetFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadWidgetFormat(QBrush color,
+                                          QBrush back,
+                                          QFont font,
+                                          QBrush underline,
+                                          QTextCharFormat::UnderlineStyle style)
+{
+  m_badWidgetFormat.setFont(font);
+  m_badWidgetFormat.setForeground(color.color());
+  m_badWidgetFormat.setBackground(back.color());
+  m_badWidgetFormat.setUnderlineColor(underline.color());
+  m_badWidgetFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadWidgetFormat(QTextCharFormat format)
+{
+  m_badWidgetFormat = format;
 }
 
 void
 StylesheetHighlighter::setSeperatorFormat(QBrush color,
                                           QBrush back,
-                                          QFont::Weight weight)
+                                          QFont font,
+                                          QBrush underline,
+                                          QTextCharFormat::UnderlineStyle style)
 {
-  m_seperatorFormat.setFontWeight(weight);
+  m_seperatorFormat.setFont(font);
   m_seperatorFormat.setForeground(color);
   m_seperatorFormat.setBackground(back);
-  m_badSeperatorFormat.setFontWeight(weight);
-  m_badSeperatorFormat.setForeground(color);
-  m_badSeperatorFormat.setBackground(back);
-  m_badSeperatorFormat.setUnderlineColor(QColor(Qt::red));
-  m_badSeperatorFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_seperatorFormat.setUnderlineColor(underline.color());
+  m_seperatorFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setIdSelectorFormat(QBrush color,
-                                           QBrush back,
-                                           QFont::Weight weight)
+StylesheetHighlighter::setSeperatorFormat(QTextCharFormat format)
 {
-  m_idSelectorFormat.setFontWeight(weight);
+  m_seperatorFormat = format;
+}
+
+void
+StylesheetHighlighter::setIdSelectorFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  if (underline.style() == Qt::NoBrush)
+    underline = m_back;
+  m_idSelectorFormat.setFont(font);
   m_idSelectorFormat.setForeground(color);
   m_idSelectorFormat.setBackground(back);
-  m_badIdSelectorFormat.setFontWeight(weight);
-  m_badIdSelectorFormat.setForeground(color);
-  m_badIdSelectorFormat.setBackground(back);
-  m_badIdSelectorFormat.setUnderlineColor(QColor(Qt::red));
-  m_badIdSelectorFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_idSelectorFormat.setUnderlineColor(underline.color());
+  m_idSelectorFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setIDSelectorMarkerFormat(QBrush color,
-                                                  QBrush back,
-                                                  QFont::Weight weight)
+StylesheetHighlighter::setIdSelectorFormat(QTextCharFormat format)
 {
-  m_idSelectorMarkerFormat.setFontWeight(weight);
+  m_idSelectorFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadIdSelectorFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badIdSelectorFormat.setFont(font);
+  m_badIdSelectorFormat.setForeground(back);
+  m_badIdSelectorFormat.setBackground(back);
+  m_badIdSelectorFormat.setUnderlineColor(underline.color());
+  m_badIdSelectorFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadIdSelectorFormat(QTextCharFormat format)
+{
+  m_badIdSelectorFormat = format;
+}
+
+void
+StylesheetHighlighter::setIDSelectorMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  if (underline.style() == Qt::NoBrush)
+    underline = m_back;
+  m_idSelectorMarkerFormat.setFont(font);
   m_idSelectorMarkerFormat.setForeground(color);
   m_idSelectorMarkerFormat.setBackground(back);
-  m_badIdSelectorMarkerFormat.setFontWeight(weight);
+  m_idSelectorMarkerFormat.setUnderlineColor(underline.color());
+  m_idSelectorMarkerFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setIDSelectorMarkerFormat(QTextCharFormat format)
+{
+  m_idSelectorMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadIDSelectorMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badIdSelectorMarkerFormat.setFont(font);
   m_badIdSelectorMarkerFormat.setForeground(color);
   m_badIdSelectorMarkerFormat.setBackground(back);
-  m_badIdSelectorMarkerFormat.setUnderlineColor(QColor(Qt::red));
-  m_badIdSelectorMarkerFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_badIdSelectorMarkerFormat.setUnderlineColor(underline.color());
+  m_badIdSelectorMarkerFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setPseudoStateFormat(QBrush color,
-                                            QBrush back,
-                                            QFont::Weight weight)
+StylesheetHighlighter::setBadIDSelectorMarkerFormat(QTextCharFormat format)
 {
-  m_pseudoStateFormat.setFontWeight(weight);
+  m_badIdSelectorMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setPseudoStateFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_pseudoStateFormat.setFont(font);
   m_pseudoStateFormat.setForeground(color);
   m_pseudoStateFormat.setBackground(back);
-  m_badPseudoStateFormat = QTextCharFormat(m_pseudoStateFormat);
-  m_badPseudoStateFormat.setUnderlineColor(QColor(Qt::red));
-  m_badPseudoStateFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_pseudoStateFormat.setUnderlineColor(underline.color());
+  m_pseudoStateFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setPseudoStateMarkerFormat(QBrush color,
-                                                  QBrush back,
-                                                  QFont::Weight weight)
+StylesheetHighlighter::setPseudoStateFormat(QTextCharFormat format)
 {
-  m_pseudoStateMarkerFormat.setFontWeight(weight);
+  m_pseudoStateFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadPseudoStateFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badPseudoStateFormat.setFont(font);
+  m_badPseudoStateFormat.setForeground(color);
+  m_badPseudoStateFormat.setBackground(back);
+  m_badPseudoStateFormat.setUnderlineColor(underline.color());
+  m_badPseudoStateFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadPseudoStateFormat(QTextCharFormat format)
+{
+  m_badPseudoStateFormat = format;
+}
+
+void
+StylesheetHighlighter::setPseudoStateMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_pseudoStateMarkerFormat.setFont(font);
   m_pseudoStateMarkerFormat.setForeground(color);
   m_pseudoStateMarkerFormat.setBackground(back);
-  m_badPseudoStateMarkerFormat.setFontWeight(weight);
+  m_pseudoStateMarkerFormat.setUnderlineColor(underline.color());
+  m_pseudoStateMarkerFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setPseudoStateMarkerFormat(QTextCharFormat format)
+{
+  m_pseudoStateMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadPseudoStateMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badPseudoStateMarkerFormat.setFont(font);
   m_badPseudoStateMarkerFormat.setForeground(color);
   m_badPseudoStateMarkerFormat.setBackground(back);
-  m_badPseudoStateMarkerFormat.setUnderlineColor(QColor(Qt::red));
-  m_badPseudoStateMarkerFormat.setUnderlineStyle(
-    QTextCharFormat::WaveUnderline);
+  m_badPseudoStateMarkerFormat.setUnderlineColor(underline.color());
+  m_badPseudoStateMarkerFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setSubControlFormat(QBrush color,
-                                           QBrush back,
-                                           QFont::Weight weight)
+StylesheetHighlighter::setBadPseudoStateMarkerFormat(QTextCharFormat format)
 {
-  m_subControlFormat.setFontWeight(weight);
+  m_badPseudoStateMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setSubControlFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_subControlFormat.setFont(font);
   m_subControlFormat.setForeground(color);
   m_subControlFormat.setBackground(back);
-  m_badSubControlFormat = QTextCharFormat(m_subControlFormat);
-  m_badSubControlFormat.setUnderlineColor(QColor(Qt::red));
-  m_badSubControlFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_subControlFormat.setUnderlineColor(underline.color());
+  m_subControlFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setSubControlMarkerFormat(QBrush color,
-                                                 QBrush back,
-                                                 QFont::Weight weight)
+StylesheetHighlighter::setSubControlFormat(QTextCharFormat format)
 {
-  m_subControlMarkerFormat.setFontWeight(weight);
+  m_subControlFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadSubControlFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badSubControlFormat.setFont(font);
+  m_badSubControlFormat.setForeground(color);
+  m_badSubControlFormat.setBackground(back);
+  m_badSubControlFormat.setUnderlineColor(underline.color());
+  m_badSubControlFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadSubControlFormat(QTextCharFormat format)
+{
+  m_badSubControlFormat = format;
+}
+
+void
+StylesheetHighlighter::setSubControlMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_subControlMarkerFormat.setFont(font);
   m_subControlMarkerFormat.setForeground(color);
   m_subControlMarkerFormat.setBackground(back);
-  m_badSubControlMarkerFormat.setFontWeight(weight);
-  m_badSubControlMarkerFormat.setForeground(color);
-  m_badSubControlMarkerFormat.setBackground(back);
-  m_badSubControlMarkerFormat.setUnderlineColor(QColor(Qt::red));
-  m_badSubControlMarkerFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_subControlMarkerFormat.setUnderlineColor(underline.color());
+  m_subControlMarkerFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setValueFormat(QBrush color,
-                                      QBrush back,
-                                      QFont::Weight weight)
+StylesheetHighlighter::setSubControlMarkerFormat(QTextCharFormat format)
 {
-  m_valueFormat.setFontWeight(weight);
+  m_subControlMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadSubControlMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badSubControlMarkerFormat.setFont(font);
+  m_badSubControlMarkerFormat.setForeground(color);
+  m_badSubControlMarkerFormat.setBackground(back);
+  m_badSubControlMarkerFormat.setUnderlineColor(underline.color());
+  m_badSubControlMarkerFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadSubControlMarkerFormat(QTextCharFormat format)
+{
+  m_badSubControlMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setPropertyValueFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_valueFormat.setFont(font);
   m_valueFormat.setForeground(color);
   m_valueFormat.setBackground(back);
-  m_badValueFormat = QTextCharFormat(m_badValueFormat);
-  m_badValueFormat.setUnderlineColor(QColor(Qt::red));
-  m_badValueFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_valueFormat.setUnderlineColor(underline.color());
+  m_valueFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setPropertyValueFormat(QTextCharFormat format)
+{
+  m_valueFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadPropertyValueFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badValueFormat.setFont(font);
+  m_badValueFormat.setForeground(color);
+  m_badValueFormat.setBackground(back);
+  m_badValueFormat.setUnderlineColor(underline.color());
+  m_badValueFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadPropertyValueFormat(QTextCharFormat format)
+{
+  m_badValueFormat = format;
 }
 
 void
 StylesheetHighlighter::setPropertyFormat(QBrush color,
                                          QBrush back,
-                                         QFont::Weight weight)
+                                         QFont font,
+                                         QBrush underline,
+                                         QTextCharFormat::UnderlineStyle style)
 {
-  m_propertyFormat.setFontWeight(weight);
+  m_propertyFormat.setFont(font);
   m_propertyFormat.setForeground(color);
   m_propertyFormat.setBackground(back);
-  m_badPropertyFormat = QTextCharFormat(m_propertyFormat);
-  m_badPropertyFormat.setUnderlineColor(QColor(Qt::red));
-  m_badPropertyFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_propertyFormat.setUnderlineColor(underline.color());
+  m_propertyFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setPropertyMarkerFormat(QBrush color,
-                                               QBrush back,
-                                               QFont::Weight weight)
+StylesheetHighlighter::setPropertyFormat(QTextCharFormat format)
 {
-  m_propertyMarkerFormat.setFontWeight(weight);
+  m_propertyFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadPropertyFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badPropertyFormat.setFont(font);
+  m_badPropertyFormat.setForeground(color);
+  m_badPropertyFormat.setBackground(back);
+  m_badPropertyFormat.setUnderlineColor(underline.color());
+  m_badPropertyFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadPropertyFormat(QTextCharFormat format)
+{
+  m_badPropertyFormat = format;
+}
+
+void
+StylesheetHighlighter::setPropertyMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_propertyMarkerFormat.setFont(font);
   m_propertyMarkerFormat.setForeground(color);
   m_propertyMarkerFormat.setBackground(back);
+  m_propertyMarkerFormat.setUnderlineColor(underline.color());
+  m_propertyMarkerFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setPropertyEndMarkerFormat(QBrush color,
-                                                  QBrush back,
-                                                  QFont::Weight weight)
+StylesheetHighlighter::setPropertyMarkerFormat(QTextCharFormat format)
 {
-  m_propertyEndMarkerFormat.setFontWeight(weight);
+  m_propertyMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setPropertyEndMarkerFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_propertyEndMarkerFormat.setFont(font);
   m_propertyEndMarkerFormat.setForeground(color);
   m_propertyEndMarkerFormat.setBackground(back);
+  m_propertyEndMarkerFormat.setUnderlineColor(underline.color());
+  m_propertyEndMarkerFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setStartBraceFormat(QBrush color,
-                                           QBrush back,
-                                           QFont::Weight weight)
+StylesheetHighlighter::setPropertyEndMarkerFormat(QTextCharFormat format)
 {
-  m_startBraceFormat.setFontWeight(weight);
+  m_propertyEndMarkerFormat = format;
+}
+
+void
+StylesheetHighlighter::setStartBraceFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_startBraceFormat.setFont(font);
   m_startBraceFormat.setForeground(color);
   m_startBraceFormat.setBackground(back);
-  m_badStartBraceFormat = QTextCharFormat(m_startBraceFormat);
-  m_badStartBraceFormat.setUnderlineColor(QColor(Qt::red));
-  m_badStartBraceFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_startBraceFormat.setUnderlineColor(underline.color());
+  m_startBraceFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setStartBraceFormat(QTextCharFormat format)
+{
+  m_startBraceFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadStartBraceFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badStartBraceFormat.setFont(font);
+  m_badStartBraceFormat.setForeground(color);
+  m_badStartBraceFormat.setBackground(back);
+  m_badStartBraceFormat.setUnderlineColor(underline.color());
+  m_badStartBraceFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadStartBraceFormat(QTextCharFormat format)
+{
+  m_badStartBraceFormat = format;
 }
 
 void
 StylesheetHighlighter::setEndBraceFormat(QBrush color,
                                          QBrush back,
-                                         QFont::Weight weight)
+                                         QFont font,
+                                         QBrush underline,
+                                         QTextCharFormat::UnderlineStyle style)
 {
-  m_endBraceFormat.setFontWeight(weight);
+  m_endBraceFormat.setFont(font);
   m_endBraceFormat.setForeground(color);
   m_endBraceFormat.setBackground(back);
-  m_badEndBraceFormat = QTextCharFormat(m_endBraceFormat);
-  m_badEndBraceFormat.setUnderlineColor(QColor(Qt::red));
-  m_badEndBraceFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_endBraceFormat.setUnderlineColor(underline.color());
+  m_endBraceFormat.setUnderlineStyle(style);
 }
 
 void
-StylesheetHighlighter::setBraceMatchFormat(QBrush color,
-                                           QBrush back,
-                                           QFont::Weight weight)
+StylesheetHighlighter::setEndBraceFormat(QTextCharFormat format)
 {
-  m_braceMatchFormat.setFontWeight(weight);
+  m_endBraceFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadEndBraceFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badEndBraceFormat.setFont(font);
+  m_badEndBraceFormat.setForeground(color);
+  m_badEndBraceFormat.setBackground(back);
+  m_badEndBraceFormat.setUnderlineColor(underline.color());
+  m_badEndBraceFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadEndBraceFormat(QTextCharFormat format)
+{
+  m_badEndBraceFormat = format;
+}
+
+void
+StylesheetHighlighter::setBraceMatchFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_braceMatchFormat.setFont(font);
   m_braceMatchFormat.setForeground(color);
   m_braceMatchFormat.setBackground(back);
-  m_badBraceMatchFormat = QTextCharFormat(m_braceMatchFormat);
-  m_badBraceMatchFormat.setUnderlineColor(QColor(Qt::red));
-  m_badBraceMatchFormat.setUnderlineStyle(QTextCharFormat::WaveUnderline);
+  m_braceMatchFormat.setUnderlineColor(underline.color());
+  m_braceMatchFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBraceMatchFormat(QTextCharFormat format)
+{
+  m_braceMatchFormat = format;
+}
+
+void
+StylesheetHighlighter::setBadBraceMatchFormat(
+  QBrush color,
+  QBrush back,
+  QFont font,
+  QBrush underline,
+  QTextCharFormat::UnderlineStyle style)
+{
+  m_badBraceMatchFormat.setFont(font);
+  m_badBraceMatchFormat.setForeground(color);
+  m_badBraceMatchFormat.setBackground(back);
+  m_badBraceMatchFormat.setUnderlineColor(underline.color());
+  m_badBraceMatchFormat.setUnderlineStyle(style);
+}
+
+void
+StylesheetHighlighter::setBadBraceMatchFormat(QTextCharFormat format)
+{
+  m_badBraceMatchFormat = format;
 }
 
 void
 StylesheetHighlighter::setCommentFormat(QBrush color,
                                         QBrush back,
-                                        QFont::Weight weight)
+                                        QFont font,
+                                        QBrush underline,
+                                        QTextCharFormat::UnderlineStyle style)
 {
-  m_commentFormat.setFontWeight(weight);
+  m_commentFormat.setFont(font);
   m_commentFormat.setForeground(color);
   m_commentFormat.setBackground(back);
+  m_commentFormat.setUnderlineColor(underline.color());
+  m_commentFormat.setUnderlineStyle(style);
 }
 
-QBrush
-StylesheetHighlighter::widget() const
+void
+StylesheetHighlighter::setCommentFormat(QTextCharFormat format)
 {
-  return m_widgetFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::pseudostate() const
-{
-  return m_pseudoStateFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::pseudostatemarker() const
-{
-  return m_pseudoStateMarkerFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::subcontrol() const
-{
-  return m_subControlFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::subcontrolmarker() const
-{
-  return m_subControlMarkerFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::value() const
-{
-  return m_valueFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::badvalue() const
-{
-  return m_badValueFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::property() const
-{
-  return m_propertyFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::propertymarker() const
-{
-  return m_propertyMarkerFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::startbrace() const
-{
-  return m_startBraceFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::endbrace() const
-{
-  return m_endBraceFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::bracematch() const
-{
-  return m_braceMatchFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::bracematchBack() const
-{
-  return m_braceMatchFormat.background();
-}
-
-QBrush
-StylesheetHighlighter::comment() const
-{
-  return m_commentFormat.foreground();
-}
-
-QBrush
-StylesheetHighlighter::back() const
-{
-  return m_back;
-}
-
-QBrush
-StylesheetHighlighter::underlineColor() const
-{
-  return m_badValueFormat.underlineColor();
-}
-
-int
-StylesheetHighlighter::widgetWeight() const
-{
-  return m_widgetFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::pseudostateWeight() const
-{
-  return m_pseudoStateFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::pseudostatemarkerWeight() const
-{
-  return m_pseudoStateMarkerFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::subcontrolWeight() const
-{
-  return m_subControlFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::subcontrolmarkerWeight() const
-{
-  return m_subControlMarkerFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::valueWeight() const
-{
-  return m_valueFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::commentWeight() const
-{
-  return m_commentFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::bracematchWeight() const
-{
-  return m_braceMatchFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::endbraceWeight() const
-{
-  return m_endBraceFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::startbraceWeight() const
-{
-  return m_startBraceFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::propertymarkerWeight() const
-{
-  return m_propertyMarkerFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::propertyWeight() const
-{
-  return m_propertyFormat.fontWeight();
-}
-
-int
-StylesheetHighlighter::badvalueWeight() const
-{
-  return m_badValueFormat.fontWeight();
-}
-
-bool
-StylesheetHighlighter::badUnderline() const
-{
-  return m_badUnderline;
+  m_commentFormat = format;
 }
 
 QTextCharFormat::UnderlineStyle
@@ -856,82 +1068,170 @@ StylesheetHighlighter::underlinestyle() const
   return m_badValueFormat.underlineStyle();
 }
 
-QTextCharFormat StylesheetHighlighter::widgetFormat() const
+QTextCharFormat
+StylesheetHighlighter::widgetFormat() const
 {
   return m_widgetFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::seperatorFormat() const
+QTextCharFormat
+StylesheetHighlighter::badWidgetFormat() const
+{
+  return m_badWidgetFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::seperatorFormat() const
 {
   return m_seperatorFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::valueFormat() const
+QTextCharFormat
+StylesheetHighlighter::valueFormat() const
 {
   return m_valueFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::idSelectorFormat() const
+QTextCharFormat
+StylesheetHighlighter::badValueFormat() const
+{
+  return m_badValueFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::idSelectorFormat() const
 {
   return m_idSelectorFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::idSelectorMarkerFormat() const
+QTextCharFormat
+StylesheetHighlighter::badIdSelectorFormat() const
+{
+  return m_badIdSelectorFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::idSelectorMarkerFormat() const
 {
   return m_idSelectorMarkerFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::pseudoStateFormat() const
+QTextCharFormat
+StylesheetHighlighter::badIdSelectorMarkerFormat() const
+{
+  return m_badIdSelectorMarkerFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::pseudoStateFormat() const
 {
   return m_pseudoStateFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::pseudoStateMarkerFormat() const
+QTextCharFormat
+StylesheetHighlighter::badPseudoStateFormat() const
+{
+  return m_badPseudoStateFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::pseudoStateMarkerFormat() const
 {
   return m_pseudoStateMarkerFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::subControlFormat() const
+QTextCharFormat
+StylesheetHighlighter::badPseudoStateMarkerFormat() const
+{
+  return m_badPseudoStateMarkerFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::subControlFormat() const
 {
   return m_subControlFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::subControlMarkerFormat() const
+QTextCharFormat
+StylesheetHighlighter::badSubControlFormat() const
+{
+  return m_badSubControlFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::subControlMarkerFormat() const
 {
   return m_subControlMarkerFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::propertyFormat() const
+QTextCharFormat
+StylesheetHighlighter::badSubControlMarkerFormat() const
+{
+  return m_badSubControlMarkerFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::propertyFormat() const
 {
   return m_propertyFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::propertyMarkerFormat() const
+QTextCharFormat
+StylesheetHighlighter::badPropertyFormat() const
+{
+  return m_badPropertyFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::propertyMarkerFormat() const
 {
   return m_propertyMarkerFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::startBraceFormat() const
+QTextCharFormat
+StylesheetHighlighter::startBraceFormat() const
 {
   return m_startBraceFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::endBraceFormat() const
+QTextCharFormat
+StylesheetHighlighter::badStartBraceFormat() const
+{
+  return m_badStartBraceFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::endBraceFormat() const
 {
   return m_endBraceFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::braceMatchFormat() const
+QTextCharFormat
+StylesheetHighlighter::badEndBraceFormat() const
+{
+  return m_badEndBraceFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::braceMatchFormat() const
 {
   return m_braceMatchFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::commentFormat() const
+QTextCharFormat
+StylesheetHighlighter::badBraceMatchFormat() const
+{
+  return m_badBraceMatchFormat;
+}
+
+QTextCharFormat
+StylesheetHighlighter::commentFormat() const
 {
   return m_commentFormat;
 }
 
-QTextCharFormat StylesheetHighlighter::propertyEndMarkerFormat() const
+QTextCharFormat
+StylesheetHighlighter::propertyEndMarkerFormat() const
 {
   return m_propertyEndMarkerFormat;
 }

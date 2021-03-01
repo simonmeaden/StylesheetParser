@@ -34,19 +34,14 @@
 
 class Node : public QObject
 {
-
+  Q_OBJECT
 public:
   Node(QTextCursor cursor,
        StylesheetEditor* editor,
        QObject* parent,
-       enum NodeType type = NoType)
-    : QObject(parent)
-    , m_cursor(cursor)
-    , m_type(type)
-    , m_editor(editor)
-  {}
+       enum NodeType type = NoType);
 
-  Node(const Node& other) {}
+  Node(const Node& other);
 
   virtual QTextCursor cursor() const;
   virtual void setCursor(QTextCursor podition);
@@ -102,6 +97,7 @@ protected:
 
 class MarkerBase : public NamedNode
 {
+  Q_OBJECT
 public:
   MarkerBase(QTextCursor markerCursor,
              QTextCursor nameCursor,
@@ -130,6 +126,7 @@ protected:
 
 class PseudoState : public MarkerBase
 {
+  Q_OBJECT
 public:
   PseudoState(QTextCursor markerCursor,
               QTextCursor nameCursor,
@@ -151,6 +148,7 @@ protected:
 
 class ControlBase : public MarkerBase
 {
+  Q_OBJECT
 public:
   ControlBase(QTextCursor markerCursor,
               QTextCursor nameCursor,
@@ -202,76 +200,12 @@ public:
   bool isValid() const override;
 };
 
-class PropertyNode;
-class IDSelector;
-
-class WidgetNode : public NamedNode
-{
-  Q_OBJECT
-
-public:
-  explicit WidgetNode(const QString& name,
-                      QTextCursor start,
-                      StylesheetEditor* editor,
-                      NodeState check,
-                      QObject* parent,
-                      enum NodeType type = WidgetType);
-  WidgetNode(const WidgetNode& other);
-  ~WidgetNode();
-
-  int length() const override;
-
-  bool isValid() const;
-  bool isNameValid() const;
-  bool isNameFuzzy() const;
-  //! \note Only changes widgetcheck or fuzzywidgetcheck.
-  void setWidgetCheck(NodeState type);
-
-  bool isIn(QPoint pos) override;
-  NodeSection* sectionIfIn(QPoint pos) override;
-
-  QList<SubControl*>* subControls();
-  SubControl* subControl(QPoint pos) const;
-  SubControl* subControl(QTextCursor cursor) const;
-  bool hasSubControls() const;
-  void addSubControl(SubControl* control);
-
-  void addPseudoState(PseudoState* state);
-  bool hasPseudoStates();
-
-  PseudoState* pseudoState(QPoint pos) const;
-  PseudoState* pseudoState(QTextCursor cursor) const;
-  void setSubControlMarkerCursor(QTextCursor cursor);
-  void setPseudoStateMarkerCursor(QTextCursor cursor);
-
-  IDSelector* idSelector();
-  void setIdSelector(IDSelector* selector);
-  bool hasIdSelector();
-
-  bool isSubControlValid(QPoint pos) const;
-  bool isSubControlFuzzy(QTextCursor cursor) const;
-  bool isSubControlFuzzy(QPoint pos) const;
-  bool isSubControlBad(QPoint pos) const;
-  bool isSubControl() const;
-  bool isPseudoState() const;
-  bool hasSubControl() const;
-
-  bool doesMarkerMatch(NodeState type) const;
-  bool doMarkersMatch() const;
-  bool isExtensionMarkerCorrect();
-
-protected:
-  QList<SubControl*>* m_subcontrols = nullptr;
-  QList<PseudoState*>* m_pseudoStates = nullptr;
-  IDSelector* m_idSelector = nullptr;
-};
-
 class WidgetNodes;
 
 class PropertyNode : public NamedNode
 {
-  Q_OBJECT
   Q_FLAGS(PropertyChecks)
+  Q_OBJECT
 
 public:
   explicit PropertyNode(const QString& name,
@@ -368,7 +302,7 @@ protected:
   bool m_isFinalProperty = false;
 };
 
-class NewlineNode : public WidgetNode
+class NewlineNode : public NamedNode
 {
   Q_OBJECT
 public:
@@ -378,15 +312,7 @@ public:
                        enum NodeType type = NewlineType);
 };
 
-struct CommentNodeData
-{
-  bool validComment = true;
-  QTextCursor cursor;
-  bool endCommentExists = false;
-  QTextCursor endCursor;
-};
-
-class CommentNode : public WidgetNode
+class CommentNode : public Node
 {
   Q_OBJECT
 public:
@@ -411,9 +337,75 @@ public:
   void setEndCommentCursor(QTextCursor cursor);
 
   NodeSection* sectionIfIn(QPoint pos) override;
+  bool isIn(int pos) override {}
+  bool isIn(QPoint pos) override {}
 
 private:
-  CommentNodeData* comment_ptr;
+  bool m_validComment = true;
+  QTextCursor m_textCursor;
+  bool m_endCommentExists = false;
+  QTextCursor m_endCursor;
+  QString m_text;
+};
+
+class WidgetNode : public NamedNode
+{
+  Q_OBJECT
+public:
+  explicit WidgetNode(const QString& name,
+                      QTextCursor start,
+                      StylesheetEditor* editor,
+                      NodeState check,
+                      QObject* parent,
+                      enum NodeType type = WidgetType);
+  WidgetNode(const WidgetNode& other);
+  ~WidgetNode();
+
+  int length() const override;
+
+  bool isValid() const;
+  bool isNameValid() const;
+  bool isNameFuzzy() const;
+  //! \note Only changes widgetcheck or fuzzywidgetcheck.
+  void setWidgetCheck(NodeState type);
+
+  bool isIn(QPoint pos) override;
+  NodeSection* sectionIfIn(QPoint pos) override;
+
+  QList<SubControl*>* subControls();
+  SubControl* subControl(QPoint pos) const;
+  SubControl* subControl(QTextCursor cursor) const;
+  bool hasSubControls() const;
+  void addSubControl(SubControl* control);
+
+  void addPseudoState(PseudoState* state);
+  bool hasPseudoStates();
+
+  PseudoState* pseudoState(QPoint pos) const;
+  PseudoState* pseudoState(QTextCursor cursor) const;
+  void setSubControlMarkerCursor(QTextCursor cursor);
+  void setPseudoStateMarkerCursor(QTextCursor cursor);
+
+  IDSelector* idSelector();
+  void setIdSelector(IDSelector* selector);
+  bool hasIdSelector();
+
+  bool isSubControlValid(QPoint pos) const;
+  bool isSubControlFuzzy(QTextCursor cursor) const;
+  bool isSubControlFuzzy(QPoint pos) const;
+  bool isSubControlBad(QPoint pos) const;
+  bool isSubControl() const;
+  bool isPseudoState() const;
+  bool hasSubControl() const;
+
+  bool doesMarkerMatch(NodeState type) const;
+  bool doMarkersMatch() const;
+  bool isExtensionMarkerCorrect();
+
+protected:
+  QList<SubControl*>* m_subcontrols = nullptr;
+  QList<PseudoState*>* m_pseudoStates = nullptr;
+  IDSelector* m_idSelector = nullptr;
 };
 
 class WidgetNodes : public Node

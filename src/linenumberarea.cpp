@@ -63,10 +63,10 @@ LineNumberArea::paintEvent(QPaintEvent* event)
         int number = blockNumber + 1;
 
         if (number == m_currentLineNumber) {
-          painter.setPen(m_foreSelected);
+          painter.setPen(m_foreSelected.color());
 
         } else {
-          painter.setPen(m_foreUnselected);
+          painter.setPen(m_foreUnselected.color());
         }
 
         painter.drawText(
@@ -145,40 +145,39 @@ LineNumberArea::setWeight(const QFont::Weight& weight)
   update();
 }
 
-QColor
-LineNumberArea::back() const
+QBrush LineNumberArea::back() const
 {
   return m_back;
 }
 
 void
-LineNumberArea::setBack(const QColor& back)
+LineNumberArea::setBack(const QBrush& back)
 {
   m_back = back;
   update();
 }
 
-QColor
+QBrush
 LineNumberArea::foreSelected() const
 {
   return m_foreSelected;
 }
 
 void
-LineNumberArea::setForeSelected(const QColor& fore)
+LineNumberArea::setForeSelected(const QBrush& fore)
 {
   m_foreSelected = fore;
   update();
 }
 
-QColor
+QBrush
 LineNumberArea::foreUnselected() const
 {
   return m_foreUnselected;
 }
 
 void
-LineNumberArea::setForeUnselected(const QColor& fore)
+LineNumberArea::setForeUnselected(const QBrush &fore)
 {
   m_foreUnselected = fore;
   update();

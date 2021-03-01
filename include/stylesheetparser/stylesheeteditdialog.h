@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef STYLESHEETEDITDIALOG_H
 #define STYLESHEETEDITDIALOG_H
 
+#include <QAbstractListModel>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialog>
@@ -37,7 +38,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QTabWidget>
 #include <QTextCharFormat>
 #include <QVBoxLayout>
-#include <QAbstractListModel>
 
 #include <sm_widgets/labelledcombobox.h>
 #include <sm_widgets/labelledspinbox.h>
@@ -51,23 +51,20 @@ class TypeModel : public QAbstractListModel
   // QAbstractItemModel interface
 public:
   TypeModel(QObject* parent);
-  QModelIndex index(int row,
-                    int column,
-                    const QModelIndex& parent) const override
-  {}
-  QModelIndex parent(const QModelIndex& child) const override {}
   int rowCount(const QModelIndex&) const override;
   int columnCount(const QModelIndex&) const override;
   QVariant data(const QModelIndex& index, int role) const override;
-  void setData(StylesheetEditor* editor);
+  void populate(StylesheetEditor* editor);
+  QTextCharFormat format(int row);
+  void setFormat(int row, QTextCharFormat format);
 
 private:
-  StylesheetEditor* m_editor=nullptr;
+  StylesheetEditor* m_editor = nullptr;
   QString m_fontfamily;
   QStringList m_text;
   QList<QTextCharFormat> m_formats;
 
-  void setData(const QString& text, QTextCharFormat format);
+  void populateItem(const QString& text, QTextCharFormat format);
 };
 
 class ModifyFrame : public QWidget
@@ -77,12 +74,22 @@ public:
   ModifyFrame(QWidget* parent = nullptr);
 
   void setRow(int row, QTextCharFormat format);
+
+signals:
+  void rowChanged(int row, QTextCharFormat format);
+
 private:
+  int m_row;
+  QTextCharFormat m_format;
+  QPushButton *m_foregroundBtn, *m_backgroundBtn,*m_underlineColorBtn;
+  QCheckBox *m_boldBox, *m_italicBox;
+  QComboBox *m_underlineType;
+
   void foregroundClicked(bool);
   void backgroundClicked(bool);
   void colorClicked(bool);
-  void boldClicked(bool);
-  void italicClicked(bool);
+  void boldClicked(bool checked);
+  void italicClicked(bool checked);
   void underlineTypeChanged(int index);
 };
 
@@ -94,10 +101,13 @@ public:
 
 private:
   StylesheetEditor* m_editor = nullptr;
-  TypeModel *m_model;
-  ModifyFrame *m_modify;
+  TypeModel* m_model;
+  ModifyFrame* m_modify;
+  QListView* m_typeList;
+  StylesheetEdit* m_display;
 
-  void indexChanged(const QModelIndex &index);
+  void indexChanged(const QModelIndex& index);
+  void rowChanged(int row, QTextCharFormat format);
 
   static const QString DISPLAY;
 };
@@ -112,9 +122,7 @@ public:
   //  StylesheetEdit *editor() const;
   void setEditor(StylesheetEdit* editor);
 
-
 protected:
-
 private:
   QTabWidget* m_tabs;
   QDialogButtonBox* m_btnBox;

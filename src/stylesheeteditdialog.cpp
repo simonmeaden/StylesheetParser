@@ -165,26 +165,38 @@ ColorFontFrame::ColorFontFrame(StylesheetEditor* editor, QWidget* parent)
   themeLayout->addLayout(typeLayout, 0, 0, 1, 3);
 
   m_model = new TypeModel(this);
-  m_model->setData(m_editor);
-  auto typeList = new QListView(this);
-  typeList->setModel(m_model);
-  connect(typeList, &QListView::clicked, this, &ColorFontFrame::indexChanged);
-  themeLayout->addWidget(typeList, 1, 0);
+  m_model->populate(m_editor);
+  m_typeList = new QListView(this);
+  m_typeList->setModel(m_model);
+  connect(m_typeList, &QListView::clicked, this, &ColorFontFrame::indexChanged);
+  themeLayout->addWidget(m_typeList, 1, 0);
 
-  auto display = new StylesheetEdit(this);
-  display->setPlainText(DISPLAY);
-  themeLayout->addWidget(display, 1, 1);
+  m_display = new StylesheetEdit(this);
+  m_display->setPlainText(DISPLAY);
+  themeLayout->addWidget(m_display, 1, 1);
 
   m_modify = new ModifyFrame(this);
   themeLayout->addWidget(m_modify, 1, 2);
+  connect(
+    m_modify, &ModifyFrame::rowChanged, this, &ColorFontFrame::rowChanged);
 }
 
 void
 ColorFontFrame::indexChanged(const QModelIndex& index)
 {
-  auto data = m_model->data(index, Qt::UserRole + 1);
-  auto format = data.value<QTextCharFormat>();
+  auto format = m_model->format(index.row());
+  m_display->setWidgetFormat(format.foreground(),
+                             format.background(),
+                             format.font(),
+                             format.underlineColor(),
+                             format.underlineStyle());
   m_modify->setRow(index.row(), format);
+}
+
+void
+ColorFontFrame::rowChanged(int row, QTextCharFormat format)
+{
+  m_model->setFormat(row, format);
 }
 
 TypeModel::TypeModel(QObject* parent)
@@ -194,8 +206,7 @@ TypeModel::TypeModel(QObject* parent)
 int
 TypeModel::rowCount(const QModelIndex&) const
 {
-  auto s =  m_text.size();
-  return s;
+  return m_text.size();
 }
 
 int
@@ -212,6 +223,7 @@ TypeModel::data(const QModelIndex& index, int role) const
   auto row = index.row();
   switch (role) {
     default:
+      return QVariant();
     case Qt::DisplayRole: // QString
       return m_text.at(row);
     case Qt::BackgroundRole: // QBrush
@@ -220,46 +232,69 @@ TypeModel::data(const QModelIndex& index, int role) const
       return m_formats.at(row).foreground();
     case Qt::FontRole: // QFont
       return m_formats.at(row).font();
-    case Qt::UserRole + 1: // QTextCharFormat
-      QVariant v;
-      v.setValue(m_formats.at(row));
-      return v;
   }
   return QVariant();
 }
 
 void
-TypeModel::setData(StylesheetEditor* editor)
+TypeModel::populate(StylesheetEditor* editor)
 {
   m_editor = editor;
   m_text.clear();
   m_formats.clear();
   auto highlighter = editor->highlighter();
 
-  setData("Widget", highlighter->widgetFormat());
-  setData("ID Selector", highlighter->idSelectorFormat());
-  setData("ID Selector Marker #", highlighter->idSelectorMarkerFormat());
-  setData("Sub Control", highlighter->subControlFormat());
-  setData("Sub Control marker ::", highlighter->subControlMarkerFormat());
-  setData("Pseudo State", highlighter->pseudoStateFormat());
-  setData("Pseudo State Marker :", highlighter->pseudoStateMarkerFormat());
-  setData("Property Name", highlighter->propertyFormat());
-  setData("Property Name Marker :", highlighter->propertyMarkerFormat());
-  setData("Property Value", highlighter->valueFormat());
-  setData("Property End Marker ;", highlighter->propertyEndMarkerFormat());
-  setData("Start Brace {", highlighter->startBraceFormat());
-  setData("End Brace }", highlighter->endBraceFormat());
-  setData("Mismatched Paranthesis {}", highlighter->braceMatchFormat());
-  setData("/* Comment */", highlighter->commentFormat());
+  populateItem("Widget", highlighter->widgetFormat());
+  populateItem("Bad Widget", highlighter->badWidgetFormat());
+  populateItem("Widget Seperator ','", highlighter->seperatorFormat());
+  populateItem("ID Selector", highlighter->idSelectorFormat());
+  populateItem("Bad ID Selector", highlighter->badIdSelectorFormat());
+  populateItem("ID Selector Marker #", highlighter->idSelectorMarkerFormat());
+  populateItem("Bad ID Selector Marker #",
+               highlighter->badIdSelectorMarkerFormat());
+  populateItem("Sub Control", highlighter->subControlFormat());
+  populateItem("Bad Sub Control", highlighter->badSubControlFormat());
+  populateItem("Sub Control marker ::", highlighter->subControlMarkerFormat());
+  populateItem("Sub Control marker ::",
+               highlighter->badSubControlMarkerFormat());
+  populateItem("Pseudo State", highlighter->pseudoStateFormat());
+  populateItem("Bad Pseudo State", highlighter->badPseudoStateFormat());
+  populateItem("Pseudo State Marker :", highlighter->pseudoStateMarkerFormat());
+  populateItem("Bad Pseudo State Marker :",
+               highlighter->badPseudoStateMarkerFormat());
+  populateItem("Property Name", highlighter->propertyFormat());
+  populateItem("Bad Property Name", highlighter->badPropertyFormat());
+  populateItem("Property Name Marker :", highlighter->propertyMarkerFormat());
+  populateItem("Property Value", highlighter->valueFormat());
+  populateItem("Bad Property Value", highlighter->badValueFormat());
+  populateItem("Property End Marker ;", highlighter->propertyEndMarkerFormat());
+  populateItem("Start Brace {", highlighter->startBraceFormat());
+  populateItem("Bad Start Brace {", highlighter->badStartBraceFormat());
+  populateItem("End Brace }", highlighter->endBraceFormat());
+  populateItem("Bad End Brace }", highlighter->badEndBraceFormat());
+  populateItem("Mismatched Paranthesis {}", highlighter->braceMatchFormat());
+  populateItem("Bad Mismatched Paranthesis {}",
+               highlighter->badBraceMatchFormat());
+  populateItem("/* Comment */", highlighter->commentFormat());
+}
+
+QTextCharFormat TypeModel::format(int row)
+{
+  return m_formats.at(row);
 }
 
 void
-TypeModel::setData(const QString& text, QTextCharFormat format)
+TypeModel::setFormat(int row, QTextCharFormat format)
 {
-  auto font = format.font();
+  QModelIndex i = index(row);
+  m_formats.replace(row, format);
+  emit dataChanged(i, i);
+}
+
+void
+TypeModel::populateItem(const QString& text, QTextCharFormat format)
+{
   m_fontfamily = format.fontFamily();
-  auto fore = format.foreground();
-  auto back = format.background();
   m_text.append(text);
   m_formats.append(format);
 }
@@ -271,15 +306,17 @@ ModifyFrame::ModifyFrame(QWidget* parent)
   setLayout(layout);
 
   auto colorLayout = new QFormLayout;
-  auto foregroundBtn = new QPushButton(this);
-  colorLayout->addRow(tr("Foreground"), foregroundBtn);
-  connect(foregroundBtn,
+  m_foregroundBtn = new QPushButton(this);
+  m_foregroundBtn->setAutoFillBackground(true);
+  colorLayout->addRow(tr("Foreground"), m_foregroundBtn);
+  connect(m_foregroundBtn,
           &QPushButton::clicked,
           this,
           &ModifyFrame::foregroundClicked);
-  auto backgroundBtn = new QPushButton(this);
-  colorLayout->addRow(tr("Background"), backgroundBtn);
-  connect(foregroundBtn,
+  m_backgroundBtn = new QPushButton(this);
+  m_backgroundBtn->setAutoFillBackground(true);
+  colorLayout->addRow(tr("Background"), m_backgroundBtn);
+  connect(m_backgroundBtn,
           &QPushButton::clicked,
           this,
           &ModifyFrame::backgroundClicked);
@@ -291,12 +328,12 @@ ModifyFrame::ModifyFrame(QWidget* parent)
   font.setBold(true);
   lbl->setFont(font);
   fontLayout->addWidget(lbl, 0, 0);
-  auto boldBox = new QCheckBox(tr("Bold"), this);
-  connect(boldBox, &QCheckBox::clicked, this, &ModifyFrame::boldClicked);
-  fontLayout->addWidget(boldBox, 1, 0);
-  auto italicBox = new QCheckBox(tr("Italic"), this);
-  connect(italicBox, &QCheckBox::clicked, this, &ModifyFrame::italicClicked);
-  fontLayout->addWidget(italicBox, 1, 1);
+  m_boldBox = new QCheckBox(tr("Bold"), this);
+  connect(m_boldBox, &QCheckBox::clicked, this, &ModifyFrame::boldClicked);
+  fontLayout->addWidget(m_boldBox, 1, 0);
+  m_italicBox = new QCheckBox(tr("Italic"), this);
+  connect(m_italicBox, &QCheckBox::clicked, this, &ModifyFrame::italicClicked);
+  fontLayout->addWidget(m_italicBox, 1, 1);
   layout->addLayout(fontLayout);
 
   auto underlineLayout = new QGridLayout;
@@ -305,64 +342,111 @@ ModifyFrame::ModifyFrame(QWidget* parent)
   underlineLayout->addWidget(lbl, 0, 0);
   lbl = new QLabel("Color");
   underlineLayout->addWidget(lbl, 1, 0);
-  auto colorBtn = new QPushButton(this);
-  connect(colorBtn, &QPushButton::clicked, this, &ModifyFrame::colorClicked);
-  underlineLayout->addWidget(colorBtn, 1, 1);
+  m_underlineColorBtn = new QPushButton(this);
+  m_underlineColorBtn->setAutoFillBackground(true);
+  connect(m_underlineColorBtn,
+          &QPushButton::clicked,
+          this,
+          &ModifyFrame::colorClicked);
+  underlineLayout->addWidget(m_underlineColorBtn, 1, 1);
   QStringList values;
-  values << tr("No Underline") << "Single"
-         << "Wave"
-         << "Dot"
-         << "Dash"
-         << "Dash-Dot"
-         << "Dash-Dot-Dot";
-  auto underlineType = new QComboBox(this);
-  connect(underlineType,
+  values << "No Underline"
+         << "Single Underline"
+         << "Dash Underline"
+         << "Dot Underline"
+         << "Dash-Dot Underline"
+         << "Dash-Dot-Dot Underline"
+         << "Wave Underline";
+  m_underlineType = new QComboBox(this);
+  m_underlineType->addItems(values);
+  connect(m_underlineType,
           qOverload<int>(&QComboBox::currentIndexChanged),
           this,
           &ModifyFrame::underlineTypeChanged);
-  underlineLayout->addWidget(underlineType, 2, 0);
+  underlineLayout->addWidget(m_underlineType, 2, 0);
   layout->addLayout(underlineLayout);
 }
 
 void
 ModifyFrame::setRow(int row, QTextCharFormat format)
 {
-  // TODO
+  m_row = row;
+  m_format = format;
+  QPalette palette = m_foregroundBtn->palette();
+  palette.setColor(m_foregroundBtn->backgroundRole(),
+                   m_format.foreground().color());
+  m_foregroundBtn->setPalette(palette);
+  palette = m_backgroundBtn->palette();
+  palette.setColor(m_backgroundBtn->backgroundRole(),
+                   m_format.background().color());
+  m_backgroundBtn->setPalette(palette);
+
+  m_boldBox->setChecked(m_format.font().bold());
+  m_italicBox->setChecked(m_format.font().italic());
+
+  palette = m_underlineColorBtn->palette();
+  palette.setColor(m_underlineColorBtn->backgroundRole(),
+                   m_format.underlineColor());
+  m_underlineColorBtn->setPalette(palette);
+
+  m_underlineType->setCurrentIndex(m_format.underlineStyle());
 }
 
 void
 ModifyFrame::foregroundClicked(bool)
 {
-  // TODO
-  //  auto dlg = new QColorDialog(color, this);
+  auto brush = m_format.foreground();
+  auto dlg = new QColorDialog(brush.color(), this);
+  if (dlg->exec() == QDialog::Accepted) {
+    brush.setColor(dlg->currentColor());
+    m_format.setForeground(brush);
+    emit rowChanged(m_row, m_format);
+  }
 }
 
 void
 ModifyFrame::backgroundClicked(bool)
 {
-  // TODO
+  auto brush = m_format.background();
+  auto dlg = new QColorDialog(brush.color(), this);
+  if (dlg->exec() == QDialog::Accepted) {
+    brush.setColor(dlg->currentColor());
+    m_format.setBackground(brush);
+    emit rowChanged(m_row, m_format);
+  }
 }
 
 void
 ModifyFrame::colorClicked(bool)
 {
-  // TODO
+  auto dlg = new QColorDialog(m_format.underlineColor(), this);
+  if (dlg->exec() == QDialog::Accepted) {
+    m_format.setUnderlineColor(dlg->currentColor());
+    emit rowChanged(m_row, m_format);
+  }
 }
 
 void
-ModifyFrame::boldClicked(bool)
+ModifyFrame::boldClicked(bool checked)
 {
-  // TODO
+  auto font = m_format.font();
+  font.setBold(checked);
+  m_format.setFont(font);
+  emit rowChanged(m_row, m_format);
 }
 
 void
-ModifyFrame::italicClicked(bool)
+ModifyFrame::italicClicked(bool checked)
 {
-  // TODO
+  auto font = m_format.font();
+  font.setItalic(checked);
+  m_format.setFont(font);
+  emit rowChanged(m_row, m_format);
 }
 
 void
 ModifyFrame::underlineTypeChanged(int index)
 {
-  // TODO
+  m_format.setUnderlineStyle(QTextCharFormat::UnderlineStyle(index));
+  emit rowChanged(m_row, m_format);
 }

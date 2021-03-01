@@ -335,38 +335,24 @@ public:
   QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
 
   //! Adds a new custom widget, with it's specialised names and values.
-  bool addCustomWidget(const QString& name, const QString& parent)
-  {
-    return m_widgetModel->addCustomWidget(name, parent);
-  }
+  bool addCustomWidget(const QString& name, const QString& parent);
   bool addCustomWidgetPseudoStates(const QString& name,
-                                   const QStringList& states)
-  {
-    return m_widgetModel->addCustomWidgetPseudoStates(name, states);
-  }
+                                   const QStringList& states);
   bool addCustomWidgetSubControls(const QString& name,
-                                  const QStringList& controls)
-  {
-    return m_widgetModel->addCustomWidgetSubControls(name, controls);
-  }
+                                  const QStringList& controls);
   bool addCustomWidgetProperties(const QString& name,
-                                 const QStringList& properties)
-  {
-    return m_widgetModel->addCustomWidgetProperties(name, properties);
-  }
+                                 const QStringList& properties);
   bool addCustomWidgetPropertyValue(const QString& widget,
                                     const QString& property,
-                                    const QString& value)
-  {
-    return m_widgetModel->addCustomWidgetPropertyValue(widget, property, value);
-  }
+                                    const QString& value);
   bool addCustomWidgetPropertyValues(const QString& widget,
                                      const QString& property,
-                                     QStringList values)
-  {
-    return m_widgetModel->addCustomWidgetPropertyValues(
-      widget, property, values);
-  }
+                                     QStringList values);
+
+  static const QFont NORMALFONT;
+  static const QFont LIGHTFONT;
+  static const QFont BOLDFONT;
+
 signals:
   void finished();
 

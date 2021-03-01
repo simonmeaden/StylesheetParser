@@ -61,6 +61,18 @@ NamedNode::pointHeight() const
   return fm.height();
 }
 
+Node::Node(QTextCursor cursor,
+           StylesheetEditor* editor,
+           QObject* parent,
+           NodeType type)
+  : QObject(parent)
+  , m_cursor(cursor)
+  , m_type(type)
+  , m_editor(editor)
+{}
+
+Node::Node(const Node& other) {}
+
 QTextCursor
 Node::cursor() const
 {
@@ -1213,44 +1225,35 @@ CommentNode::CommentNode(QTextCursor start,
                          StylesheetEditor* editor,
                          QObject* parent,
                          enum NodeType type)
-  : WidgetNode(QString(), start, editor, NodeState::CommentState, parent, type)
+  : Node(start, editor, parent, type)
 // TODO set actual comment check value
-{
-  comment_ptr = new CommentNodeData;
-}
+{}
 
 CommentNode::CommentNode(const CommentNode& other)
-  : WidgetNode(other.name(),
-               other.cursor(),
-               other.m_editor,
-               NodeState::CommentState, // TODO set actual comment check value
+  : Node(other.cursor(),
+               other.m_editor, // TODO set actual comment check value
                other.parent(),
                other.type())
-{
-  comment_ptr = new CommentNodeData(*other.comment_ptr);
-}
+{}
 
-CommentNode::~CommentNode()
-{
-  delete comment_ptr;
-}
+CommentNode::~CommentNode() {}
 
 void
 CommentNode::append(QChar c)
 {
-  m_name.append(c);
+  m_text.append(c);
 }
 
 void
 CommentNode::append(QString text)
 {
-  m_name.append(text);
+  m_text.append(text);
 }
 
 int
 CommentNode::end() const
 {
-  return m_cursor.anchor() + m_name.length();
+  return m_cursor.anchor() + m_text.length();
 }
 
 int
@@ -1258,8 +1261,8 @@ CommentNode::length() const
 {
   if (hasEndComment()) {
     return endCommentCursor().anchor() - position() + 2;
-  } else if (m_name.length() > 0) {
-    return comment_ptr->cursor.anchor() + m_name.length() - position();
+  } else if (m_text.length() > 0) {
+    return cursor().anchor() + m_text.length() - position();
   } else {
     return 2; // length of start comment
   }
@@ -1268,43 +1271,43 @@ CommentNode::length() const
 QTextCursor
 CommentNode::textCursor() const
 {
-  return comment_ptr->cursor;
+  return m_textCursor;
 }
 
 void
 CommentNode::setTextCursor(QTextCursor cursor)
 {
-  comment_ptr->cursor = cursor;
+  m_textCursor = cursor;
 }
 
 int
 CommentNode::textPosition() const
 {
-  return comment_ptr->cursor.anchor();
+  return m_textCursor.anchor();
 }
 
 bool
 CommentNode::hasEndComment() const
 {
-  return comment_ptr->endCommentExists;
+  return m_endCommentExists;
 }
 
 void
 CommentNode::setEndCommentExists(bool exists)
 {
-  comment_ptr->endCommentExists = exists;
+  m_endCommentExists = exists;
 }
 
 QTextCursor
 CommentNode::endCommentCursor() const
 {
-  return comment_ptr->endCursor;
+  return m_endCursor;
 }
 
 void
 CommentNode::setEndCommentCursor(QTextCursor cursor)
 {
-  comment_ptr->endCursor = cursor;
+  m_endCursor = cursor;
 }
 
 NodeSection*
@@ -1340,7 +1343,7 @@ NewlineNode::NewlineNode(QTextCursor start,
                          StylesheetEditor* editor,
                          QObject* parent,
                          enum NodeType type)
-  : WidgetNode("\n", start, editor, NodeState::NewLineState, parent, type)
+  : NamedNode("\n", start, editor, parent, type)
 {}
 
 MarkerBase::MarkerBase(QTextCursor markerCursor,
@@ -1402,11 +1405,11 @@ MarkerBase::length() const
 }
 
 ControlBase::ControlBase(QTextCursor markerCursor,
-                       QTextCursor nameCursor,
-                       const QString& name,
-                       StylesheetEditor* editor,
-                       QObject* parent,
-                       enum NodeType type)
+                         QTextCursor nameCursor,
+                         const QString& name,
+                         StylesheetEditor* editor,
+                         QObject* parent,
+                         enum NodeType type)
   : MarkerBase(markerCursor, nameCursor, name, editor, parent, type)
 {
   m_marker = "::";
@@ -1676,7 +1679,8 @@ IDSelector::IDSelector(QTextCursor markerCursor,
   }
 }
 
-bool IDSelector::isValid() const
+bool
+IDSelector::isValid() const
 {
   if (m_marker == "#" && m_name.length() > 0) {
     return true;

@@ -247,8 +247,8 @@ public:
   QTextCharFormat badIdSelectorFormat() const;
   QTextCharFormat idSelectorMarkerFormat() const;
   QTextCharFormat badIdSelectorMarkerFormat() const;
-  QTextCharFormat valueFormat() const;
-  QTextCharFormat badValueFormat() const;
+  QTextCharFormat propertyValueFormat() const;
+  QTextCharFormat badPropertyValueFormat() const;
 //  QTextCharFormat idSelectorFormat() const;
 //  QTextCharFormat idSelectorMarkerFormat() const;
   QTextCharFormat pseudoStateFormat() const;

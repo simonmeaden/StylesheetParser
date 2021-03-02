@@ -44,7 +44,8 @@ StylesheetEditDialog::StylesheetEditDialog(StylesheetEditor* editor,
           this,
           &StylesheetEditDialog::apply);
 
-  m_tabs->addTab(new ColorFontFrame(m_editor, this), tr("Font & Colors"));
+  m_colorFontFrame = new ColorFontFrame(m_editor, this);
+  m_tabs->addTab(m_colorFontFrame, tr("Font & Colors"));
 
   mainLayout->addWidget(m_btnBox);
 }
@@ -53,6 +54,12 @@ void
 StylesheetEditDialog::setEditor(StylesheetEdit* editor)
 {
   m_editor = editor->editor();
+}
+
+QList<QTextCharFormat>
+StylesheetEditDialog::formats() const
+{
+  return m_colorFontFrame->formats();
 }
 
 void
@@ -181,6 +188,12 @@ ColorFontFrame::ColorFontFrame(StylesheetEditor* editor, QWidget* parent)
     m_modify, &ModifyFrame::rowChanged, this, &ColorFontFrame::rowChanged);
 }
 
+QList<QTextCharFormat>
+ColorFontFrame::formats() const
+{
+  return m_model->formats();
+}
+
 void
 ColorFontFrame::indexChanged(const QModelIndex& index)
 {
@@ -197,6 +210,92 @@ void
 ColorFontFrame::rowChanged(int row, QTextCharFormat format)
 {
   m_model->setFormat(row, format);
+  switch (row) {
+    case 0:
+      m_editor->setWidgetFormat(format);
+      break;
+    case 1:
+      m_editor->setBadWidgetFormat(format);
+      break;
+    case 2:
+      m_editor->setSeperatorFormat(format);
+      break;
+    case 3:
+      m_editor->setIdSelectorFormat(format);
+      break;
+    case 4:
+      m_editor->setBadIdSelectorFormat(format);
+      break;
+    case 5:
+      m_editor->setIdSelectorMarkerFormat(format);
+      break;
+    case 6:
+      m_editor->setBadIdSelectorMarkerFormat(format);
+      break;
+    case 7:
+      m_editor->setSubControlFormat(format);
+      break;
+    case 8:
+      m_editor->setBadSubControlFormat(format);
+      break;
+    case 9:
+      m_editor->setSubControlMarkerFormat(format);
+      break;
+    case 10:
+      m_editor->setBadSubControlMarkerFormat(format);
+      break;
+    case 11:
+      m_editor->setPseudoStateFormat(format);
+      break;
+    case 12:
+      m_editor->setBadPseudoStateFormat(format);
+      break;
+    case 13:
+      m_editor->setPseudoStateMarkerFormat(format);
+      break;
+    case 14:
+      m_editor->setBadPseudoStateMarkerFormat(format);
+      break;
+    case 15:
+      m_editor->setPropertyFormat(format);
+      break;
+    case 16:
+      m_editor->setBadPropertyFormat(format);
+      break;
+    case 17:
+      m_editor->setPropertyMarkerFormat(format);
+      break;
+    case 18:
+      m_editor->setPropertyValueFormat(format);
+      break;
+    case 19:
+      m_editor->setBadPropertyValueFormat(format);
+      break;
+    case 20:
+      m_editor->setPropertyEndMarkerFormat(format);
+      break;
+    case 21:
+      m_editor->setStartBraceFormat(format);
+      break;
+    case 22:
+      m_editor->setBadStartBraceFormat(format);
+      break;
+    case 23:
+      m_editor->setEndBraceFormat(format);
+      break;
+    case 24:
+      m_editor->setBadEndBraceFormat(format);
+      break;
+    case 25:
+      m_editor->setBraceMatchFormat(format);
+      break;
+    case 26:
+      m_editor->setBadBraceMatchFormat(format);
+      break;
+    case 27:
+      m_editor->setCommentFormat(format);
+      break;
+  }
 }
 
 TypeModel::TypeModel(QObject* parent)
@@ -265,8 +364,8 @@ TypeModel::populate(StylesheetEditor* editor)
   populateItem("Property Name", highlighter->propertyFormat());
   populateItem("Bad Property Name", highlighter->badPropertyFormat());
   populateItem("Property Name Marker :", highlighter->propertyMarkerFormat());
-  populateItem("Property Value", highlighter->valueFormat());
-  populateItem("Bad Property Value", highlighter->badValueFormat());
+  populateItem("Property Value", highlighter->propertyValueFormat());
+  populateItem("Bad Property Value", highlighter->badPropertyValueFormat());
   populateItem("Property End Marker ;", highlighter->propertyEndMarkerFormat());
   populateItem("Start Brace {", highlighter->startBraceFormat());
   populateItem("Bad Start Brace {", highlighter->badStartBraceFormat());
@@ -278,7 +377,8 @@ TypeModel::populate(StylesheetEditor* editor)
   populateItem("/* Comment */", highlighter->commentFormat());
 }
 
-QTextCharFormat TypeModel::format(int row)
+QTextCharFormat
+TypeModel::format(int row)
 {
   return m_formats.at(row);
 }
@@ -289,6 +389,12 @@ TypeModel::setFormat(int row, QTextCharFormat format)
   QModelIndex i = index(row);
   m_formats.replace(row, format);
   emit dataChanged(i, i);
+}
+
+QList<QTextCharFormat>
+TypeModel::formats() const
+{
+  return m_formats;
 }
 
 void
@@ -400,6 +506,9 @@ ModifyFrame::foregroundClicked(bool)
   if (dlg->exec() == QDialog::Accepted) {
     brush.setColor(dlg->currentColor());
     m_format.setForeground(brush);
+    QPalette palette = m_foregroundBtn->palette();
+    palette.setColor(m_foregroundBtn->backgroundRole(), dlg->currentColor());
+    m_foregroundBtn->setPalette(palette);
     emit rowChanged(m_row, m_format);
   }
 }
@@ -412,6 +521,10 @@ ModifyFrame::backgroundClicked(bool)
   if (dlg->exec() == QDialog::Accepted) {
     brush.setColor(dlg->currentColor());
     m_format.setBackground(brush);
+    QPalette palette = m_backgroundBtn->palette();
+    palette.setColor(m_backgroundBtn->backgroundRole(), dlg->currentColor());
+    m_backgroundBtn->setPalette(palette);
+    emit rowChanged(m_row, m_format);
     emit rowChanged(m_row, m_format);
   }
 }
@@ -422,6 +535,10 @@ ModifyFrame::colorClicked(bool)
   auto dlg = new QColorDialog(m_format.underlineColor(), this);
   if (dlg->exec() == QDialog::Accepted) {
     m_format.setUnderlineColor(dlg->currentColor());
+    QPalette palette = m_underlineColorBtn->palette();
+    palette.setColor(m_underlineColorBtn->backgroundRole(),
+                     dlg->currentColor());
+    m_underlineColorBtn->setPalette(palette);
     emit rowChanged(m_row, m_format);
   }
 }

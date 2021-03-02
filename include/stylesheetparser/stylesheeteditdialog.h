@@ -58,6 +58,8 @@ public:
   QTextCharFormat format(int row);
   void setFormat(int row, QTextCharFormat format);
 
+  QList<QTextCharFormat> formats() const;
+
 private:
   StylesheetEditor* m_editor = nullptr;
   QString m_fontfamily;
@@ -81,9 +83,9 @@ signals:
 private:
   int m_row;
   QTextCharFormat m_format;
-  QPushButton *m_foregroundBtn, *m_backgroundBtn,*m_underlineColorBtn;
+  QPushButton *m_foregroundBtn, *m_backgroundBtn, *m_underlineColorBtn;
   QCheckBox *m_boldBox, *m_italicBox;
-  QComboBox *m_underlineType;
+  QComboBox* m_underlineType;
 
   void foregroundClicked(bool);
   void backgroundClicked(bool);
@@ -98,6 +100,11 @@ class ColorFontFrame : public QFrame
   Q_OBJECT
 public:
   ColorFontFrame(StylesheetEditor* editor, QWidget* parent = nullptr);
+
+  QList<QTextCharFormat> formats() const;
+
+//signals:
+//  void formatChanged(int row, QTextCharFormat& format);
 
 private:
   StylesheetEditor* m_editor = nullptr;
@@ -122,11 +129,14 @@ public:
   //  StylesheetEdit *editor() const;
   void setEditor(StylesheetEdit* editor);
 
+  QList<QTextCharFormat> formats() const;
+
 protected:
 private:
   QTabWidget* m_tabs;
   QDialogButtonBox* m_btnBox;
   StylesheetEditor* m_editor;
+  ColorFontFrame* m_colorFontFrame;
 
   void apply();
 };

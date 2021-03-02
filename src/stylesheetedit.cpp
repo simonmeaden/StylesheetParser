@@ -60,6 +60,18 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
 }
 
 void
+StylesheetEdit::loadConfig(const QString& filename)
+{
+  m_editor->loadConfig(filename);
+}
+
+void
+StylesheetEdit::saveConfig(const QString& filename)
+{
+  m_editor->saveConfig(filename);
+}
+
+void
 StylesheetEdit::setPlainText(const QString& text)
 {
   m_editor->setPlainText(text);
@@ -146,7 +158,7 @@ StylesheetEdit::setIDSelectorMarkerFormat(QBrush color,
                                           QBrush underline,
                                           QTextCharFormat::UnderlineStyle style)
 {
-  m_editor->setIDSelectorMarkerFormat(color, back, font, underline, style);
+  m_editor->setIdSelectorMarkerFormat(color, back, font, underline, style);
 }
 
 void
@@ -157,7 +169,7 @@ StylesheetEdit::setBadIDSelectorMarkerFormat(
   QBrush underline,
   QTextCharFormat::UnderlineStyle style)
 {
-  m_editor->setBadIDSelectorMarkerFormat(color, back, font, underline, style);
+  m_editor->setBadIdSelectorMarkerFormat(color, back, font, underline, style);
 }
 
 void
@@ -244,23 +256,23 @@ StylesheetEdit::setBadSubControlMarkerFormat(
 }
 
 void
-StylesheetEdit::setValueFormat(QBrush color,
+StylesheetEdit::setPropertyValueFormat(QBrush color,
                                QBrush back,
                                QFont font,
                                QBrush underline,
                                QTextCharFormat::UnderlineStyle style)
 {
-  m_editor->setValueFormat(color, back, font, underline, style);
+  m_editor->setPropertyValueFormat(color, back, font, underline, style);
 }
 
 void
-StylesheetEdit::setBadValueFormat(QBrush color,
+StylesheetEdit::setBadPropertyValueFormat(QBrush color,
                                   QBrush back,
                                   QFont font,
                                   QBrush underline,
                                   QTextCharFormat::UnderlineStyle style)
 {
-  m_editor->setBadValueFormat(color, back, font, underline, style);
+  m_editor->setBadPropertyValueFormat(color, back, font, underline, style);
 }
 
 void
@@ -577,19 +589,27 @@ StylesheetEditor::checkForEmpty(const QString& text)
 //================================================================
 
 const QChar StylesheetEditor::m_arrow = QChar(0x2BC8);
-const QString StylesheetEditor::STYLESHEETEDIT = "stylesheetedit";
 const QString StylesheetEditor::GOOD = "good";
 const QString StylesheetEditor::BAD = "bad";
-const QString StylesheetEditor::RED = "red";
-const QString StylesheetEditor::GREEN = "green";
-const QString StylesheetEditor::BLUE = "blue";
-const QString StylesheetEditor::ALPHA = "alpha";
+const QString StylesheetEditor::MARKER = "marker";
+const QString StylesheetEditor::ENDMARKER = "endmarker";
 const QString StylesheetEditor::FORE = "foreground";
 const QString StylesheetEditor::BACK = "background";
 const QString StylesheetEditor::FONT = "font";
-const QString StylesheetEditor::COLOR = "color";
-const QString StylesheetEditor::STYLE = "style";
+const QString StylesheetEditor::COLOR = "underlinecolor";
+const QString StylesheetEditor::STYLE = "underlinestyle";
 const QString StylesheetEditor::WIDGET = "widget";
+const QString StylesheetEditor::SEPERATOR = "seperator";
+const QString StylesheetEditor::IDSELECTOR = "idselector";
+const QString StylesheetEditor::PSEUDOSTATE = "pseudostate";
+const QString StylesheetEditor::SUBCONTROL = "subcontrol";
+const QString StylesheetEditor::PROPERTY = "property";
+const QString StylesheetEditor::VALUE = "value";
+const QString StylesheetEditor::BRACE = "brace";
+const QString StylesheetEditor::START = "start";
+const QString StylesheetEditor::END = "end";
+const QString StylesheetEditor::MATCH = "match";
+const QString StylesheetEditor::COMMENT = "comment";
 
 StylesheetEditor::StylesheetEditor(QWidget* parent)
   : QPlainTextEdit(parent)
@@ -654,51 +674,24 @@ StylesheetEditor::setup(BookmarkArea* bookmarkArea,
   //          Qt::UniqueConnection);
 }
 
-// void
-// StylesheetEditor::setFormatValues(QSettings* settings,
-//                                  QTextCharFormat format,
-//                                  QString dataset)
-//{
-//  settings->setValue(dataset + "/foreground",
-//                     QVariant::fromValue(format.foreground()));
-//  settings->setValue(dataset + "/background",
-//                     QVariant::fromValue(format.background()));
-//  settings->setValue(dataset + "/font-family",
-//                     QVariant::fromValue(format.font().family()));
-//  settings->setValue(dataset + "/font-size",
-//                     QVariant::fromValue(format.font().pointSize()));
-//  settings->setValue(dataset + "/underline-color",
-//                     QVariant::fromValue(format.underlineColor()));
-//  settings->setValue(dataset + "/underline-style", format.underlineStyle());
-//}
-
-// QByteArray
-// StylesheetEditor::formatToByteArray(QTextCharFormat format)
-//{
-//  QByteArray data;
-//  QDataStream stream(&data, QIODevice::ReadOnly);
-//  stream << format;
-//  return data;
-//}
-
 void
 StylesheetEditor::writeFormat(YAML::Emitter* emitter, QTextCharFormat format)
 {
-  auto fore = format.foreground().color();
-  auto back = format.background().color();
+  auto fore = format.foreground();
+  auto back = format.background();
   auto font = format.font();
   auto underlineColor = format.underlineColor();
   auto underlineStyle = format.underlineStyle();
   *emitter << YAML::BeginMap;
-  *emitter << YAML::Key << "foreground";
+  *emitter << YAML::Key << FORE;
   *emitter << YAML::Value << fore;
-  *emitter << YAML::Key << "background";
+  *emitter << YAML::Key << BACK;
   *emitter << YAML::Value << back;
-  *emitter << YAML::Key << "font";
+  *emitter << YAML::Key << FONT;
   *emitter << YAML::Value << font;
-  *emitter << YAML::Key << "underlinecolor";
+  *emitter << YAML::Key << COLOR;
   *emitter << YAML::Value << underlineColor;
-  *emitter << YAML::Key << "underlinestyle";
+  *emitter << YAML::Key << STYLE;
   *emitter << YAML::Value << underlineStyle;
   *emitter << YAML::EndMap;
 }
@@ -715,46 +708,46 @@ StylesheetEditor::saveConfig(const QString& filename)
   if (file->open((QFile::ReadWrite | QFile::Truncate))) {
     YAML::Emitter emitter;
 
-    emitter << YAML::Key << "stylesheetedit";
-    {
+    //    emitter << YAML::Key << STYLESHEETEDIT;
+    { // Start of stylesheet.
       QVariant v;
       QTextCharFormat format;
       emitter << YAML::BeginMap;
       { // Start of WIDGET
-        emitter << YAML::Key << "widget";
+        emitter << YAML::Key << WIDGET;
         emitter << YAML::BeginMap;
         {
-          emitter << YAML::Key << "good";
+          emitter << YAML::Key << GOOD;
           format = m_highlighter->widgetFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "bad";
+          emitter << YAML::Key << BAD;
           format = m_highlighter->badWidgetFormat();
           writeFormat(&emitter, format);
         }
         emitter << YAML::EndMap;
       } // End of WIDGET
       { // Start of SEPERATOR
-        emitter << YAML::Key << "seperator";
+        emitter << YAML::Key << SEPERATOR;
         format = m_highlighter->seperatorFormat();
         writeFormat(&emitter, format);
       } // End of SEPERATOR
       { // Start of IDSELECTOR
-        emitter << YAML::Key << "idselector";
+        emitter << YAML::Key << IDSELECTOR;
         emitter << YAML::BeginMap;
         {
-          emitter << YAML::Key << "good";
+          emitter << YAML::Key << GOOD;
           format = m_highlighter->idSelectorFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "bad";
+          emitter << YAML::Key << BAD;
           format = m_highlighter->badIdSelectorFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "marker";
+          emitter << YAML::Key << MARKER;
           {
             emitter << YAML::BeginMap;
-            emitter << YAML::Key << "good";
+            emitter << YAML::Key << GOOD;
             format = m_highlighter->idSelectorMarkerFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
+            emitter << YAML::Key << BAD;
             format = m_highlighter->badIdSelectorMarkerFormat();
             writeFormat(&emitter, format);
             emitter << YAML::EndMap;
@@ -763,22 +756,22 @@ StylesheetEditor::saveConfig(const QString& filename)
         emitter << YAML::EndMap;
       } // End of IDSELECTOR
       { // Start of PSEUDOSTATE
-        emitter << YAML::Key << "pseudostate";
+        emitter << YAML::Key << PSEUDOSTATE;
         emitter << YAML::BeginMap;
         {
-          emitter << YAML::Key << "good";
+          emitter << YAML::Key << GOOD;
           format = m_highlighter->pseudoStateFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "bad";
+          emitter << YAML::Key << BAD;
           format = m_highlighter->badPseudoStateFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "marker";
+          emitter << YAML::Key << MARKER;
           {
             emitter << YAML::BeginMap;
-            emitter << YAML::Key << "good";
+            emitter << YAML::Key << GOOD;
             format = m_highlighter->pseudoStateMarkerFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
+            emitter << YAML::Key << BAD;
             format = m_highlighter->badPseudoStateMarkerFormat();
             writeFormat(&emitter, format);
             emitter << YAML::EndMap;
@@ -787,22 +780,22 @@ StylesheetEditor::saveConfig(const QString& filename)
         emitter << YAML::EndMap;
       } // End of PSEUDOSTATE
       { // Start of SUBCONTROL
-        emitter << YAML::Key << "subcontrol";
+        emitter << YAML::Key << SUBCONTROL;
         emitter << YAML::BeginMap;
         {
-          emitter << YAML::Key << "good";
+          emitter << YAML::Key << GOOD;
           format = m_highlighter->subControlFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "bad";
+          emitter << YAML::Key << BAD;
           format = m_highlighter->badSubControlFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "marker";
+          emitter << YAML::Key << MARKER;
           {
             emitter << YAML::BeginMap;
-            emitter << YAML::Key << "good";
+            emitter << YAML::Key << GOOD;
             format = m_highlighter->subControlMarkerFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
+            emitter << YAML::Key << BAD;
             format = m_highlighter->badSubControlMarkerFormat();
             writeFormat(&emitter, format);
             emitter << YAML::EndMap;
@@ -811,29 +804,32 @@ StylesheetEditor::saveConfig(const QString& filename)
         emitter << YAML::EndMap;
       } // End of PSEUDOSTATE
       { // Start of PROPERTY
-        emitter << YAML::Key << "property";
+        emitter << YAML::Key << PROPERTY;
         emitter << YAML::BeginMap;
         {
-          emitter << YAML::Key << "good";
+          emitter << YAML::Key << GOOD;
           format = m_highlighter->propertyFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "bad";
+          emitter << YAML::Key << BAD;
           format = m_highlighter->badPropertyFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "marker";
+          emitter << YAML::Key << MARKER;
           format = m_highlighter->propertyMarkerFormat();
           writeFormat(&emitter, format);
-          emitter << YAML::Key << "value";
+          emitter << YAML::Key << PROPERTY;
           {
             emitter << YAML::BeginMap;
-            emitter << YAML::Key << "good";
-            format = m_highlighter->valueFormat();
+            emitter << YAML::Key << GOOD;
+            format = m_highlighter->propertyValueFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
-            format = m_highlighter->badValueFormat();
+            emitter << YAML::Key << BAD;
+            format = m_highlighter->badPropertyValueFormat();
             writeFormat(&emitter, format);
             emitter << YAML::EndMap;
           }
+          emitter << YAML::Key << ENDMARKER;
+          format = m_highlighter->propertyEndMarkerFormat();
+          writeFormat(&emitter, format);
         }
         emitter << YAML::EndMap;
       } // End of PROPERTY
@@ -844,10 +840,10 @@ StylesheetEditor::saveConfig(const QString& filename)
           emitter << YAML::Key << "start";
           emitter << YAML::BeginMap;
           {
-            emitter << YAML::Key << "good";
+            emitter << YAML::Key << GOOD;
             format = m_highlighter->startBraceFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
+            emitter << YAML::Key << BAD;
             format = m_highlighter->badStartBraceFormat();
             writeFormat(&emitter, format);
           }
@@ -857,10 +853,10 @@ StylesheetEditor::saveConfig(const QString& filename)
           emitter << YAML::Key << "end";
           emitter << YAML::BeginMap;
           {
-            emitter << YAML::Key << "good";
+            emitter << YAML::Key << GOOD;
             format = m_highlighter->endBraceFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
+            emitter << YAML::Key << BAD;
             format = m_highlighter->badEndBraceFormat();
             writeFormat(&emitter, format);
           }
@@ -870,10 +866,10 @@ StylesheetEditor::saveConfig(const QString& filename)
           emitter << YAML::Key << "match";
           emitter << YAML::BeginMap;
           {
-            emitter << YAML::Key << "good";
+            emitter << YAML::Key << GOOD;
             format = m_highlighter->braceMatchFormat();
             writeFormat(&emitter, format);
-            emitter << YAML::Key << "bad";
+            emitter << YAML::Key << BAD;
             format = m_highlighter->badBraceMatchFormat();
             writeFormat(&emitter, format);
           }
@@ -895,227 +891,338 @@ StylesheetEditor::saveConfig(const QString& filename)
   }
 }
 
-QColor
-StylesheetEditor::readColor(YAML::Node* node) const
-{
-  int red = 0, green = 0, blue = 0, alpha = 0;
-  if ((*node)[RED]) {
-    red = (*node)[RED].as<int>();
-  }
-  if ((*node)[GREEN]) {
-    green = (*node)[GREEN].as<int>();
-  }
-  if ((*node)[BLUE]) {
-    blue = (*node)[BLUE].as<int>();
-  }
-  if ((*node)[ALPHA]) {
-    alpha = (*node)[ALPHA].as<int>();
-  }
-  return QColor(red, green, blue, alpha);
-}
+// QFont
+// StylesheetEditor::readFont(YAML::Node* node)
+//{
+//  QFont font;
 
-QFont
-StylesheetEditor::readFont(YAML::Node* node)
-{
-  QFont font;
+//  if ((*node)["family"]) {
+//    font.setFamily((*node)["family"].as<QString>());
+//  }
+//  if ((*node)["bold"]) {
+//    font.setBold((*node)["bold"].as<bool>());
+//  }
+//  if ((*node)["capitalization"]) {
+//    font.setCapitalization(
+//      QFont::Capitalization((*node)["capitalization"].as<int>()));
+//  }
+//  if ((*node)["fixedpitch"]) {
+//    font.setFixedPitch((*node)["fixedpitch"].as<bool>());
+//  }
+//  if ((*node)["hinting preference"]) {
+//    font.setHintingPreference(
+//      QFont::HintingPreference((*node)["hinting preference"].as<int>()));
+//  }
+//  if ((*node)["italic"]) {
+//    font.setItalic((*node)["italic"].as<bool>());
+//  }
+//  if ((*node)["kerning"]) {
+//    font.setKerning((*node)["kerning"].as<bool>());
+//  }
+//  if ((*node)["letter spacing"] && (*node)["letter spacing type"]) {
+//    font.setLetterSpacing(
+//      QFont::SpacingType((*node)["letter spacing type"].as<int>()),
+//      (*node)["letter spacing"].as<qreal>());
+//  }
+//  if ((*node)["overline"]) {
+//    font.setOverline((*node)["overline"].as<bool>());
+//  }
+//  if ((*node)["point size"]) {
+//    font.setPointSize((*node)["point size"].as<int>());
+//  }
+//  if ((*node)["stretch"]) {
+//    font.setStretch((*node)["stretch"].as<int>());
+//  }
+//  if ((*node)["strikeout"]) {
+//    font.setStrikeOut((*node)["strikeout"].as<bool>());
+//  }
+//  if ((*node)["bold"]) {
+//    font.setBold((*node)["bold"].as<bool>());
+//  }
+//  if ((*node)["style"]) {
+//    font.setStyle(QFont::Style((*node)["style"].as<int>()));
+//  }
+//  if ((*node)["style hint"]) {
+//    font.setStyleHint(QFont::StyleHint((*node)["style hint"].as<int>()));
+//  }
+//  if ((*node)["style name"]) {
+//    font.setStyleName((*node)["style name"].as<QString>());
+//  }
+//  if ((*node)["style strategy"]) {
+//    font.setStyleStrategy(
+//      QFont::StyleStrategy((*node)["style strategy"].as<int>()));
+//  }
+//  if ((*node)["underline"]) {
+//    font.setUnderline((*node)["underline"].as<bool>());
+//  }
+//  if ((*node)["weight"]) {
+//    font.setWeight((*node)["weight"].as<int>());
+//  }
+//  if ((*node)["word spacing"]) {
+//    font.setWordSpacing((*node)["word spacing"].as<qreal>());
+//  }
+//  return font;
+//}
 
-  if ((*node)["family"]) {
-    font.setFamily((*node)["family"].as<QString>());
-  }
-  if ((*node)["bold"]) {
-    font.setBold((*node)["bold"].as<bool>());
-  }
-  if ((*node)["capitalization"]) {
-    font.setCapitalization(
-      QFont::Capitalization((*node)["capitalization"].as<int>()));
-  }
-  if ((*node)["fixedpitch"]) {
-    font.setFixedPitch((*node)["fixedpitch"].as<bool>());
-  }
-  if ((*node)["hinting preference"]) {
-    font.setHintingPreference(
-      QFont::HintingPreference((*node)["hinting preference"].as<int>()));
-  }
-  if ((*node)["italic"]) {
-    font.setItalic((*node)["italic"].as<bool>());
-  }
-  if ((*node)["kerning"]) {
-    font.setKerning((*node)["kerning"].as<bool>());
-  }
-  if ((*node)["letter spacing"] && (*node)["letter spacing type"]) {
-    font.setLetterSpacing(
-      QFont::SpacingType((*node)["letter spacing type"].as<int>()),
-      (*node)["letter spacing"].as<qreal>());
-  }
-  if ((*node)["overline"]) {
-    font.setOverline((*node)["overline"].as<bool>());
-  }
-  if ((*node)["point size"]) {
-    font.setPointSize((*node)["point size"].as<int>());
-  }
-  if ((*node)["stretch"]) {
-    font.setStretch((*node)["stretch"].as<int>());
-  }
-  if ((*node)["strikeout"]) {
-    font.setStrikeOut((*node)["strikeout"].as<bool>());
-  }
-  if ((*node)["bold"]) {
-    font.setBold((*node)["bold"].as<bool>());
-  }
-  if ((*node)["style"]) {
-    font.setStyle(QFont::Style((*node)["style"].as<int>()));
-  }
-  if ((*node)["style hint"]) {
-    font.setStyleHint(QFont::StyleHint((*node)["style hint"].as<int>()));
-  }
-  if ((*node)["style name"]) {
-    font.setStyleName((*node)["style name"].as<QString>());
-  }
-  if ((*node)["style strategy"]) {
-    font.setStyleStrategy(
-      QFont::StyleStrategy((*node)["style strategy"].as<int>()));
-  }
-  if ((*node)["underline"]) {
-    font.setUnderline((*node)["underline"].as<bool>());
-  }
-  if ((*node)["weight"]) {
-    font.setWeight((*node)["weight"].as<int>());
-  }
-  if ((*node)["word spacing"]) {
-    font.setWordSpacing((*node)["word spacing"].as<qreal>());
-  }
-  return font;
-}
-
-QBrush
-StylesheetEditor::readBrush(YAML::Node* node)
-{
-  QBrush brush;
-  brush.setColor(readColor(node));
-  return brush;
-}
+// QBrush
+// StylesheetEditor::readBrush(YAML::Node* node)
+//{
+//  QBrush brush;
+//  brush.setColor(node->as<QColor>());
+//  //  brush.setColor(readColor(node));
+//  return brush;
+//}
 
 void
 StylesheetEditor::readFormat(YAML::Node* subnode1, QTextCharFormat** format)
 {
-  YAML::Node subnode2, *nodePtr;
-  ;
+  YAML::Node subnode2;
+
   if ((*subnode1)[FORE]) {
     subnode2 = (*subnode1)[FORE];
-    nodePtr = &subnode2;
-    (*format)->setForeground(readBrush(nodePtr));
+    try {
+      (*format)->setForeground(subnode2.as<QBrush>());
+    }/* catch (const YAML::TypedBadConversion<QBrush>& e) {
+      errorMsg(e.what());
+    } catch (const YAML::BadConversion& e) {
+      errorMsg(e.what());
+    } catch (const YAML::InvalidNode& e) {
+      errorMsg(e.what());
+    }*/ catch (const std::exception& e) {
+      errorMsg(e.what());
+    }
   }
   if ((*subnode1)[BACK]) {
     subnode2 = (*subnode1)[BACK];
-    nodePtr = &subnode2;
-    (*format)->setBackground(readBrush(nodePtr));
+    try {
+      (*format)->setBackground(subnode2.as<QBrush>());
+    } catch (const std::exception& e) {
+      errorMsg(e.what());
+    }
   }
   if ((*subnode1)[FONT]) {
     subnode2 = (*subnode1)[FONT];
-    nodePtr = &subnode2;
-    (*format)->setFont(readFont(nodePtr));
+    try {
+      (*format)->setFont(subnode2.as<QFont>());
+    } catch (const std::exception& e) {
+      errorMsg(e.what());
+    }
   }
   if ((*subnode1)[COLOR]) {
     subnode2 = (*subnode1)[COLOR];
-    nodePtr = &subnode2;
-    (*format)->setUnderlineColor(readColor(nodePtr));
+    try {
+      (*format)->setUnderlineColor(subnode2.as<QColor>());
+    } catch (const std::exception& e) {
+      errorMsg(e.what());
+    }
   }
   if ((*subnode1)[STYLE]) {
-    (*format)->setUnderlineStyle(
-      QTextCharFormat::UnderlineStyle((*subnode1)[STYLE].as<int>()));
+    try {
+      (*format)->setUnderlineStyle(
+        QTextCharFormat::UnderlineStyle((*subnode1)[STYLE].as<int>()));
+    } catch (const std::exception& e) {
+      errorMsg(e.what());
+    }
   }
+}
+
+void StylesheetEditor::errorMsg(const char *text) {
+  qWarning() << "Yaml parsing error : " << text;
 }
 
 void
 StylesheetEditor::loadConfig(const QString& filename)
 {
-  QFile file(filename);
-  if (file.exists()) {
-    auto config = YAML::LoadFile(file);
-    YAML::Node node, subnode1, subnode2;
+  QFile* file;
+  if (filename.isEmpty())
+    file = new QFile(QDir(m_configDir).filePath(m_configFile));
+  else
+    file = new QFile(filename);
+
+  if (file->exists()) {
+    auto config = YAML::LoadFile(*file);
+    YAML::Node stylesheetedit, node, subnode1, subnode2;
     QTextCharFormat format;
     QTextCharFormat* formatPtr = &format;
-    if (config[STYLESHEETEDIT]) {
-      auto stylesheetedit = config[STYLESHEETEDIT];
-      if (stylesheetedit[WIDGET]) {
-        node = stylesheetedit[WIDGET];
-        if (node[GOOD]) {
-          subnode1 = node[GOOD];
-          readFormat(&subnode1, &formatPtr);
-          m_highlighter->setWidgetFormat(*formatPtr);
+    if (config[WIDGET]) {
+      node = config[WIDGET];
+      if (node[GOOD]) {
+        subnode1 = node[GOOD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setWidgetFormat(*formatPtr);
+      }
+      if (node[BAD]) {
+        subnode1 = node[BAD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setBadWidgetFormat(*formatPtr);
+      }
+    }
+    if (config[SEPERATOR]) {
+      node = config[SEPERATOR];
+      readFormat(&node, &formatPtr);
+      m_highlighter->setSeperatorFormat(*formatPtr);
+    }
+    if (config[IDSELECTOR]) {
+      node = config[IDSELECTOR];
+      if (node[GOOD]) {
+        subnode1 = node[GOOD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setIdSelectorFormat(*formatPtr);
+      }
+      if (node[BAD]) {
+        subnode1 = node[BAD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setBadIdSelectorFormat(*formatPtr);
+      }
+      if (node[MARKER]) {
+        subnode1 = node[MARKER];
+        if (subnode1[GOOD]) {
+          subnode2 = subnode1[GOOD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setIDSelectorMarkerFormat(*formatPtr);
         }
-        if (node[BAD]) {
-          subnode1 = node[BAD];
-          readFormat(&subnode1, &formatPtr);
-          m_highlighter->setBadWidgetFormat(*formatPtr);
+        if (subnode1[BAD]) {
+          subnode2 = subnode1[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadIDSelectorMarkerFormat(*formatPtr);
         }
       }
     }
+    if (config[PSEUDOSTATE]) {
+      node = config[PSEUDOSTATE];
+      if (node[GOOD]) {
+        subnode1 = node[GOOD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setPseudoStateFormat(*formatPtr);
+      }
+      if (node[BAD]) {
+        subnode1 = node[BAD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setBadPseudoStateFormat(*formatPtr);
+      }
+      if (node[MARKER]) {
+        subnode1 = node[MARKER];
+        if (subnode1[GOOD]) {
+          subnode2 = subnode1[GOOD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setPseudoStateMarkerFormat(*formatPtr);
+        }
+        if (subnode1[BAD]) {
+          subnode2 = subnode1[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadPseudoStateMarkerFormat(*formatPtr);
+        }
+      }
+    }
+    if (config[SUBCONTROL]) {
+      node = config[SUBCONTROL];
+      if (node[GOOD]) {
+        subnode1 = node[GOOD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setSubControlFormat(*formatPtr);
+      }
+      if (node[BAD]) {
+        subnode1 = node[BAD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setBadSubControlFormat(*formatPtr);
+      }
+      if (node[MARKER]) {
+        subnode1 = node[MARKER];
+        if ((subnode2 = subnode1[GOOD])) {
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setSubControlMarkerFormat(*formatPtr);
+        }
+        if (subnode1[BAD]) {
+          subnode2 = subnode1[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadSubControlMarkerFormat(*formatPtr);
+        }
+      }
+    }
+    if (config[PROPERTY]) {
+      node = config[PROPERTY];
+      if (node[GOOD]) {
+        subnode1 = node[GOOD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setPropertyFormat(*formatPtr);
+      }
+      if (node[BAD]) {
+        subnode1 = node[BAD];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setBadPropertyFormat(*formatPtr);
+      }
+      if (node[MARKER]) {
+        subnode1 = node[MARKER];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setPropertyMarkerFormat(*formatPtr);
+      }
+      if (node[VALUE]) {
+        subnode1 = node[VALUE];
+        if (subnode1[GOOD]) {
+          subnode2 = subnode1[GOOD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setPropertyValueFormat(*formatPtr);
+        }
+        if (subnode1[BAD]) {
+          subnode2 = subnode1[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadPropertyValueFormat(*formatPtr);
+        }
+      }
+      if (node[ENDMARKER]) {
+        subnode1 = node[ENDMARKER];
+        readFormat(&subnode1, &formatPtr);
+        m_highlighter->setPropertyEndMarkerFormat(*formatPtr);
+      }
+    }
+    if (config[BRACE]) {
+      node = config[BRACE];
+      if (node[START]) {
+        subnode1 = node[START];
+        if (node[GOOD]) {
+          subnode1 = node[GOOD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setStartBraceFormat(*formatPtr);
+        }
+        if (node[BAD]) {
+          subnode1 = node[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadStartBraceFormat(*formatPtr);
+        }
+      }
+      if (node[END]) {
+        subnode1 = node[END];
+        if (subnode1[GOOD]) {
+          subnode2 = subnode1[GOOD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setEndBraceFormat(*formatPtr);
+        }
+        if (subnode1[BAD]) {
+          subnode2 = subnode1[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadEndBraceFormat(*formatPtr);
+        }
+      }
+      if (node[MATCH]) {
+        subnode1 = node[MATCH];
+        if (node[GOOD]) {
+          subnode2 = node[GOOD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBraceMatchFormat(*formatPtr);
+        }
+        if (node[BAD]) {
+          subnode2 = node[BAD];
+          readFormat(&subnode2, &formatPtr);
+          m_highlighter->setBadBraceMatchFormat(*formatPtr);
+        }
+      }
+    }
+    if (config[COMMENT]) {
+      node = config[COMMENT];
+      readFormat(&node, &formatPtr);
+      m_highlighter->setCommentFormat(*formatPtr);
+    }
   }
-  //  QSettings* settings;
-  //  if (filename.isEmpty()) {
-  //    settings = new QSettings(QDir(m_configDir).filePath(m_configFile),
-  //                             QSettings::NativeFormat);
-  //  } else {
-  //    settings = new QSettings(filename, QSettings::NativeFormat);
-  //  }
-
-  //  m_highlighter->setWidgetFormat(
-  //    loadFormatValues(settings, "stylesheetedit/widget/good"));
-  //  m_highlighter->setBadWidgetFormat(
-  //    loadFormatValues(settings, "stylesheetedit/widget/bad"));
-  //  m_highlighter->setSeperatorFormat(
-  //    loadFormatValues(settings, "stylesheetedit/seperator"));
-  //  m_highlighter->setIdSelectorFormat(
-  //    loadFormatValues(settings, "stylesheetedit/idselector/good"));
-  //  m_highlighter->setBadIdSelectorFormat(
-  //    loadFormatValues(settings, "stylesheetedit/idselector/bad"));
-  //  m_highlighter->setIDSelectorMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/idselector/marker/good"));
-  //  m_highlighter->setBadIDSelectorMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/idselector/marker/bad"));
-  //  m_highlighter->setPseudoStateFormat(
-  //    loadFormatValues(settings, "stylesheetedit/pseudostate/good"));
-  //  m_highlighter->setBadPseudoStateFormat(
-  //    loadFormatValues(settings, "stylesheetedit/pseudostate/bad"));
-  //  m_highlighter->setPseudoStateMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/pseudostate/marker/good"));
-  //  m_highlighter->setBadPseudoStateMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/pseudostate/marker/bad"));
-  //  m_highlighter->setSubControlFormat(
-  //    loadFormatValues(settings, "stylesheetedit/subcontrol/good"));
-  //  m_highlighter->setBadSubControlFormat(
-  //    loadFormatValues(settings, "stylesheetedit/subcontrol/bad"));
-  //  m_highlighter->setSubControlMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/subcontrol/marker/good"));
-  //  m_highlighter->setBadSubControlMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/subcontrol/marker/bad"));
-  //  m_highlighter->setPropertyValueFormat(
-  //    loadFormatValues(settings, "stylesheetedit/property/value/good"));
-  //  m_highlighter->setBadPropertyValueFormat(
-  //    loadFormatValues(settings, "stylesheetedit/property/value/bad"));
-  //  m_highlighter->setPropertyFormat(
-  //    loadFormatValues(settings, "stylesheetedit/property/good"));
-  //  m_highlighter->setBadPropertyFormat(
-  //    loadFormatValues(settings, "stylesheetedit/property/good"));
-  //  m_highlighter->setPropertyMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/property/marker"));
-  //  m_highlighter->setPropertyEndMarkerFormat(
-  //    loadFormatValues(settings, "stylesheetedit/property/endmarker"));
-  //  m_highlighter->setStartBraceFormat(
-  //    loadFormatValues(settings, "stylesheetedit/brace/start/good"));
-  //  m_highlighter->setBadStartBraceFormat(
-  //    loadFormatValues(settings, "stylesheetedit/brace/start/bad"));
-  //  m_highlighter->setEndBraceFormat(
-  //    loadFormatValues(settings, "stylesheetedit/brace/end/good"));
-  //  m_highlighter->setBadEndBraceFormat(
-  //    loadFormatValues(settings, "stylesheetedit/brace/end/bad"));
-  //  m_highlighter->setBraceMatchFormat(
-  //    loadFormatValues(settings, "stylesheetedit/brace/match/good"));
-  //  m_highlighter->setBadBraceMatchFormat(
-  //    loadFormatValues(settings, "stylesheetedit/brace/match/bad"));
-  //  m_highlighter->setCommentFormat(
-  //    loadFormatValues(settings, "stylesheetedit/comment"));
 }
 
 int
@@ -1173,12 +1280,6 @@ StylesheetEditor::addCustomWidgetPropertyValues(const QString& widget,
   return m_datastore->addCustomWidgetPropertyValues(widget, property, values);
 }
 
-// int
-// StylesheetEditorPrivate::getLineCount() const
-//{
-//  return m_lineNumberArea->lineCount();
-//}
-
 void
 StylesheetEditor::setPlainText(const QString& text)
 {
@@ -1192,12 +1293,6 @@ StylesheetEditor::setPlainText(const QString& text)
           Qt::UniqueConnection);
 }
 
-// void
-// StylesheetEditorPrivate::setPlainText(const QString& text)
-//{
-//  m_parser->parseInitialText(text);
-//}
-
 void
 StylesheetEditor::handleRehighlight()
 {
@@ -1209,18 +1304,6 @@ StylesheetEditor::handleRehighlightBlock(const QTextBlock& block)
 {
   m_highlighter->rehighlightBlock(block);
 }
-
-// void
-// StylesheetEditorPrivate::handleRehighlight()
-//{
-//  m_highlighter->rehighlight();
-//}
-
-// void
-// StylesheetEditorPrivate::handleRehighlightBlock(const QTextBlock& block)
-//{
-//  m_highlighter->rehighlightBlock(block);
-//}
 
 void
 StylesheetEditor::handleParseComplete()
@@ -1367,11 +1450,11 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
           //          // TODO maybe drop earlier values.
           //          QFont font("");
 
-          //          if (data->name == "widget") {
+          //          if (data->name == WIDGET) {
           //            m_highlighter->setWidgetFormat(color1, color2,
           //            fontWeight); continue;
 
-          //          } else if (data->name == "subcontrol") {
+          //          } else if (data->name == PSEUDOSTATE) {
           //            m_highlighter->setSubControlFormat(color1, color2,
           //            fontWeight); continue;
 
@@ -1380,7 +1463,7 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
           //              color1, color2, fontWeight);
           //            continue;
 
-          //          } else if (data->name == "pseudostate") {
+          //          } else if (data->name == PSEUDOSTATE) {
           //            m_highlighter->setPseudoStateFormat(color1, color2,
           //            fontWeight); continue;
 
@@ -1389,7 +1472,7 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
           //              color1, color2, fontWeight);
           //            continue;
 
-          //          } else if (data->name == "property") {
+          //          } else if (data->name == PROPERTY) {
           //            m_highlighter->setPropertyFormat(color1, color2,
           //            fontWeight); continue;
 
@@ -1397,7 +1480,7 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
           //            m_highlighter->setPropertyMarkerFormat(color1, color2,
           //            fontWeight); continue;
 
-          //          } else if (data->name == "value") {
+          //          } else if (data->name == PROPERTY) {
           //            m_highlighter->setValueFormat(color1, color2,
           //            fontWeight); continue;
 
@@ -1417,7 +1500,7 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
           //            m_highlighter->setCommentFormat(color1, color2,
           //            fontWeight); continue;
 
-          //          } /* else if (data->name == "bad") {
+          //          } /* else if (data->name == BAD) {
 
           //             m_highlighter->setBadValueFormat(
           //               color1, color2, fontWeight, true, underlineStyle,
@@ -1433,23 +1516,37 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
 }
 
 void
-StylesheetEditor::setValueFormat(QBrush color,
+StylesheetEditor::setPropertyValueFormat(QBrush color,
                                  QBrush back,
                                  QFont font,
                                  QBrush underline,
                                  QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setPropertyValueFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setPropertyValueFormat(QTextCharFormat format)
+{
+  m_highlighter->setPropertyValueFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
-StylesheetEditor::setBadValueFormat(QBrush color,
-                                    QBrush back,
-                                    QFont font,
-                                    QBrush underline,
+StylesheetEditor::setBadPropertyValueFormat(QBrush color,
+                                            QBrush back,
+                                            QFont font,
+                                            QBrush underline,
                                     QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadPropertyValueFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadPropertyValueFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadPropertyValueFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1460,6 +1557,13 @@ StylesheetEditor::setWidgetFormat(QBrush color,
                                   QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setWidgetFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setWidgetFormat(QTextCharFormat format)
+{
+  m_highlighter->setWidgetFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1470,6 +1574,13 @@ StylesheetEditor::setBadWidgetFormat(QBrush color,
                                      QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadWidgetFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadWidgetFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadWidgetFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1480,6 +1591,13 @@ StylesheetEditor::setSeperatorFormat(QBrush color,
                                      QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setSeperatorFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setSeperatorFormat(QTextCharFormat format)
+{
+  m_highlighter->setSeperatorFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1490,6 +1608,13 @@ StylesheetEditor::setIdSelectorFormat(QBrush color,
                                       QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setIdSelectorFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setIdSelectorFormat(QTextCharFormat format)
+{
+  m_highlighter->setIdSelectorFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1500,29 +1625,50 @@ StylesheetEditor::setBadIdSelectorFormat(QBrush color,
                                          QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadIdSelectorFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadIdSelectorFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadIdSelectorFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
-StylesheetEditor::setIDSelectorMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+StylesheetEditor::setIdSelectorMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setIDSelectorMarkerFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setIdSelectorMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setIDSelectorMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
-StylesheetEditor::setBadIDSelectorMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+StylesheetEditor::setBadIdSelectorMarkerFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadIDSelectorMarkerFormat(
     color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadIdSelectorMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadIDSelectorMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1533,6 +1679,13 @@ StylesheetEditor::setPseudoStateFormat(QBrush color,
                                        QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setPseudoStateFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setPseudoStateFormat(QTextCharFormat format)
+{
+  m_highlighter->setPseudoStateFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1543,30 +1696,51 @@ StylesheetEditor::setBadPseudoStateFormat(QBrush color,
                                           QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadPseudoStateFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadPseudoStateFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadPseudoStateFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
 StylesheetEditor::setPseudoStateMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setPseudoStateMarkerFormat(
     color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setPseudoStateMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setPseudoStateMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
 StylesheetEditor::setBadPseudoStateMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadPseudoStateMarkerFormat(
     color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadPseudoStateMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadPseudoStateMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1577,6 +1751,13 @@ StylesheetEditor::setSubControlFormat(QBrush color,
                                       QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setSubControlFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setSubControlFormat(QTextCharFormat format)
+{
+  m_highlighter->setSubControlFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1587,29 +1768,50 @@ StylesheetEditor::setBadSubControlFormat(QBrush color,
                                          QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadSubControlFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadSubControlFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadSubControlFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
 StylesheetEditor::setSubControlMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setSubControlMarkerFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setSubControlMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setSubControlMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
 StylesheetEditor::setBadSubControlMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadSubControlMarkerFormat(
     color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadSubControlMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadSubControlMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1620,6 +1822,13 @@ StylesheetEditor::setPropertyFormat(QBrush color,
                                     QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setPropertyFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setPropertyFormat(QTextCharFormat format)
+{
+  m_highlighter->setPropertyFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1630,6 +1839,13 @@ StylesheetEditor::setBadPropertyFormat(QBrush color,
                                        QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadPropertyFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadPropertyFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadPropertyFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1640,17 +1856,31 @@ StylesheetEditor::setPropertyMarkerFormat(QBrush color,
                                           QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setPropertyMarkerFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setPropertyMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setPropertyMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
 StylesheetEditor::setPropertyEndMarkerFormat(
-  QBrush color,
-  QBrush back,
-  QFont font,
-  QBrush underline,
-  QTextCharFormat::UnderlineStyle style)
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline,
+    QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setPropertyMarkerFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setPropertyEndMarkerFormat(QTextCharFormat format)
+{
+  m_highlighter->setPropertyEndMarkerFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1669,6 +1899,13 @@ StylesheetEditor::setStartBraceFormat(QBrush color,
                                       QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setStartBraceFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setStartBraceFormat(QTextCharFormat format)
+{
+  m_highlighter->setStartBraceFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1679,6 +1916,13 @@ StylesheetEditor::setBadStartBraceFormat(QBrush color,
                                          QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadStartBraceFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadStartBraceFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadStartBraceFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1689,6 +1933,13 @@ StylesheetEditor::setEndBraceFormat(QBrush color,
                                     QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setEndBraceFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setEndBraceFormat(QTextCharFormat format)
+{
+  m_highlighter->setEndBraceFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1699,6 +1950,13 @@ StylesheetEditor::setBadEndBraceFormat(QBrush color,
                                        QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBadEndBraceFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadEndBraceFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadEndBraceFormat(format);
+  m_highlighter->rehighlight();
 }
 
 void
@@ -1709,6 +1967,25 @@ StylesheetEditor::setBraceMatchFormat(QBrush color,
                                       QTextCharFormat::UnderlineStyle style)
 {
   m_highlighter->setBraceMatchFormat(color, back, font, underline, style);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBraceMatchFormat(QTextCharFormat format)
+{
+  m_highlighter->setBraceMatchFormat(format);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setBadBraceMatchFormat(QTextCharFormat format)
+{
+  m_highlighter->setBadBraceMatchFormat(format);
+  m_highlighter->rehighlight();
+}
+
+void StylesheetEditor::setCommentFormat(QTextCharFormat format)
+{
+  m_highlighter->setCommentFormat(format);
+  m_highlighter->rehighlight();
 }
 
 int
@@ -2060,8 +2337,36 @@ StylesheetEditor::options()
   auto dlg = new StylesheetEditDialog(this, this);
 
   if (dlg->exec() == QDialog::Accepted) {
-    // make changes.
-    saveConfig();
+    auto formats = dlg->formats();
+    m_highlighter->setWidgetFormat(formats.at(0));
+    m_highlighter->setBadWidgetFormat(formats.at(1));
+    m_highlighter->setSeperatorFormat(formats.at(2));
+    m_highlighter->setIdSelectorFormat(formats.at(3));
+    m_highlighter->setBadIdSelectorFormat(formats.at(4));
+    m_highlighter->setIDSelectorMarkerFormat(formats.at(5));
+    m_highlighter->setBadIDSelectorMarkerFormat(formats.at(6));
+    m_highlighter->setSubControlFormat(formats.at(7));
+    m_highlighter->setBadSubControlFormat(formats.at(8));
+    m_highlighter->setSubControlMarkerFormat(formats.at(9));
+    m_highlighter->setBadSubControlMarkerFormat(formats.at(10));
+    m_highlighter->setPseudoStateFormat(formats.at(11));
+    m_highlighter->setBadPseudoStateFormat(formats.at(12));
+    m_highlighter->setPseudoStateMarkerFormat(formats.at(13));
+    m_highlighter->setBadPseudoStateMarkerFormat(formats.at(14));
+    m_highlighter->setPropertyFormat(formats.at(15));
+    m_highlighter->setBadPropertyFormat(formats.at(16));
+    m_highlighter->setPropertyMarkerFormat(formats.at(17));
+    m_highlighter->setPropertyValueFormat(formats.at(18));
+    m_highlighter->setBadPropertyValueFormat(formats.at(19));
+    m_highlighter->setPropertyEndMarkerFormat(formats.at(20));
+    m_highlighter->setStartBraceFormat(formats.at(21));
+    m_highlighter->setBadStartBraceFormat(formats.at(22));
+    m_highlighter->setEndBraceFormat(formats.at(23));
+    m_highlighter->setBadEndBraceFormat(formats.at(24));
+    m_highlighter->setBraceMatchFormat(formats.at(25));
+    m_highlighter->setBadBraceMatchFormat(formats.at(26));
+    m_highlighter->setCommentFormat(formats.at(27));
+   saveConfig();
   }
 }
 

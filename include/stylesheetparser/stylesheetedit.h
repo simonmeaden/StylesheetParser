@@ -51,6 +51,29 @@ class StylesheetEdit : public QWidget
 public:
   explicit StylesheetEdit(QWidget* parent = nullptr);
 
+  //! load colour configuration from file.
+  //!
+  //! If filename is empty it will look at it's default location
+  //! which is based on QStandardPaths::writeableLocation(QStandardPaths::ConfigLocation).
+  //! This is generally "<home>.config/QtProject/qtcreator/stylesheetedit" for
+  //! Linux, "%APPDATA%/QtProject/ctcreator/stylesheetedit" for Windows similar
+  //! locations for other supported OS's.
+  //!
+  //! To use a application specific location you can specify it here.
+  //! \see saveConfig();
+  void loadConfig(const QString& filename = QString());
+  //! save colour configuration to file.
+  //!
+  //! If filename is empty it will look at it's default location
+  //! which is based on QStandardPaths::writeableLocation(QStandardPaths::ConfigLocation).
+  //! This is generally "<home>.config/QtProject/qtcreator/stylesheetedit" for
+  //! Linux, "%APPDATA%/QtProject/ctcreator/stylesheetedit" for Windows similar
+  //! locations for other supported OS's.
+  //!
+  //! To use a application specific location you can specify it here.
+  //! \see loadConfig();
+  void saveConfig(const QString& filename = QString());
+
   //! Reimplemented from QPlainText::setPlainText()
   void setPlainText(const QString& text);
 
@@ -167,13 +190,13 @@ public:
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter value
   //! format
-  void setValueFormat(
+  void setPropertyValueFormat(
     QBrush color,
     QBrush back,
     QFont font,
     QBrush underline = QBrush(),
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
-  void setBadValueFormat(
+  void setBadPropertyValueFormat(
     QBrush color,
     QBrush back,
     QFont font,

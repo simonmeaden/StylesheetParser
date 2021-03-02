@@ -54,6 +54,7 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/sm_widgets/labelledcombobox.h>
 
    PRIVATE
+      include/qyamlcpp/qyamlcpp.h
       src/main.cpp
       src/parser.h
       src/parser.cpp

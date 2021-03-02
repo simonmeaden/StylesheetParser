@@ -200,7 +200,7 @@ StylesheetHighlighter::formatControlBase(ControlBase* control,
   }
 
   if (control->hasPseudoStates()) {
-    for (auto state : *(control->pseudoStates())) {
+    for (auto &state : *(control->pseudoStates())) {
       formatPseudoState(state, blockStart, blockEnd);
     }
   }
@@ -308,7 +308,8 @@ StylesheetHighlighter::highlightBlock(const QString& text)
   auto blockStart = block.position();
   auto blockEnd = blockStart + block.text().length();
 
-  for (auto& key : nodes.keys()) {
+  auto keys = nodes.keys();
+  for (auto& key : keys) {
     auto node = nodes.value(key);
     auto type = node->type();
     int nodeStart = node->position();
@@ -331,7 +332,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
       case WidgetsType: {
         auto widgets = qobject_cast<WidgetNodes*>(node);
         if (widgets) {
-          for (auto widget : widgets->widgets()) {
+          for (auto& widget : widgets->widgets()) {
             position = widget->position();
             length = widget->name().length();
             if (isInBlock(position, length, blockStart, blockEnd)) {
@@ -350,20 +351,20 @@ StylesheetHighlighter::highlightBlock(const QString& text)
               auto selector = widget->idSelector();
               formatIdSelector(selector, blockStart, blockEnd);
               if (selector->hasPseudoStates()) {
-                for (auto state : *(selector->pseudoStates())) {
+                for (auto& state : *(selector->pseudoStates())) {
                   formatPseudoState(state, blockStart, blockEnd);
                 }
               }
             }
 
             if (widget->hasSubControl()) {
-              for (auto subcontrol : *(widget->subControls())) {
+              for (auto& subcontrol : *(widget->subControls())) {
                 formatSubControl(subcontrol, blockStart, blockEnd);
               }
             }
           }
 
-          for (auto seperator : widgets->seperators()) {
+          for (auto& seperator : widgets->seperators()) {
             position = seperator.anchor();
             length = 1;
             if (isInBlock(position, length, blockStart, blockEnd)) {
@@ -568,7 +569,7 @@ StylesheetHighlighter::setBadIdSelectorFormat(
   QTextCharFormat::UnderlineStyle style)
 {
   m_badIdSelectorFormat.setFont(font);
-  m_badIdSelectorFormat.setForeground(back);
+  m_badIdSelectorFormat.setForeground(color);
   m_badIdSelectorFormat.setBackground(back);
   m_badIdSelectorFormat.setUnderlineColor(underline.color());
   m_badIdSelectorFormat.setUnderlineStyle(style);
@@ -1087,13 +1088,13 @@ StylesheetHighlighter::seperatorFormat() const
 }
 
 QTextCharFormat
-StylesheetHighlighter::valueFormat() const
+StylesheetHighlighter::propertyValueFormat() const
 {
   return m_valueFormat;
 }
 
 QTextCharFormat
-StylesheetHighlighter::badValueFormat() const
+StylesheetHighlighter::badPropertyValueFormat() const
 {
   return m_badValueFormat;
 }

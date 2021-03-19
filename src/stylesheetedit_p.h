@@ -60,12 +60,18 @@ class StylesheetEditor : public QPlainTextEdit
 {
   Q_OBJECT
 public:
-  explicit StylesheetEditor(QWidget* parent = nullptr);
+  explicit StylesheetEditor(DataStore*datastore, QWidget* parent = nullptr);
 
   StylesheetHighlighter* highlighter();
   void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
-  void saveConfig(const QString& filename = QString());
-  void loadConfig(const QString& filename = QString());
+  void saveYamlConfig(const QString& filename = QString());
+  void loadYamlConfig(const QString& filename = QString());
+  bool saveXmlConfig(const QString& filename = QString()) {
+    return m_datastore->saveXmlScheme(filename);
+  }
+  bool loadXmlConfig(const QString& filename = QString()) {
+    return m_datastore->loadXmlTheme(filename);
+  }
 
   void setPlainText(const QString& text);
 
@@ -360,17 +366,16 @@ public:
                                      const QString& property,
                                      QStringList values);
 
+  void handleRehighlight();
+  void handleRehighlightBlock(const QTextBlock& block);
+
 signals:
   void lineNumber(int);
   void lineCount(int);
   void column(int);
 
+protected:
 private:
-  void setLineNumber(int lineNumber);
-  void suggestionMade(bool);
-  void bookmarkMenuRequested(QPoint pos);
-  void linenumberMenuRequested(QPoint pos);
-  QString getValueAtCursor(int anchor, const QString& text);
   BookmarkArea* m_bookmarkArea;
   LineNumberArea* m_lineNumberArea;
   DataStore* m_datastore;
@@ -380,17 +385,21 @@ private:
   QString m_stylesheet;
   bool m_parseComplete;
   int m_bookmarkLineNumber;
-  QString m_configDir;
-  QString m_configFile;
+//  QString m_configDir;
+//  QString m_configFile;
 
   QMenu *m_contextMenu, *m_suggestionsMenu;
   NodeSection* m_oldSection;
 
-  //  void initActions();
-  //  void initMenus();
+//  void setupConfiguration();
+
+  void setLineNumber(int lineNumber);
+  void suggestionMade(bool);
+  void bookmarkMenuRequested(QPoint pos);
+  void linenumberMenuRequested(QPoint pos);
+  QString getValueAtCursor(int anchor, const QString& text);
+
   void handleParseComplete();
-  void handleRehighlight();
-  void handleRehighlightBlock(const QTextBlock& block);
   void handleAddBookmark(bool);
   void handleRemoveBookmark(bool);
   void handleEditBookmark(bool);

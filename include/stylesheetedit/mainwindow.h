@@ -47,7 +47,7 @@ private:
   StylesheetEdit* m_editor;
   QLabel *m_lineLbl, *m_colLbl;
   int m_column, m_linenumber, m_linecount;
-  QSpinBox *m_lineBox;
+  QSpinBox* m_lineBox;
 
   QWidget* initGui();
   void setColumn(int value);

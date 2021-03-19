@@ -47,6 +47,66 @@ private:
   T& m_data;
 };
 
+struct ThemeData
+{
+  ThemeData(const QString& fore,
+            const QString& back,
+            const QString& italic,
+            const QString& bold,
+            const QString& underlineColor,
+            const QString& underlineStyle)
+    : m_foreground(fore)
+    , m_background(back)
+    , m_italic(ThemeData::toBool(italic))
+    , m_bold(ThemeData::toBool(bold))
+    , m_underlineColor(underlineColor)
+    , m_underlineStyle(ThemeData::stringToStyle(underlineStyle))
+  {}
+
+  QString m_foreground;
+  QString m_background;
+  bool m_italic;
+  bool m_bold;
+  QString m_underlineColor;
+  QTextCharFormat::UnderlineStyle m_underlineStyle;
+
+  static QTextCharFormat::UnderlineStyle stringToStyle(const QString& style)
+  {
+    if (style == "NoUnderline")
+      return QTextCharFormat::NoUnderline;
+    else if (style == "SingleUnderline")
+      return QTextCharFormat::SingleUnderline;
+    else if (style == "DotLine")
+      return QTextCharFormat::DotLine;
+    else if (style == "DashDotLine")
+      return QTextCharFormat::DashDotLine;
+    else if (style == "DashDotDotLine")
+      return QTextCharFormat::DashDotDotLine;
+    else if (style == "DashUnderline")
+      return QTextCharFormat::DashUnderline;
+    else if (style == "WaveUnderline")
+      return QTextCharFormat::WaveUnderline;
+    else if (style == "SpellCheckUnderline")
+      return QTextCharFormat::SpellCheckUnderline;
+    return QTextCharFormat::NoUnderline;
+  }
+  static bool toBool(const QString& value)
+  {
+    if (value.toLower() == "true")
+      return true;
+    return false;
+  }
+};
+
+class Theme
+{
+public:
+  QMap<QString, ThemeData> data() const { return m_data; }
+  void addData(QString name, ThemeData& data) { m_data.insert(name, data); }
+
+private:
+  QMap<QString, ThemeData> m_data;
+};
 
 class StylesheetData
 {
@@ -91,6 +151,22 @@ enum SectionType
   WidgetStartBrace,
   WidgetEndBrace,
   Comment,
+};
+
+struct PartialType
+{
+  enum Type
+  {
+    Name,
+    Marker,
+    Value,
+    EndMarker,
+  };
+
+  int start = -1;
+  int end = -1;
+  int offest = -1;
+  Type type;
 };
 
 class NodeSection : public QObject
@@ -258,6 +334,8 @@ enum NodeState
   ValidPropertyValueState = 0x8,
   FuzzyPropertyState = 0x10,
   FuzzyPropertyNameState = 0x20,
+  FuzzyPropertyValueState = 0x40,
+  BadPropertyValueState = 0x80,
   GoodPropertyState = 0xF,
   //
   //  WidgetExtensionCheck = 0x10,
@@ -312,22 +390,39 @@ Q_DECLARE_METATYPE(MenuData);
 
 struct PropertyStatus
 {
-  PropertyStatus(SectionType status = SectionType::None,
-                 const QString& name = QString(),
-                 int offset = -1)
-    : m_status(status)
-    , m_offset(offset)
-    , m_name(name)
+  enum PropertyValueState
+  {
+    IrrelevantValue,   // Not relevant for this check.
+    GoodPropertyValue, //! Good value for this property name
+    BadPropertyValue,  //! Bad general value
+    FuzzyColorValue,
+    EmptyGradientValueName, //! Missing value
+    FuzzyGradientName,
+    BadGradientName,           //! Bad gradient name
+    BadGradientValue,          //! Bad gradient value.
+    BadGradientNumericalValue, //! Bad gradient number.
+    BadGradientColorValue,     //! Bad gradient color.
+    BadGradientValueCount,     //! Bad gradient value count.
+    BadGradientValueName,      //! Bad gradient value.
+  };
+
+  PropertyStatus(PropertyValueState s = GoodPropertyValue,
+                 const QString& n = QString(),
+                 int o = -1,
+                 int l = 0)
+    : state(s)
+    , name(n)
+    , offset(o)
+  //    , length(l)
   {}
 
-  SectionType m_status;
-  int m_offset;
-  QString m_name;
+  PropertyValueState state;
+  int offset;
+  //  int length;
+  QString name;
 
-public:
-  SectionType status() const;
-  int offset() const;
-  QString name() const;
+  int length() const { return name.length(); }
+  bool notIrrelevant() const { return (state != IrrelevantValue); }
 };
 
 #endif // COMMON_H

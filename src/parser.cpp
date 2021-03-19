@@ -88,9 +88,21 @@ Parser::checkType(const QString& block,
                                           NodeState::IdSelectorState);
   }
   if (property) {
-    if (m_datastore->isValidPropertyValueForProperty(property->name(), block)) {
+    auto propertyState =
+      m_datastore->isValidPropertyValueForProperty(property->name(), block);
+    if (propertyState->state == PropertyStatus::GoodPropertyValue) {
       return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
                                             NodeState::GoodPropertyState);
+    } else {
+      auto data =
+        m_datastore->fuzzySearchPropertyValue(property->name(), block);
+      if (data.isEmpty()) {
+        return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
+                                              NodeState::BadPropertyValueState);
+      } else {
+        return qMakePair<NodeType, NodeState>(
+          NodeType::PropertyValueType, NodeState::FuzzyPropertyValueState);
+      }
     }
   }
 
@@ -546,16 +558,40 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
       stepBack(pos, block);
       break;
     } else {
-      bool validForProperty =
+      auto valueStatus =
         m_datastore->isValidPropertyValueForProperty(propertyName, block);
       AttributeType attributeType = m_datastore->propertyValueAttribute(block);
+      valueStatus->offset = start;
 
-      if (validForProperty) {
+      if (valueStatus->state == PropertyStatus::GoodPropertyValue) {
         // valid property and valid value.
+        valueStatus->name = block;
         property->addValue(block,
                            ValidPropertyValueState,
                            getCursorForPosition((pos - block.length())),
-                           attributeType);
+                           valueStatus);
+      } else if (valueStatus->state == PropertyStatus::FuzzyColorValue) {
+        valueStatus->name = block;
+        property->addValue(block,
+                           FuzzyPropertyValueState,
+                           getCursorForPosition((pos - block.length())),
+                           valueStatus);
+      } else if (valueStatus->state == PropertyStatus::FuzzyGradientName) {
+        valueStatus->name =
+          block.mid(valueStatus->offset, block.indexOf("(")).trimmed();
+        property->addValue(block,
+                           FuzzyPropertyValueState,
+                           getCursorForPosition((pos - block.length())),
+                           valueStatus);
+      } else if (valueStatus->state == PropertyStatus::BadGradientValue ||
+                 valueStatus->state == PropertyStatus::BadGradientValueCount ||
+                 valueStatus->state ==
+                   PropertyStatus::BadGradientNumericalValue ||
+                 valueStatus->state == PropertyStatus::BadGradientColorValue) {
+        property->addValue(block,
+                           BadPropertyValueState,
+                           getCursorForPosition((pos - block.length())),
+                           valueStatus);
       } else {
         if (attributeType == NoAttributeValue) {
           // not a valid value for any property
@@ -570,11 +606,26 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
               stepBack(pos, block);
               return;
             }
+
+            case NodeType::PropertyValueType:
+              switch (check) {
+                case GoodPropertyState:
+                  break;
+
+                case BadPropertyValueState:
+                  break;
+
+                case FuzzyPropertyValueState:
+                  break;
+              }
+
+              break;
+
             default:
               property->addValue(block,
                                  BadNodeState,
                                  getCursorForPosition((pos - block.length())),
-                                 attributeType);
+                                 valueStatus);
           }
         } else {
           // invalid property name but this is a valid property attribute
@@ -582,7 +633,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
           property->addValue(block,
                              ValidPropertyValueState,
                              getCursorForPosition((pos - block.length())),
-                             attributeType);
+                             valueStatus);
         }
       }
     }
@@ -1604,11 +1655,30 @@ Parser::handleMouseClicked(const QPoint& pos)
             auto valName = property->value(section->position);
             if (property->isValidPropertyName()) {
               if (property->isValueValid(section->position)) {
-                // must have a valid property to check value types.
-                auto matches = m_datastore->fuzzySearchPropertyValue(
-                  property->name(), valName);
-                updateValidPropertyValueContextMenu(
-                  matches, pos, property, valName, &suggestionsMenu);
+                if (!property->hasPropertyEndMarker() &&
+                    !property->isFinalProperty()) {
+                  suggestionsMenu->clear();
+                  auto widgetact =
+                    getWidgetAction(m_datastore->badDColonIcon(),
+                                    tr("Property has no end marker (;)"),
+                                    suggestionsMenu);
+                  suggestionsMenu->addAction(widgetact);
+                  suggestionsMenu->addSeparator();
+                  auto act = new QAction(m_datastore->addColonIcon(),
+                                         tr("Add end marker"));
+                  suggestionsMenu->addAction(act);
+                  setMenuData(act, property, SectionType::PropertyEndMarker);
+                  m_editor->connect(act,
+                                    &QAction::triggered,
+                                    m_editor,
+                                    &StylesheetEditor::suggestionMade);
+                } else {
+                  // must have a valid property to check value types.
+                  auto matches = m_datastore->fuzzySearchPropertyValue(
+                    property->name(), valName);
+                  updateValidPropertyValueContextMenu(
+                    matches, pos, property, valName, &suggestionsMenu);
+                }
               } else {
                 auto matches = m_datastore->fuzzySearchPropertyValue(
                   property->name(), valName);

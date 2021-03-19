@@ -38,12 +38,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QTabWidget>
 #include <QTextCharFormat>
 #include <QVBoxLayout>
+#include <QXmlStreamReader>
 
 #include <sm_widgets/labelledcombobox.h>
 #include <sm_widgets/labelledspinbox.h>
+class StylesheetHighlighter;
 
 class StylesheetEdit;
 class StylesheetEditor;
+class DataStore;
 
 class TypeModel : public QAbstractListModel
 {
@@ -54,8 +57,9 @@ public:
   int rowCount(const QModelIndex&) const override;
   int columnCount(const QModelIndex&) const override;
   QVariant data(const QModelIndex& index, int role) const override;
-  void populate(StylesheetEditor* editor);
+  void populate(StylesheetHighlighter* highlighter);
   QTextCharFormat format(int row);
+  QTextCharFormat originalFormat(int row);
   void setFormat(int row, QTextCharFormat format);
 
   QList<QTextCharFormat> formats() const;
@@ -64,7 +68,7 @@ private:
   StylesheetEditor* m_editor = nullptr;
   QString m_fontfamily;
   QStringList m_text;
-  QList<QTextCharFormat> m_formats;
+  QList<QTextCharFormat> m_formats, m_originalFormats;
 
   void populateItem(const QString& text, QTextCharFormat format);
 };
@@ -99,31 +103,37 @@ class ColorFontFrame : public QFrame
 {
   Q_OBJECT
 public:
-  ColorFontFrame(StylesheetEditor* editor, QWidget* parent = nullptr);
+  ColorFontFrame(DataStore *datastore, StylesheetEditor* editor, QWidget* parent = nullptr);
 
   QList<QTextCharFormat> formats() const;
 
-//signals:
-//  void formatChanged(int row, QTextCharFormat& format);
-
 private:
+  DataStore *m_datastore;
   StylesheetEditor* m_editor = nullptr;
   TypeModel* m_model;
   ModifyFrame* m_modify;
   QListView* m_typeList;
-  StylesheetEdit* m_display;
+  StylesheetEditor* m_display;
 
   void indexChanged(const QModelIndex& index);
   void rowChanged(int row, QTextCharFormat format);
 
   static const QString DISPLAY;
+  void updateChangedFormat(int row, QTextCharFormat format);
+  void applyEditorFormats();
+  void resetEditorFormats();
+  void populateDisplay();
+  void copyTheme();
+
+  friend class StylesheetEditDialog;
 };
 
 class StylesheetEditDialog : public QDialog
 {
   Q_OBJECT
 public:
-  explicit StylesheetEditDialog(StylesheetEditor* editor,
+  explicit StylesheetEditDialog(DataStore* datastore,
+                                StylesheetEditor* editor,
                                 QWidget* parent = nullptr);
 
   //  StylesheetEdit *editor() const;
@@ -131,8 +141,13 @@ public:
 
   QList<QTextCharFormat> formats() const;
 
+public slots:
+  void accept() override;
+  void reject() override;
+
 protected:
 private:
+  DataStore* m_datastore;
   QTabWidget* m_tabs;
   QDialogButtonBox* m_btnBox;
   StylesheetEditor* m_editor;

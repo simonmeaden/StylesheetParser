@@ -23,16 +23,23 @@
 #include "node.h"
 #include "parser.h"
 //#include "safe_lib.h"
+#include "qyamlcpp/qyamlcpp.h"
+#include "rapidfuzz/fuzz.hpp"
+#include "rapidfuzz/utils.hpp"
 #include "string"
+#include "stylesheetedit/stylesheetedit.h"
 #include "stylesheetedit_p.h"
-#include "stylesheetparser/stylesheetedit.h"
 
-const QFont DataStore::NORMALFONT = QFont("Source Code Pro", 9, QFont::Normal, false);
-const QFont DataStore::LIGHTFONT = QFont("Source Code Pro", 9, QFont::Light, false);
-const QFont DataStore::BOLDFONT = QFont("Source Code Pro", 9, QFont::Bold, false);
+const QFont DataStore::NORMALFONT =
+  QFont("Source Code Pro", 9, QFont::Normal, false);
+const QFont DataStore::LIGHTFONT =
+  QFont("Source Code Pro", 9, QFont::Light, false);
+const QFont DataStore::BOLDFONT =
+  QFont("Source Code Pro", 9, QFont::Bold, false);
 
-DataStore::DataStore(QObject* parent)
+DataStore::DataStore(QWidget* parent)
   : QObject(parent)
+  , m_parent(parent)
   , m_invalidIcon(":/icons/invalid")
   , m_validIcon(":/icons/valid")
   , m_addSemiColonIcon(":/icons/add-scolon")
@@ -48,12 +55,313 @@ DataStore::DataStore(QObject* parent)
   , m_hasSuggestion(false)
   , m_maxSuggestionCount(30)
 {
+  setConfigurationLocation();
+  readQtCreatorTheme();
+  readStandardThemes();
+  readCustomThemes();
+  loadConfig();
+
+  m_currentTheme = m_qtTheme;
+  m_currentThemeName = m_qtThemeName;
+
   initialiseWidgetModel();
 }
 
 DataStore::~DataStore()
 {
   emit finished();
+}
+
+void
+DataStore::readQtCreatorTheme()
+{
+  QDir dir(m_qtConfigDir);
+  QSettings settings(QDir(m_qtConfigDir).filePath(m_qtConfigFile),
+                     QSettings::IniFormat);
+  settings.beginGroup("Core");
+  const QStringList childKeys = settings.childKeys();
+  for (auto childKey : childKeys) {
+    if (childKey == "CreatorTheme") {
+      m_qtTheme = settings.value(childKey).toString();
+      if (m_qtTheme == "flat")
+        m_qtThemeName = "Flat";
+      else if (m_qtTheme == "flat-dark")
+        m_qtThemeName = "Flat Dark";
+      else if (m_qtTheme == "design-light")
+        m_qtThemeName = "Design Light";
+      else if (m_qtTheme == "design-dark")
+        m_qtThemeName = "Design Dark";
+      else if (m_qtTheme == "dark")
+        m_qtThemeName = "Dark";
+      else if (m_qtTheme == "default")
+        m_qtThemeName = "Classic";
+    }
+  }
+  settings.endGroup();
+}
+
+void
+DataStore::setConfigurationLocation()
+{
+  m_qtConfigDir =
+    QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+  m_qtConfigDir += "/QtProject";
+  m_configDir = m_qtConfigDir + "/qtcreator/stylesheetedit";
+  QDir dir;
+  dir.mkpath(m_configDir);
+  m_qtConfigFile = "QtCreator.ini";
+  m_configFile = "stylesheetedit.yaml";
+}
+
+QString
+DataStore::configDir() const
+{
+  return m_configDir;
+}
+
+QString
+DataStore::configFile() const
+{
+  return m_configFile;
+}
+
+QString
+DataStore::qtTheme() const
+{
+  return m_qtTheme;
+}
+
+QString
+DataStore::qtThemeName() const
+{
+  return m_qtThemeName;
+}
+
+bool
+DataStore::loadXmlTheme(const QString& /*name*/)
+{
+  return false;
+}
+
+bool
+DataStore::saveXmlScheme(const QString& name)
+{
+  QString filename = QDir(m_configDir).filePath(name + ".xml");
+  QFile file(filename);
+  QMap<QString, QList<QString>> names;
+  if (file.exists()) {
+    // TODO OVERWRITE ??
+    if (QMessageBox::question(
+          m_parent, tr("File already exists!"), tr("Press Yes to Overwrite")) ==
+        QMessageBox::No) {
+      return false;
+    }
+  }
+
+  if (file.open(QFile::ReadOnly | QFile::Text)) {
+    QXmlStreamWriter writer(&file);
+    writer.writeStartDocument();
+    writer.writeStartElement(QStringLiteral("style-scheme"));
+    writer.writeAttribute("version", "1.0");
+    writer.writeAttribute("name", name);
+
+    //          writer.writeAttribute(XbelReader::versionAttribute(),
+    //          QStringLiteral("1.0")); for (int i = 0; i <
+    //          treeWidget->topLevelItemCount(); ++i)
+    //              writeItem(treeWidget->topLevelItem(i));
+
+    writer.writeEndDocument();
+    return true;
+  }
+
+  return false;
+}
+
+bool
+DataStore::loadConfig(const QString& filename)
+{
+  QFile* file;
+  if (filename.isEmpty())
+    file = new QFile(QDir(m_configDir).filePath(m_configFile));
+  else
+    file = new QFile(filename);
+
+  if (file->exists()) {
+    auto config = YAML::LoadFile(*file);
+    YAML::Node stylesheetedit, node, subnode1, subnode2;
+    if (config["theme"]) {
+      m_currentTheme = config["theme"].as<QString>();
+    }
+    if (config["themename"]) {
+      m_currentThemeName = config["themename"].as<QString>();
+    }
+    return true;
+  } else {
+    saveConfig();
+  }
+  return false;
+}
+
+bool
+DataStore::saveConfig(const QString& filename)
+{
+  QFile* file;
+  if (filename.isEmpty())
+    file = new QFile(QDir(m_configDir).filePath(m_configFile));
+  else
+    file = new QFile(filename);
+
+  if (file->open((QFile::ReadWrite | QFile::Truncate))) {
+    YAML::Emitter emitter;
+    emitter << YAML::Key << "theme";
+    emitter << YAML::Value << m_currentTheme;
+    emitter << YAML::Key << "themename";
+    emitter << YAML::Value << m_currentThemeName;
+
+    QTextStream out(file);
+    out << emitter.c_str();
+    file->close();
+    return true;
+  }
+  return false;
+}
+
+QString
+DataStore::currentTheme() const
+{
+  return m_currentTheme;
+}
+
+QString
+DataStore::currentThemeName() const
+{
+  return m_currentThemeName;
+}
+
+void
+DataStore::readStyleFile(QFileInfo info)
+{
+  QFile file = info.absoluteFilePath();
+  QMap<QString, QList<QString>> names;
+  if (file.exists()) {
+    if (file.open(QFile::ReadOnly | QFile::Text)) {
+      QXmlStreamReader reader(&file);
+      QStringRef attname;
+      QString name, fore, back, underlineColor, underlineStyle, themename,
+        italic, bold;
+      bool text = false, linenumber = false, parenthesis = false,
+           mismatch = false, currentlinenumber = false, punctuation = false,
+           comment = false, ignore = false, currentline = false;
+      Theme* theme = nullptr;
+      while (reader.readNextStartElement()) {
+        if (text && linenumber && parenthesis && mismatch &&
+            currentlinenumber && currentline && comment && punctuation) {
+          break;
+        }
+
+        auto attributes = reader.attributes();
+        if (reader.name() == "style") {
+          for (auto& att : attributes) {
+            attname = att.name();
+            if (attname == "name") {
+              name = att.value().toString();
+              if (name == "Text") {
+                text = true;
+              } else if (name == "LineNumber") {
+                linenumber = true;
+              } else if (name == "Parentheses") {
+                parenthesis = true;
+              } else if (name == "ParenthesesMismatch") {
+                mismatch = true;
+              } else if (name == "CurrentLineNumber") {
+                currentlinenumber = true;
+              } else if (name == "CurrentLine") {
+                currentline = true;
+              } else if (name == "Comment") {
+                comment = true;
+              } else if (name == "Comment") {
+                punctuation = true;
+              } else {
+                ignore = true;
+                reader.skipCurrentElement();
+              }
+            } else if (attname == "foreground") {
+              fore = att.value().toString();
+            } else if (attname == "background") {
+              back = att.value().toString();
+            } else if (attname == "italic") {
+              italic = att.value().toString();
+            } else if (attname == "bold") {
+              bold = att.value().toString();
+            } else if (attname == "underlineColor") {
+              underlineColor = att.value().toString();
+            } else if (attname == "underlineStyle") {
+              underlineStyle = att.value().toString();
+            }
+          }
+          if (!ignore) {
+            if (theme) {
+              ThemeData data(
+                fore, back, italic, bold, underlineColor, underlineStyle);
+              theme->addData(name, data);
+              reader.skipCurrentElement();
+            }
+          }
+          ignore = false;
+        } else if (reader.name() == "style-scheme") {
+          for (auto& att : attributes) {
+            if (att.name() == "name") {
+              theme = new Theme();
+              themename = att.value().toString();
+            }
+          }
+        }
+      }
+      m_customThemes.insert(themename, theme);
+      theme = nullptr;
+    }
+  }
+}
+
+void
+DataStore::readStandardThemes()
+{
+  auto qtdir = getenv("QTDIR");
+  QDir dir(qtdir);
+  dir.cdUp();
+  dir.cdUp();
+  auto configPath = dir.absolutePath();
+  configPath += "/Tools/QtCreator/share/qtcreator/styles";
+  dir.setPath(configPath);
+  if (dir.exists()) {
+    QStringList filters;
+    filters << "*.xml";
+    dir.setFilter(QDir::Files | QDir::NoSymLinks | QDir::NoDotAndDotDot);
+    dir.setNameFilters(filters);
+    auto files = dir.entryInfoList(filters);
+    for (auto& info : files) {
+      readStyleFile(info);
+    }
+  }
+}
+
+void
+DataStore::readCustomThemes()
+{
+  auto configPath =
+    QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+  configPath += "/QtProject/qtcreator/styles";
+  QDir dir = (configPath);
+  if (dir.exists()) {
+    QStringList filters;
+    filters << "*.xml";
+    dir.setFilter(QDir::Files | QDir::NoSymLinks | QDir::NoDotAndDotDot);
+    dir.setNameFilters(filters);
+    auto files = dir.entryInfoList(filters);
+    for (auto& info : files) {
+      readStyleFile(info);
+    }
+  }
 }
 
 void
@@ -95,7 +403,7 @@ QMultiMap<int, QString>
 DataStore::fuzzySearchProperty(const QString& name)
 {
   QMutexLocker locker(&m_mutex);
-  return fuzzySearchProperty(name);
+  return m_widgetModel->fuzzySearchProperty(name);
 }
 
 QMultiMap<int, QString>
@@ -145,35 +453,59 @@ DataStore::fuzzySearchSubControl(const QString& name)
   return m_widgetModel->fuzzySearchSubControl(name);
 }
 
-bool DataStore::addCustomWidget(const QString &name, const QString &parent)
+bool
+DataStore::addCustomWidget(const QString& name, const QString& parent)
 {
   return m_widgetModel->addCustomWidget(name, parent);
 }
 
-bool DataStore::addCustomWidgetPseudoStates(const QString &name, const QStringList &states)
+bool
+DataStore::addCustomWidgetPseudoStates(const QString& name,
+                                       const QStringList& states)
 {
   return m_widgetModel->addCustomWidgetPseudoStates(name, states);
 }
 
-bool DataStore::addCustomWidgetSubControls(const QString &name, const QStringList &controls)
+bool
+DataStore::addCustomWidgetSubControls(const QString& name,
+                                      const QStringList& controls)
 {
   return m_widgetModel->addCustomWidgetSubControls(name, controls);
 }
 
-bool DataStore::addCustomWidgetProperties(const QString &name, const QStringList &properties)
+bool
+DataStore::addCustomWidgetProperties(const QString& name,
+                                     const QStringList& properties)
 {
   return m_widgetModel->addCustomWidgetProperties(name, properties);
 }
 
-bool DataStore::addCustomWidgetPropertyValue(const QString &widget, const QString &property, const QString &value)
+bool
+DataStore::addCustomWidgetPropertyValue(const QString& widget,
+                                        const QString& property,
+                                        const QString& value)
 {
   return m_widgetModel->addCustomWidgetPropertyValue(widget, property, value);
 }
 
-bool DataStore::addCustomWidgetPropertyValues(const QString &widget, const QString &property, QStringList values)
+bool
+DataStore::addCustomWidgetPropertyValues(const QString& widget,
+                                         const QString& property,
+                                         QStringList values)
 {
-  return m_widgetModel->addCustomWidgetPropertyValues(
-        widget, property, values);
+  return m_widgetModel->addCustomWidgetPropertyValues(widget, property, values);
+}
+
+QList<QString>
+DataStore::customThemeNames() const
+{
+  return m_customThemes.keys();
+}
+
+QMap<QString, Theme*>
+DataStore::customThemes() const
+{
+  return m_customThemes;
 }
 
 bool
@@ -182,148 +514,192 @@ DataStore::checkSubControlForWidget(const QString& widget, const QString& name)
   return m_widgetModel->checkSubControlForWidget(widget, name);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkAlignment(const QString& value) const
 {
-  return m_alignmentValues.contains(value);
+  auto status = new PropertyStatus();
+  if (m_alignmentValues.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkAttachment(const QString& value) const
 {
-  return m_attachment.contains(value);
+  auto status = new PropertyStatus();
+  if (m_attachment.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBackground(const QString& value) const
 {
-  if (checkBrush(value)) {
-    return true;
+  auto status = checkBrush(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkUrl(value)) {
-    return true;
+  status = checkUrl(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkRepeat(value)) {
-    return true;
+  status = checkRepeat(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkAlignment(value)) {
-    return true;
+  status = checkAlignment(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBool(const QString& value) const
 {
+  auto status = new PropertyStatus();
   if (value == "true" || value == "false") {
-    return true;
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
   }
-
-  return false;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBoolean(const QString& value) const
 {
+  auto status = new PropertyStatus();
   if (value == "0" || value == "1") {
-    return true;
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
   }
-
-  return false;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBorder(const QString& value) const
 {
-  if (checkBorderStyle(value)) {
-    return true;
+  auto status = checkBorderStyle(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkLength(value)) {
-    return true;
+  status = checkLength(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkBrush(value)) {
-    return true;
+  status = checkBrush(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBorderImage(const QString& value) const
 {
-  if (checkUrl(value)) {
-    return true;
+  auto status = checkUrl(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkNumber(value)) {
-    return true;
+  status = checkNumber(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  return m_borderImage.contains(value);
+  if (m_borderImage.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBorderStyle(const QString& value) const
 {
-  return m_borderStyle.contains(value);
+  auto status = new PropertyStatus();
+  if (m_borderStyle.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBoxColors(const QString& value) const
 {
   return checkColor(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBoxLengths(const QString& value) const
 {
   return checkLength(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkBrush(const QString& value) const
 {
-  if (checkColor(value)) {
-    return true;
+  auto status = checkColor(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkGradient(value)) {
-    return true;
+  status = checkGradient(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkPaletteRole(value)) {
-    return true;
+  status = checkPaletteRole(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkColor(const QString& value) const
 {
+  auto status = new PropertyStatus();
   // check if this was a color name.
   if (m_colors.contains(value)) {
-    return true;
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
   }
 
   if (value.startsWith("#")) {
     if (value.length() != 4 || value.length() != 7) {
-      return false;
+      status->state = PropertyStatus::BadPropertyValue;
+    } else {
+      bool ok = false;
+      QString val = value.right(value.length() - 1);
+      val.toUInt(&ok, 16);
+      if (ok) {
+        status->state = PropertyStatus::GoodPropertyValue;
+      }
     }
-
-    bool ok = false;
-    QString val = value.right(value.length() - 1);
-    value.toUInt(&ok, 16);
-
-    if (ok) {
-      return ok;
-    }
+    return status;
   }
 
   if (value.startsWith("rgba")) {
@@ -331,35 +707,37 @@ WidgetModel::checkColor(const QString& value) const
     QStringList cols = rgb.split(',');
 
     if (cols.count() != 4) {
-      return false;
-    }
+      status->state = PropertyStatus::BadPropertyValue;
+    } else {
+      bool ok = false;
+      int val, count = 0;
+      for (int i = 0; i < 4; i++) {
+        auto col = cols.at(i).trimmed();
 
-    bool ok = false;
-    int val, count = 0;
+        if (col.endsWith('%')) {
+          col = col.left(col.length() - 1);
+          val = col.toInt(&ok);
 
-    for (int i = 0; i < 4; i++) {
-      auto col = cols.at(i).trimmed();
+          if (val >= 0 && val <= 100) {
+            count++;
+          }
 
-      if (col.endsWith('%')) {
-        col = col.left(col.length() - 1);
-        val = col.toInt(&ok);
+        } else {
+          val = col.toInt(&ok);
 
-        if (val >= 0 && val <= 100) {
-          count++;
-        }
-
-      } else {
-        val = col.toInt(&ok);
-
-        if (val >= 0 && val <= 255) {
-          count++;
+          if (val >= 0 && val <= 255) {
+            count++;
+          }
         }
       }
-    }
 
-    if (count == 4) {
-      return true;
+      if (count == 4) {
+        status->state = PropertyStatus::GoodPropertyValue;
+      } else {
+        status->state = PropertyStatus::BadPropertyValue;
+      }
     }
+    return status;
   }
 
   if (value.startsWith("rgb")) { // include rgba in this case
@@ -367,35 +745,38 @@ WidgetModel::checkColor(const QString& value) const
     QStringList cols = rgb.split(',');
 
     if (cols.count() != 3) {
-      return false;
-    }
+      status->state = PropertyStatus::BadPropertyValue;
+      return status;
+    } else {
+      bool ok = false;
+      int val, count = 0;
+      for (int i = 0; i < 3; i++) {
+        auto col = cols.at(i).trimmed();
 
-    bool ok = false;
-    int val, count = 0;
+        if (col.endsWith('%')) {
+          col = col.left(col.length() - 1);
+          val = col.toInt(&ok);
 
-    for (int i = 0; i < 3; i++) {
-      auto col = cols.at(i).trimmed();
+          if (val >= 0 && val <= 100) {
+            count++;
+          }
 
-      if (col.endsWith('%')) {
-        col = col.left(col.length() - 1);
-        val = col.toInt(&ok);
+        } else {
+          val = col.toInt(&ok);
 
-        if (val >= 0 && val <= 100) {
-          count++;
-        }
-
-      } else {
-        val = col.toInt(&ok);
-
-        if (val >= 0 && val <= 255) {
-          count++;
+          if (val >= 0 && val <= 255) {
+            count++;
+          }
         }
       }
-    }
 
-    if (count == 3) {
-      return true;
+      if (count == 3) {
+        status->state = PropertyStatus::GoodPropertyValue;
+      } else {
+        status->state = PropertyStatus::BadPropertyValue;
+      }
     }
+    return status;
   }
 
   if (value.startsWith("hsla") || value.startsWith("hsva")) {
@@ -403,7 +784,8 @@ WidgetModel::checkColor(const QString& value) const
     QStringList cols = rgb.split(',');
 
     if (cols.count() != 4) {
-      return false;
+      status->state = PropertyStatus::BadPropertyValue;
+      return status;
     }
 
     bool ok = false;
@@ -438,8 +820,11 @@ WidgetModel::checkColor(const QString& value) const
     }
 
     if (count == 4) {
-      return true;
+      status->state = PropertyStatus::GoodPropertyValue;
+    } else {
+      status->state = PropertyStatus::BadPropertyValue;
     }
+    return status;
   }
 
   if (value.startsWith("hsl") || value.startsWith("hsv")) {
@@ -447,376 +832,514 @@ WidgetModel::checkColor(const QString& value) const
     QStringList cols = rgb.split(',');
 
     if (cols.count() != 3) {
-      return false;
-    }
+      status->state = PropertyStatus::BadPropertyValue;
+      return status;
+    } else {
 
-    bool ok = false;
-    int val, count = 0;
+      bool ok = false;
+      int val, count = 0;
 
-    for (int i = 0; i < 3; i++) {
-      auto col = cols.at(i).trimmed();
+      for (int i = 0; i < 3; i++) {
+        auto col = cols.at(i).trimmed();
 
-      if (col.endsWith('%')) {
-        col = col.left(col.length() - 1);
-        val = col.toInt(&ok);
+        if (col.endsWith('%')) {
+          col = col.left(col.length() - 1);
+          val = col.toInt(&ok);
 
-        if (i == 0) {
-          // hue cannot be a percentage.
-          // a percentage here will cause a fail.
-          continue;
+          if (i == 0) {
+            // hue cannot be a percentage.
+            // a percentage here will cause a fail.
+            continue;
 
-        } else if (val >= 0 && val <= 100) {
-          count++;
-        }
+          } else if (val >= 0 && val <= 100) {
+            count++;
+          }
 
-      } else {
-        val = col.toInt(&ok);
+        } else {
+          val = col.toInt(&ok);
 
-        if (i == 0 && val >= 0 && val < 360) {
-          count++;
+          if (i == 0 && val >= 0 && val < 360) {
+            count++;
 
-        } else if (val >= 0 && val <= 100) {
-          count++;
+          } else if (val >= 0 && val <= 100) {
+            count++;
+          }
         }
       }
-    }
 
-    if (count == 3) {
-      return true;
+      if (count == 3) {
+        PropertyStatus::GoodPropertyValue;
+      } else {
+        status->state = PropertyStatus::BadPropertyValue;
+      }
     }
+    return status;
   }
 
-  return false;
+  auto fuzzylist = fuzzySearch(value, m_colors);
+  if (!fuzzylist.isEmpty()) {
+    status->state = PropertyStatus::FuzzyColorValue;
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkFontStyle(const QString& value) const
 {
-  return m_fontStyle.contains(value);
+  auto status = new PropertyStatus();
+  if (m_fontStyle.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkFont(const QString& value) const
 {
-  if (checkFontSize(value)) {
-    return true;
+  auto status = checkFontSize(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkFontStyle(value)) {
-    return true;
+  status = checkFontStyle(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkFontWeight(value)) {
-    return true;
+  status = checkFontWeight(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  // TODO check that the string is a valid font string.
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkFontSize(const QString& value) const
 {
-  return checkLength(value);
+  auto status = checkLength(value);
+  if (status->notIrrelevant()) {
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkFontWeight(const QString& value) const
 {
-  return m_fontWeight.contains(value);
+  auto status = new PropertyStatus();
+  if (m_fontWeight.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
+  }
+
+  bool ok;
+  value.toInt(&ok);
+  if (ok) {
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkGradient(const QString& value) const
 {
-  auto v = value;
-  if (v.contains("(")) {
-    auto l = v.split("(");
-    v = l.first();
+  auto status = new PropertyStatus();
+  QString cleanValue = value.simplified().toLower();
+  bool contains = false;
+
+  for (auto& gradient : m_gradient) {
+    if (cleanValue.contains(gradient)) {
+      contains = true;
+      break;
+    }
+    auto left = cleanValue.split("(").first();
+    double score =
+      rapidfuzz::fuzz::ratio(gradient.toStdString(), left.toStdString());
+    if (score < 100.0 && score > 90.0) { // TODO Increase minimum ??
+      status->state = PropertyStatus::FuzzyGradientName;
+      return status;
+    }
   }
-  return m_gradient.contains(v);
+
+  if (!contains) {
+    status->state = PropertyStatus::IrrelevantValue;
+    return status;
+  }
+
+  auto sections =
+    cleanValue.split(QRegularExpression("[,()]"), Qt::SkipEmptyParts);
+
+  bool linear = false;
+  bool radial = false;
+  bool conical = false;
+  QString name, number, color;
+
+  for (auto& section : sections) {
+    if (!(linear || radial || conical)) {
+      if (section == "qlineargradient") {
+        linear = true;
+        continue;
+      } else if (section == "qradialgradient") {
+        radial = true;
+        continue;
+      } else if (section == "qconicalgradient") {
+        conical = true;
+        continue;
+      } else {
+        status->state = PropertyStatus::BadGradientName; // bad name
+        return status;
+      }
+    }
+    auto parts =
+      section.split(QRegularExpression("[\\s:]"), Qt::SkipEmptyParts);
+
+    // only two or three parts is valid.
+    if (parts.size() < 2 || parts.size() > 3) {
+      status->state = PropertyStatus::BadGradientValue;
+      return status;
+    }
+
+    name = parts.at(0);
+    number = parts.at(1);
+    if (parts.size() == 3) {
+      color = parts.at(2);
+    }
+
+    if (linear) {
+      if (name == "x1" || name == "y1" || name == "x2" || name == "y2") {
+        if (parts.size() == 3) {
+          status->state = PropertyStatus::BadGradientValueCount;
+        } else if (!checkGradientNumber(number.trimmed()))
+          status->state = PropertyStatus::BadGradientValue;
+        return status;
+      } else if (name == "stop") {
+        if (parts.size() == 2)
+          status->state = PropertyStatus::BadGradientValueCount;
+        if (!checkGradientNumber(number.trimmed()))
+          status->state = PropertyStatus::BadGradientNumericalValue;
+        if (!checkGradientColor(color.trimmed()))
+          status->state = PropertyStatus::BadGradientColorValue;
+        return status;
+      } else {
+        // an invalid name.
+        status->state = PropertyStatus::BadGradientValueName;
+        return status;
+      }
+    } else if (radial) {
+      if (name == "cx" || name == "cy" || name == "angle") {
+        if (parts.size() == 3) {
+          status->state = PropertyStatus::BadGradientValueCount;
+        } else if (!checkGradientNumber(number.trimmed()))
+          status->state = PropertyStatus::BadGradientValue;
+        return status;
+      } else if (name == "stop") {
+        if (parts.size() == 2)
+          status->state = PropertyStatus::BadGradientValueCount;
+        if (!checkGradientNumber(number.trimmed()))
+          status->state = PropertyStatus::BadGradientNumericalValue;
+        if (!checkGradientColor(color.trimmed()))
+          status->state = PropertyStatus::BadGradientColorValue;
+        return status;
+      } else {
+        // an invalid name.
+        status->state = PropertyStatus::BadGradientValueName;
+        return status;
+      }
+    } else if (conical) {
+      if (name == "cx" || name == "cy" || name == "radius" || name == "fx" ||
+          name == "fy") {
+        if (parts.size() == 3) {
+          status->state = PropertyStatus::BadGradientValueCount;
+        } else if (!checkGradientNumber(number.trimmed()))
+          status->state = PropertyStatus::BadGradientValue;
+        return status;
+      } else if (name == "stop") {
+        if (parts.size() == 2)
+          status->state = PropertyStatus::BadGradientValueCount;
+        if (!checkGradientNumber(number.trimmed()))
+          status->state = PropertyStatus::BadGradientNumericalValue;
+        if (!checkGradientColor(color.trimmed()))
+          status->state = PropertyStatus::BadGradientColorValue;
+        return status;
+      } else {
+        // an invalid name.
+        status->state = PropertyStatus::BadGradientValueName;
+        return status;
+      }
+    } /* else {
+       return BadGradientName;
+     }*/
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
 bool
+WidgetModel::checkGradientColor(const QString& value) const
+{
+  QColor color(value);
+  if (!color.isValid()) {
+    return false;
+  }
+  return true;
+}
+
+bool
+WidgetModel::checkGradientNumber(const QString& value) const
+{
+  bool ok;
+  value.toDouble(&ok);
+  if (!ok) {
+    return false;
+  }
+  return true;
+}
+
+PropertyStatus*
 WidgetModel::checkIcon(const QString& value) const
 {
-  if (checkUrl(value)) {
-    return true;
+  auto status = checkUrl(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  return m_icon.contains(value);
+  if (m_icon.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkLength(const QString& value) const
 {
-  bool ok = false;
+  auto status = new PropertyStatus();
+  bool ok;
 
   if (value.endsWith("px") || value.endsWith("pt") || value.endsWith("em") ||
       value.endsWith("ex")) {
-    value.left(value.length() - 2).toUInt(&ok);
-
+    auto numValue = value.left(value.length() - 2);
+    numValue.toDouble(&ok);
+    if (ok) {
+      status->state = PropertyStatus::GoodPropertyValue;
+    } else {
+      status->state = PropertyStatus::BadPropertyValue;
+    }
+    return status;
   } else if (value.at(value.length() - 1).isDigit()) {
-    value.left(value.length() - 2).toUInt(&ok);
+    auto numValue = value.left(value.length() - 2);
+    numValue.toUInt(&ok);
+    if (ok) {
+      status->state = PropertyStatus::GoodPropertyValue;
+    } else {
+      status->state = PropertyStatus::BadPropertyValue;
+    }
+    return status;
   }
 
-  if (ok) {
-    return true;
-  }
-
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkNumber(const QString& value) const
 {
-  bool ok = false;
+  auto status = new PropertyStatus();
+  bool ok;
   // don't actually need the value, I only want to know
   // if it actually is a number.
   value.toDouble(&ok);
-  return ok;
+  if (ok) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOutline(const QString& value) const
 {
-  if (checkOutlineColor(value)) {
-    return true;
+  auto status = checkOutlineColor(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkOutlineStyle(value)) {
-    return true;
+  status = checkOutlineColor(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkOutlineWidth(value)) {
-    return true;
+  status = checkOutlineStyle(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  if (checkOutlineOffset(value)) {
-    return true;
+  status = checkOutlineWidth(value);
+  if (status->notIrrelevant()) {
+    return status;
   }
 
-  return false;
+  status = checkOutlineOffset(value);
+  if (status->notIrrelevant()) {
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOrigin(const QString& value) const
 {
-  return m_origin.contains(value);
+  auto status = new PropertyStatus();
+  if (m_origin.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOutlineStyle(const QString& value) const
 {
-  return m_outlineStyle.contains(value);
+  auto status = new PropertyStatus();
+  if (m_outlineStyle.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+  } else {
+    status->state = PropertyStatus::IrrelevantValue;
+  }
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOutlineColor(const QString& value) const
 {
   if (value == m_outlineColor) {
-    return true;
+    auto status = new PropertyStatus();
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
   }
-
   return checkColor(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOutlineWidth(const QString& value) const
 {
   if (m_outlineWidth.contains(value)) {
-    return true;
+    auto status = new PropertyStatus();
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
   }
-
   return checkLength(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOutlineOffset(const QString& value) const
 {
   return checkLength(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkOutlineRadius(const QString& value) const
 {
   // check for 4 radius values.
   return checkRadius(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkPaletteRole(const QString& value) const
 {
+  auto status = new PropertyStatus();
   if (m_paletteRoles.contains(value)) {
-    return true;
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
   }
 
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkRadius(const QString& value) const
 {
   return checkLength(value);
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkRepeat(const QString& value) const
 {
-  return m_repeat.contains(value);
+  auto status = new PropertyStatus();
+  if (m_repeat.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkUrl(const QString& value) const
 {
-  //  QFile file(value);
+  auto status = new PropertyStatus();
+  auto cols = value.split("()");
+  if (cols.size() == 2) {
+    if (cols.at(0) == "url") {
+      QUrl url(cols.at(1));
+      if (url.isValid()) {
+        status->state = PropertyStatus::GoodPropertyValue;
+      } else {
+        status->state = PropertyStatus::BadPropertyValue;
+      }
+      return status;
+    }
+  }
 
-  //  if (file.exists()) {
-  //    return true;
-  //  }
-  QString v = value.trimmed();
-  if (v.trimmed().startsWith("url")) {
-    v = v.mid(3).trimmed();
-  } else {
-    return false;
-  }
-  if (v.startsWith("(")) {
-    v = v.mid(1).trimmed();
-  } else {
-    return false;
-  }
-  if (v.endsWith(")")) {
-    v = v.mid(0, v.length() - 1).trimmed();
-  } else {
-    return false;
-  }
-  QUrl url(v);
-  return url.isValid();
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkPosition(const QString& value) const
 {
-  return m_position.contains(value);
+  auto status = new PropertyStatus();
+  if (m_position.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
+  }
+
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkTextDecoration(const QString& value) const
 {
-  return m_textDecoration.contains(value);
-}
-
-bool
-WidgetModel::checkStylesheetEdit(const QString& value,
-                                 StylesheetData* data) const
-{
-  if (data && checkColor(value)) {
-    data->colors.append(value);
-    return true;
+  auto status = new PropertyStatus();
+  if (m_textDecoration.contains(value)) {
+    status->state = PropertyStatus::GoodPropertyValue;
+    return status;
   }
 
-  if (checkStylesheetFontWeight(value, data)) {
-    return true;
-  }
-
-  return false;
-}
-
-bool
-WidgetModel::checkStylesheetEditBad(const QString& value,
-                                    StylesheetData* data) const
-{
-  if (data) {
-    if (checkColor(value)) {
-      data->colors.append(QColor(value));
-      return true;
-    }
-
-    if (checkStylesheetFontWeight(value, data)) {
-      return true;
-    }
-
-    if (value == "none") {
-      data->underline.append(QTextCharFormat::NoUnderline);
-      return true;
-
-    } else if (value == "single") {
-      data->underline.append(QTextCharFormat::SingleUnderline);
-      return true;
-
-    } else if (value == "dash") {
-      data->underline.append(QTextCharFormat::DashUnderline);
-      return true;
-
-    } else if (value == "dot") {
-      data->underline.append(QTextCharFormat::DotLine);
-      return true;
-
-    } else if (value == "dashdot") {
-      data->underline.append(QTextCharFormat::DashDotLine);
-      return true;
-
-    } else if (value == "dashdotdot") {
-      data->underline.append(QTextCharFormat::DashDotDotLine);
-      return true;
-
-    } else if (value == "wave") {
-      data->underline.append(QTextCharFormat::WaveUnderline);
-      return true;
-
-    } else if (value == "spellcheck") {
-      data->underline.append(QTextCharFormat::SpellCheckUnderline);
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool
-WidgetModel::checkStylesheetFontWeight(const QString& value,
-                                       StylesheetData* data) const
-{
-  if (data) {
-    if (value == "thin") {
-      data->weights.append(QFont::Thin);
-      return true;
-
-    } else if (value == "extralight") {
-      data->weights.append(QFont::ExtraLight);
-      return true;
-
-    } else if (value == "light") {
-      data->weights.append(QFont::Light);
-      return true;
-
-    } else if (value == "normal") {
-      data->weights.append(QFont::Normal);
-      return true;
-
-    } else if (value == "medium") {
-      data->weights.append(QFont::Medium);
-      return true;
-
-    } else if (value == "demibold") {
-      data->weights.append(QFont::DemiBold);
-      return true;
-
-    } else if (value == "bold") {
-      data->weights.append(QFont::Bold);
-      return true;
-
-    } else if (value == "extrabold") {
-      data->weights.append(QFont::ExtraBold);
-      return true;
-
-    } else if (value == "black") {
-      data->weights.append(QFont::Black);
-      return true;
-    }
-  }
-
-  return false;
+  status->state = PropertyStatus::IrrelevantValue;
+  return status;
 }
 
 void
@@ -825,131 +1348,152 @@ DataStore::initialiseWidgetModel()
   m_widgetModel = new WidgetModel();
 }
 
-bool
+PropertyStatus*
 WidgetModel::checkPropertyValue(AttributeType propertyAttribute,
                                 const QString& valuename)
 {
+  PropertyStatus* status = nullptr;
   switch (propertyAttribute) {
     case Alignment:
-      return checkAlignment(valuename);
+      status = checkAlignment(valuename);
+      break;
 
     case Attachment:
-      return checkAttachment(valuename);
+      status = checkAttachment(valuename);
+      break;
 
     case Background:
-      return checkBackground(valuename);
+      status = checkBackground(valuename);
+      break;
 
     case Bool:
-      return checkBool(valuename);
+      status = checkBool(valuename);
+      break;
 
     case Boolean:
-      return checkBoolean(valuename);
+      status = checkBoolean(valuename);
+      break;
 
     case Border:
-      return checkBorder(valuename);
+      status = checkBorder(valuename);
+      break;
 
     case BorderImage:
-      return checkBorderImage(valuename);
+      status = checkBorderImage(valuename);
+      break;
 
     case BorderStyle:
-      return checkBorderStyle(valuename);
+      status = checkBorderStyle(valuename);
+      break;
 
     case BoxColors:
-      return checkBoxColors(valuename);
+      status = checkBoxColors(valuename);
+      break;
 
     case BoxLengths:
-      return checkBoxLengths(valuename);
+      status = checkBoxLengths(valuename);
+      break;
 
     case Brush:
-      return checkBrush(valuename);
+      status = checkBrush(valuename);
+      break;
 
     case Color:
-      return checkColor(valuename);
+      status = checkColor(valuename);
+      break;
 
     case Font:
-      return checkFont(valuename);
+      status = checkFont(valuename);
+      break;
 
     case FontSize:
-      return checkFontSize(valuename);
+      status = checkFontSize(valuename);
+      break;
 
     case FontStyle:
-      return checkFontStyle(valuename);
+      status = checkFontStyle(valuename);
+      break;
 
     case FontWeight:
-      return checkFontWeight(valuename);
+      status = checkFontWeight(valuename);
+      break;
 
     case Gradient:
-      return checkGradient(valuename);
+      status = checkGradient(valuename);
+      break;
 
     case Icon:
-      return checkIcon(valuename);
+      status = checkIcon(valuename);
+      break;
 
     case Length:
-      return checkLength(valuename);
+      status = checkLength(valuename);
+      break;
 
     case Number: // TODO not supported.
-      return checkNumber(valuename);
+      status = checkNumber(valuename);
+      break;
 
     case Origin:
-      return checkOrigin(valuename);
+      status = checkOrigin(valuename);
+      break;
 
     case Outline:
-      return checkOutline(valuename);
+      status = checkOutline(valuename);
+      break;
 
     case OutlineRadius:
-      return checkOutlineRadius(valuename);
+      status = checkOutlineRadius(valuename);
+      break;
 
     case OutlineStyle:
-      return checkOutlineStyle(valuename);
+      status = checkOutlineStyle(valuename);
+      break;
 
     case PaletteRole:
-      return checkPaletteRole(valuename);
+      status = checkPaletteRole(valuename);
+      break;
 
     case Position:
-      return checkPosition(valuename);
+      status = checkPosition(valuename);
+      break;
 
     case Radius:
-      return checkRadius(valuename);
+      status = checkRadius(valuename);
+      break;
 
     case Repeat:
-      return checkRepeat(valuename);
+      status = checkRepeat(valuename);
+      break;
 
     case TextDecoration:
-      return checkTextDecoration(valuename);
+      status = checkTextDecoration(valuename);
+      break;
 
     case Url:
-      return checkUrl(valuename);
+      status = checkUrl(valuename);
+      break;
 
     case String:
       // value IS a string.
       // might need to check the string contents here.
-      return true;
+      status->state = PropertyStatus::GoodPropertyValue;
+      break;
 
     case List:
       // This should never reach here.
+      status->state = PropertyStatus::GoodPropertyValue;
       break;
-
-      // TODO add custom property value checks.
-      //    case StylesheetEditGood:
-      //      return checkStylesheetEdit(valuename, data);
-
-      //    case StylesheetEditBad:
-      //      return checkStylesheetEditBad(valuename, data);
   }
 
-  return false;
+  if (!status) {
+    status = new PropertyStatus(PropertyStatus::IrrelevantValue);
+  }
+
+  return status;
 }
 
-// bool
-// DataStore::ifValidStylesheetValue(const QString& propertyname,
-//                                  const QString& valuename,
-//                                  StylesheetData* data)
-//{
-//  QMutexLocker locker(&m_mutex);
-//  return m_widgetModel->ifValidStylesheetValue(propertyname, valuename, data);
-//}
-
-bool
+PropertyStatus*
 DataStore::isValidPropertyValueForProperty(const QString& propertyname,
                                            const QString& valuename)
 {
@@ -1070,7 +1614,7 @@ DataStore::nodes()
 }
 
 void
-DataStore::insertNode(QTextCursor cursor, Node *node)
+DataStore::insertNode(QTextCursor cursor, Node* node)
 {
   QMutexLocker locker(&m_mutex);
   m_nodes.insert(cursor, node);
@@ -2270,34 +2814,19 @@ WidgetModel::isValidSubControlForWidget(const QString& widget,
   return false;
 }
 
-bool
+PropertyStatus*
 WidgetModel::isValidPropertyValueForProperty(const QString& propertyname,
                                              const QString& valuename)
 {
   if (valuename.isEmpty()) {
-    return false;
+    auto status =
+      new PropertyStatus(PropertyStatus::PropertyStatus::BadPropertyValue);
+    return status;
   }
 
   AttributeType propertyAttribute = m_attributes.value(propertyname);
-  return (checkPropertyValue(propertyAttribute, valuename) != NoAttributeValue);
+  return checkPropertyValue(propertyAttribute, valuename);
 }
-
-// bool
-// WidgetModel::ifValidStylesheetValue(const QString& propertyname,
-//                                    const QString& valuename,
-//                                    StylesheetData* data)
-//{
-//  // TODO
-//  //  if (valuename.isEmpty()) {
-//  //    return false;
-//  //  }
-
-//  //  AttributeType stylesheetAttribute =
-//  //    m_stylesheetAttributes.value(propertyname);
-//  //  return (checkPropertyValue(stylesheetAttribute, valuename, data) !=
-//  //          NoAttributeValue);
-//  return false;
-//}
 
 bool
 WidgetModel::containsSubControl(const QString& name)
@@ -2381,7 +2910,7 @@ WidgetModel::borderValues()
 }
 
 QMultiMap<int, QString>
-WidgetModel::fuzzySearch(const QString& name, QStringList list)
+WidgetModel::fuzzySearch(const QString& name, QStringList list) const
 {
   QMultiMap<int, QString> matches;
   char* pattern = new char[name.length() + 1];
@@ -2548,101 +3077,114 @@ WidgetModel::fuzzySearchSubControl(const QString& name)
 AttributeType
 WidgetModel::propertyValueAttribute(const QString& value)
 {
-  if (checkColor(value)) {
+  if (checkColor(value)->state == PropertyStatus::GoodPropertyValue) {
     return Color;
 
-  } else if (checkLength(value)) {
+  } else if (checkLength(value)->state == PropertyStatus::GoodPropertyValue) {
     return Length;
 
-  } else if (checkBorder(value)) {
+  } else if (checkBorder(value)->state == PropertyStatus::GoodPropertyValue) {
     return Border;
 
-  } else if (checkFont(value)) {
+  } else if (checkFont(value)->state == PropertyStatus::GoodPropertyValue) {
     return Font;
 
-  } else if (checkFontWeight(value)) {
+  } else if (checkFontWeight(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return FontWeight;
 
-  } else if (checkRadius(value)) {
+  } else if (checkRadius(value)->state == PropertyStatus::GoodPropertyValue) {
     return Radius;
 
-  } else if (checkBrush(value)) {
+  } else if (checkBrush(value)->state == PropertyStatus::GoodPropertyValue) {
     return Brush;
 
-  } else if (checkFontStyle(value)) {
+  } else if (checkFontStyle(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return FontStyle;
 
-  } else if (checkFontSize(value)) {
+  } else if (checkFontSize(value)->state == PropertyStatus::GoodPropertyValue) {
     return FontSize;
 
-  } else if (checkAlignment(value)) {
+  } else if (checkAlignment(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return Alignment;
 
-  } else if (checkAttachment(value)) {
+  } else if (checkAttachment(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return Attachment;
 
-  } else if (checkBackground(value)) {
+  } else if (checkBackground(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return Background;
 
-  } else if (checkBool(value)) {
+  } else if (checkBool(value)->state == PropertyStatus::GoodPropertyValue) {
     return Bool;
 
-  } else if (checkBoolean(value)) {
+  } else if (checkBoolean(value)->state == PropertyStatus::GoodPropertyValue) {
     return Boolean;
 
-  } else if (checkBorderImage(value)) {
+  } else if (checkBorderImage(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return BorderImage;
 
-  } else if (checkBorderStyle(value)) {
+  } else if (checkBorderStyle(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return BorderStyle;
 
-  } else if (checkBoxColors(value)) {
+  } else if (checkBoxColors(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return BoxColors;
 
-  } else if (checkBoxLengths(value)) {
+  } else if (checkBoxLengths(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return BoxLengths;
 
-  } else if (checkGradient(value)) {
+  } else if (checkGradient(value)->state == PropertyStatus::GoodPropertyValue) {
     return Gradient;
 
-  } else if (checkIcon(value)) {
+  } else if (checkIcon(value)->state == PropertyStatus::GoodPropertyValue) {
     return Icon;
 
-  } else if (checkNumber(value)) {
+  } else if (checkNumber(value)->state == PropertyStatus::GoodPropertyValue) {
     return Number;
 
-  } else if (checkOutline(value)) {
+  } else if (checkOutline(value)->state == PropertyStatus::GoodPropertyValue) {
     return Outline;
 
-  } else if (checkOrigin(value)) {
+  } else if (checkOrigin(value)->state == PropertyStatus::GoodPropertyValue) {
     return Origin;
 
-  } else if (checkOutlineStyle(value)) {
+  } else if (checkOutlineStyle(value)->state ==
+             PropertyStatus::PropertyStatus::GoodPropertyValue) {
     return OutlineStyle;
 
-  } else if (checkOutlineRadius(value)) {
+  } else if (checkOutlineRadius(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return OutlineRadius;
 
-  } else if (checkPaletteRole(value)) {
+  } else if (checkPaletteRole(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return PaletteRole;
 
-  } else if (checkRepeat(value)) {
+  } else if (checkRepeat(value)->state == PropertyStatus::GoodPropertyValue) {
     return Repeat;
 
-  } else if (checkUrl(value)) {
+  } else if (checkUrl(value)->state == PropertyStatus::GoodPropertyValue) {
     return Url;
 
-  } else if (checkPosition(value)) {
+  } else if (checkPosition(value)->state == PropertyStatus::GoodPropertyValue) {
     return Position;
 
-  } else if (checkTextDecoration(value)) {
+  } else if (checkTextDecoration(value)->state ==
+             PropertyStatus::GoodPropertyValue) {
     return TextDecoration;
 
   } // TODO add property tests.
-  /* else if (checkStylesheetEdit(value)) {
+  /* else if (checkStylesheetEdit(value)==PropertyStatus::GoodPropertyValue) {
     return StylesheetEditGood;
 
-  } else if (checkStylesheetEditBad(value)) {
+  } else if (checkStylesheetEditBad(value)==PropertyStatus::GoodPropertyValue) {
     return StylesheetEditBad;
   }*/
 
@@ -2794,4 +3336,13 @@ void
 Property::setAttributes(AttributeTypes attributes)
 {
   m_attributes = attributes;
+}
+
+QStringList
+DataStore::fontSizes()
+{
+  const QStringList fontSizes = { "6",  "7",  "8",  "9",  "10", "11",
+                                  "12", "14", "16", "18", "20", "22",
+                                  "24", "26", "28", "36", "48", "72" };
+  return fontSizes;
 }

@@ -18,15 +18,18 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         */
-#include "stylesheetparser/stylesheeteditdialog.h"
+#include "stylesheetedit/stylesheeteditdialog.h"
 #include "sm_widgets/abstractlabelledwidget.h"
 #include "sm_widgets/labelledtextfield.h"
+#include "stylesheetedit/stylesheetedit.h"
 #include "stylesheetedit_p.h"
-#include "stylesheetparser/stylesheetedit.h"
+#include "stylesheethighlighter.h"
 
-StylesheetEditDialog::StylesheetEditDialog(StylesheetEditor* editor,
+StylesheetEditDialog::StylesheetEditDialog(DataStore* datastore,
+                                           StylesheetEditor* editor,
                                            QWidget* parent)
   : QDialog(parent)
+  , m_datastore(datastore)
   , m_editor(editor)
 {
   auto mainLayout = new QVBoxLayout;
@@ -37,14 +40,26 @@ StylesheetEditDialog::StylesheetEditDialog(StylesheetEditor* editor,
 
   m_btnBox = new QDialogButtonBox(
     QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Ok);
-  connect(m_btnBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+  m_btnBox->button(QDialogButtonBox::Ok)
+    ->setToolTip(tr("Accept changes and apply them to the editor"));
+  connect(
+    m_btnBox, &QDialogButtonBox::accepted, this, &StylesheetEditDialog::accept);
+  m_btnBox->button(QDialogButtonBox::Cancel)
+    ->setToolTip(tr("Cancel changes, even if previously applied"));
   connect(m_btnBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
+  m_btnBox->button(QDialogButtonBox::Apply)
+    ->setToolTip(
+      tr("Apply changes to editor, click 'Cancel' to reject changes"));
+  connect(m_btnBox->button(QDialogButtonBox::Apply),
+          &QPushButton::clicked,
+          this,
+          &StylesheetEditDialog::apply);
   connect(m_btnBox->button(QDialogButtonBox::Apply),
           &QPushButton::clicked,
           this,
           &StylesheetEditDialog::apply);
 
-  m_colorFontFrame = new ColorFontFrame(m_editor, this);
+  m_colorFontFrame = new ColorFontFrame(m_datastore, m_editor, this);
   m_tabs->addTab(m_colorFontFrame, tr("Font & Colors"));
 
   mainLayout->addWidget(m_btnBox);
@@ -63,8 +78,24 @@ StylesheetEditDialog::formats() const
 }
 
 void
+StylesheetEditDialog::accept()
+{
+  apply();
+  QDialog::accept();
+}
+
+void
+StylesheetEditDialog::reject()
+{
+  m_colorFontFrame->resetEditorFormats();
+  QDialog::reject();
+}
+
+void
 StylesheetEditDialog::apply()
-{}
+{
+  m_colorFontFrame->applyEditorFormats();
+}
 
 const QString ColorFontFrame::DISPLAY =
   "QTabBar :: tab : selected , QTabBar::tab:hover {\n"
@@ -89,8 +120,49 @@ const QString ColorFontFrame::DISPLAY =
   "  border-style: inset;\n"
   "}\n";
 
-ColorFontFrame::ColorFontFrame(StylesheetEditor* editor, QWidget* parent)
+void
+ColorFontFrame::populateDisplay()
+{
+  m_display->setWidgetFormat(m_model->format(0));
+  m_display->setBadWidgetFormat(m_model->format(1));
+  m_display->setSeperatorFormat(m_model->format(2));
+  m_display->setIdSelectorFormat(m_model->format(3));
+  m_display->setBadIdSelectorFormat(m_model->format(4));
+  m_display->setIdSelectorMarkerFormat(m_model->format(5));
+  m_display->setBadIdSelectorMarkerFormat(m_model->format(6));
+  m_display->setSubControlFormat(m_model->format(7));
+  m_display->setBadSubControlFormat(m_model->format(8));
+  m_display->setSubControlMarkerFormat(m_model->format(9));
+  m_display->setBadSubControlMarkerFormat(m_model->format(10));
+  m_display->setPseudoStateFormat(m_model->format(11));
+  m_display->setBadPseudoStateFormat(m_model->format(12));
+  m_display->setPseudoStateMarkerFormat(m_model->format(13));
+  m_display->setBadPseudoStateMarkerFormat(m_model->format(14));
+  m_display->setPropertyFormat(m_model->format(15));
+  m_display->setBadPropertyFormat(m_model->format(16));
+  m_display->setPropertyMarkerFormat(m_model->format(17));
+  m_display->setPropertyValueFormat(m_model->format(18));
+  m_display->setBadPropertyValueFormat(m_model->format(19));
+  m_display->setPropertyEndMarkerFormat(m_model->format(20));
+  m_display->setStartBraceFormat(m_model->format(21));
+  m_display->setBadStartBraceFormat(m_model->format(22));
+  m_display->setEndBraceFormat(m_model->format(23));
+  m_display->setBadEndBraceFormat(m_model->format(24));
+  m_display->setBraceMatchFormat(m_model->format(25));
+  m_display->setBadBraceMatchFormat(m_model->format(26));
+  m_display->setCommentFormat(m_model->format(27));
+  m_display->setPlainText(DISPLAY);
+}
+
+void
+ColorFontFrame::copyTheme()
+{}
+
+ColorFontFrame::ColorFontFrame(DataStore* datastore,
+                               StylesheetEditor* editor,
+                               QWidget* parent)
   : QFrame(parent)
+  , m_datastore(datastore)
   , m_editor(editor)
 {
   QGridLayout* mainLayout = new QGridLayout;
@@ -109,27 +181,8 @@ ColorFontFrame::ColorFontFrame(StylesheetEditor* editor, QWidget* parent)
   familyBox->setCurrentText(font.family());
   fontLayout->addWidget(familyBox, 0, 0);
 
-  QStringList values;
-  values << "6"
-         << "7"
-         << "8"
-         << "9"
-         << "10"
-         << "11"
-         << "12"
-         << "14"
-         << "16"
-         << "18"
-         << "20"
-         << "22"
-         << "24"
-         << "26"
-         << "28"
-         << "36"
-         << "48"
-         << "72";
   auto sizeBox = new LabelledComboBox(tr("Size :"), this);
-  sizeBox->addItems(values);
+  sizeBox->addItems(m_datastore->fontSizes());
   sizeBox->setCurrentText(QString::number(font.pointSize()));
   fontLayout->addWidget(sizeBox, 0, 1);
 
@@ -143,49 +196,46 @@ ColorFontFrame::ColorFontFrame(StylesheetEditor* editor, QWidget* parent)
   auto aliasBox = new QCheckBox(tr("Antialias"), this);
   fontLayout->addWidget(aliasBox, 1, 0, 1, 3, Qt::AlignLeft);
 
-  auto themeBox = new QGroupBox(tr("Color Scheme for Themd \"Flat\""), this);
+  auto themeBox = new QGroupBox(
+    tr("Color Scheme for Theme \"%1\"").arg(m_datastore->qtThemeName()), this);
   auto themeLayout = new QGridLayout;
   themeBox->setLayout(themeLayout);
   mainLayout->addWidget(themeBox);
 
   auto typeLayout = new QHBoxLayout;
-  values.clear();
-  values << "Default"
-         << "QtCreator dark"
-         << "Dark"
-         << "Default Classic"
-         << "Grayscale"
-         << "Inkpot"
-         << "IntelliJ IDEA"
-         << "Modnokai Night Shift v2"
-         << "Solarized Dark"
-         << "Solarized Light";
-  // TODO get custom copies.
+  auto customThemes = m_datastore->customThemeNames();
   auto themes = new QComboBox(this);
-  themes->addItems(values);
+  themes->addItems(customThemes);
+  themes->setCurrentText(m_datastore->currentThemeName());
   typeLayout->addWidget(themes, 1);
 
   auto copyBtn = new QPushButton(tr("Copy"), this);
+  connect(copyBtn, &QPushButton::clicked, this, &ColorFontFrame::copyTheme);
   typeLayout->addWidget(copyBtn, 0);
+
   auto deleteBtn = new QPushButton(tr("delete"), this);
   typeLayout->addWidget(deleteBtn, 0);
   themeLayout->addLayout(typeLayout, 0, 0, 1, 3);
 
+  m_editor = editor;
+  auto highlighter = editor->highlighter();
   m_model = new TypeModel(this);
-  m_model->populate(m_editor);
+  m_model->populate(highlighter);
   m_typeList = new QListView(this);
   m_typeList->setModel(m_model);
   connect(m_typeList, &QListView::clicked, this, &ColorFontFrame::indexChanged);
   themeLayout->addWidget(m_typeList, 1, 0);
 
-  m_display = new StylesheetEdit(this);
-  m_display->setPlainText(DISPLAY);
+  m_display = new StylesheetEditor(m_datastore, this);
+  populateDisplay();
   themeLayout->addWidget(m_display, 1, 1);
 
   m_modify = new ModifyFrame(this);
   themeLayout->addWidget(m_modify, 1, 2);
   connect(
     m_modify, &ModifyFrame::rowChanged, this, &ColorFontFrame::rowChanged);
+  m_typeList->setCurrentIndex(m_model->index(0, 0));
+  m_modify->setRow(0, m_model->format(0));
 }
 
 QList<QTextCharFormat>
@@ -198,104 +248,172 @@ void
 ColorFontFrame::indexChanged(const QModelIndex& index)
 {
   auto format = m_model->format(index.row());
-  m_display->setWidgetFormat(format.foreground(),
-                             format.background(),
-                             format.font(),
-                             format.underlineColor(),
-                             format.underlineStyle());
   m_modify->setRow(index.row(), format);
+}
+
+void
+ColorFontFrame::updateChangedFormat(int row, QTextCharFormat format)
+{
+  switch (row) {
+    case 0:
+      m_display->setWidgetFormat(format);
+      break;
+    case 1:
+      m_display->setBadWidgetFormat(format);
+      break;
+    case 2:
+      m_display->setSeperatorFormat(format);
+      break;
+    case 3:
+      m_display->setIdSelectorFormat(format);
+      break;
+    case 4:
+      m_display->setBadIdSelectorFormat(format);
+      break;
+    case 5:
+      m_display->setIdSelectorMarkerFormat(format);
+      break;
+    case 6:
+      m_display->setBadIdSelectorMarkerFormat(format);
+      break;
+    case 7:
+      m_display->setSubControlFormat(format);
+      break;
+    case 8:
+      m_display->setBadSubControlFormat(format);
+      break;
+    case 9:
+      m_display->setSubControlMarkerFormat(format);
+      break;
+    case 10:
+      m_display->setBadSubControlMarkerFormat(format);
+      break;
+    case 11:
+      m_display->setPseudoStateFormat(format);
+      break;
+    case 12:
+      m_display->setBadPseudoStateFormat(format);
+      break;
+    case 13:
+      m_display->setPseudoStateMarkerFormat(format);
+      break;
+    case 14:
+      m_display->setBadPseudoStateMarkerFormat(format);
+      break;
+    case 15:
+      m_display->setPropertyFormat(format);
+      break;
+    case 16:
+      m_display->setBadPropertyFormat(format);
+      break;
+    case 17:
+      m_display->setPropertyMarkerFormat(format);
+      break;
+    case 18:
+      m_display->setPropertyValueFormat(format);
+      break;
+    case 19:
+      m_display->setBadPropertyValueFormat(format);
+      break;
+    case 20:
+      m_display->setPropertyEndMarkerFormat(format);
+      break;
+    case 21:
+      m_display->setStartBraceFormat(format);
+      break;
+    case 22:
+      m_display->setBadStartBraceFormat(format);
+      break;
+    case 23:
+      m_display->setEndBraceFormat(format);
+      break;
+    case 24:
+      m_display->setBadEndBraceFormat(format);
+      break;
+    case 25:
+      m_display->setBraceMatchFormat(format);
+      break;
+    case 26:
+      m_display->setBadBraceMatchFormat(format);
+      break;
+    case 27:
+      m_display->setCommentFormat(format);
+      break;
+  }
+}
+
+void
+ColorFontFrame::applyEditorFormats()
+{
+  m_editor->setWidgetFormat(m_model->format(0));
+  m_editor->setBadWidgetFormat(m_model->format(1));
+  m_editor->setSeperatorFormat(m_model->format(2));
+  m_editor->setIdSelectorFormat(m_model->format(3));
+  m_editor->setBadIdSelectorFormat(m_model->format(4));
+  m_editor->setIdSelectorMarkerFormat(m_model->format(5));
+  m_editor->setBadIdSelectorMarkerFormat(m_model->format(6));
+  m_editor->setSubControlFormat(m_model->format(7));
+  m_editor->setBadSubControlFormat(m_model->format(8));
+  m_editor->setSubControlMarkerFormat(m_model->format(9));
+  m_editor->setBadSubControlMarkerFormat(m_model->format(10));
+  m_editor->setPseudoStateFormat(m_model->format(11));
+  m_editor->setBadPseudoStateFormat(m_model->format(12));
+  m_editor->setPseudoStateMarkerFormat(m_model->format(13));
+  m_editor->setBadPseudoStateMarkerFormat(m_model->format(14));
+  m_editor->setPropertyFormat(m_model->format(15));
+  m_editor->setBadPropertyFormat(m_model->format(16));
+  m_editor->setPropertyMarkerFormat(m_model->format(17));
+  m_editor->setPropertyValueFormat(m_model->format(18));
+  m_editor->setBadPropertyValueFormat(m_model->format(19));
+  m_editor->setPropertyEndMarkerFormat(m_model->format(20));
+  m_editor->setStartBraceFormat(m_model->format(21));
+  m_editor->setBadStartBraceFormat(m_model->format(22));
+  m_editor->setEndBraceFormat(m_model->format(23));
+  m_editor->setBadEndBraceFormat(m_model->format(24));
+  m_editor->setBraceMatchFormat(m_model->format(25));
+  m_editor->setBadBraceMatchFormat(m_model->format(26));
+  m_editor->setCommentFormat(m_model->format(27));
+}
+
+void
+ColorFontFrame::resetEditorFormats()
+{
+  m_editor->setWidgetFormat(m_model->originalFormat(0));
+  m_editor->setBadWidgetFormat(m_model->originalFormat(1));
+  m_editor->setSeperatorFormat(m_model->originalFormat(2));
+  m_editor->setIdSelectorFormat(m_model->originalFormat(3));
+  m_editor->setBadIdSelectorFormat(m_model->originalFormat(4));
+  m_editor->setIdSelectorMarkerFormat(m_model->originalFormat(5));
+  m_editor->setBadIdSelectorMarkerFormat(m_model->originalFormat(6));
+  m_editor->setSubControlFormat(m_model->originalFormat(7));
+  m_editor->setBadSubControlFormat(m_model->originalFormat(8));
+  m_editor->setSubControlMarkerFormat(m_model->originalFormat(9));
+  m_editor->setBadSubControlMarkerFormat(m_model->originalFormat(10));
+  m_editor->setPseudoStateFormat(m_model->originalFormat(11));
+  m_editor->setBadPseudoStateFormat(m_model->originalFormat(12));
+  m_editor->setPseudoStateMarkerFormat(m_model->originalFormat(13));
+  m_editor->setBadPseudoStateMarkerFormat(m_model->originalFormat(14));
+  m_editor->setPropertyFormat(m_model->originalFormat(15));
+  m_editor->setBadPropertyFormat(m_model->originalFormat(16));
+  m_editor->setPropertyMarkerFormat(m_model->originalFormat(17));
+  m_editor->setPropertyValueFormat(m_model->originalFormat(18));
+  m_editor->setBadPropertyValueFormat(m_model->originalFormat(19));
+  m_editor->setPropertyEndMarkerFormat(m_model->originalFormat(20));
+  m_editor->setStartBraceFormat(m_model->originalFormat(21));
+  m_editor->setBadStartBraceFormat(m_model->originalFormat(22));
+  m_editor->setEndBraceFormat(m_model->originalFormat(23));
+  m_editor->setBadEndBraceFormat(m_model->originalFormat(24));
+  m_editor->setBraceMatchFormat(m_model->originalFormat(25));
+  m_editor->setBadBraceMatchFormat(m_model->originalFormat(26));
+  m_editor->setCommentFormat(m_model->originalFormat(27));
 }
 
 void
 ColorFontFrame::rowChanged(int row, QTextCharFormat format)
 {
   m_model->setFormat(row, format);
-  switch (row) {
-    case 0:
-      m_editor->setWidgetFormat(format);
-      break;
-    case 1:
-      m_editor->setBadWidgetFormat(format);
-      break;
-    case 2:
-      m_editor->setSeperatorFormat(format);
-      break;
-    case 3:
-      m_editor->setIdSelectorFormat(format);
-      break;
-    case 4:
-      m_editor->setBadIdSelectorFormat(format);
-      break;
-    case 5:
-      m_editor->setIdSelectorMarkerFormat(format);
-      break;
-    case 6:
-      m_editor->setBadIdSelectorMarkerFormat(format);
-      break;
-    case 7:
-      m_editor->setSubControlFormat(format);
-      break;
-    case 8:
-      m_editor->setBadSubControlFormat(format);
-      break;
-    case 9:
-      m_editor->setSubControlMarkerFormat(format);
-      break;
-    case 10:
-      m_editor->setBadSubControlMarkerFormat(format);
-      break;
-    case 11:
-      m_editor->setPseudoStateFormat(format);
-      break;
-    case 12:
-      m_editor->setBadPseudoStateFormat(format);
-      break;
-    case 13:
-      m_editor->setPseudoStateMarkerFormat(format);
-      break;
-    case 14:
-      m_editor->setBadPseudoStateMarkerFormat(format);
-      break;
-    case 15:
-      m_editor->setPropertyFormat(format);
-      break;
-    case 16:
-      m_editor->setBadPropertyFormat(format);
-      break;
-    case 17:
-      m_editor->setPropertyMarkerFormat(format);
-      break;
-    case 18:
-      m_editor->setPropertyValueFormat(format);
-      break;
-    case 19:
-      m_editor->setBadPropertyValueFormat(format);
-      break;
-    case 20:
-      m_editor->setPropertyEndMarkerFormat(format);
-      break;
-    case 21:
-      m_editor->setStartBraceFormat(format);
-      break;
-    case 22:
-      m_editor->setBadStartBraceFormat(format);
-      break;
-    case 23:
-      m_editor->setEndBraceFormat(format);
-      break;
-    case 24:
-      m_editor->setBadEndBraceFormat(format);
-      break;
-    case 25:
-      m_editor->setBraceMatchFormat(format);
-      break;
-    case 26:
-      m_editor->setBadBraceMatchFormat(format);
-      break;
-    case 27:
-      m_editor->setCommentFormat(format);
-      break;
-  }
+  updateChangedFormat(row, format);
+  m_display->handleRehighlight();
 }
 
 TypeModel::TypeModel(QObject* parent)
@@ -336,13 +454,11 @@ TypeModel::data(const QModelIndex& index, int role) const
 }
 
 void
-TypeModel::populate(StylesheetEditor* editor)
+TypeModel::populate(StylesheetHighlighter* highlighter)
 {
-  m_editor = editor;
   m_text.clear();
   m_formats.clear();
-  auto highlighter = editor->highlighter();
-
+  m_originalFormats.clear();
   populateItem("Widget", highlighter->widgetFormat());
   populateItem("Bad Widget", highlighter->badWidgetFormat());
   populateItem("Widget Seperator ','", highlighter->seperatorFormat());
@@ -383,6 +499,12 @@ TypeModel::format(int row)
   return m_formats.at(row);
 }
 
+QTextCharFormat
+TypeModel::originalFormat(int row)
+{
+  return m_originalFormats.at(row);
+}
+
 void
 TypeModel::setFormat(int row, QTextCharFormat format)
 {
@@ -403,6 +525,7 @@ TypeModel::populateItem(const QString& text, QTextCharFormat format)
   m_fontfamily = format.fontFamily();
   m_text.append(text);
   m_formats.append(format);
+  m_originalFormats.append(format);
 }
 
 ModifyFrame::ModifyFrame(QWidget* parent)
@@ -524,7 +647,6 @@ ModifyFrame::backgroundClicked(bool)
     QPalette palette = m_backgroundBtn->palette();
     palette.setColor(m_backgroundBtn->backgroundRole(), dlg->currentColor());
     m_backgroundBtn->setPalette(palette);
-    emit rowChanged(m_row, m_format);
     emit rowChanged(m_row, m_format);
   }
 }

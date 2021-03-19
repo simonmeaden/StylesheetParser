@@ -61,6 +61,9 @@ protected:
   NodeStates m_state = BadNodeState;
 };
 
+QDebug
+operator<<(QDebug debug, const Node& node);
+
 class NamedNode : public Node
 {
   Q_OBJECT
@@ -94,6 +97,9 @@ protected:
   virtual int pointWidth(const QString& text) const;
   virtual int pointHeight() const;
 };
+
+QDebug
+operator<<(QDebug debug, const NamedNode& node);
 
 class MarkerBase : public NamedNode
 {
@@ -230,7 +236,7 @@ public:
   void addValue(const QString& value,
                 NodeState check,
                 QTextCursor cursor,
-                AttributeType attType);
+                PropertyStatus* status);
   QString value(int index);
 
   //! Returns the checks as a list.
@@ -250,9 +256,10 @@ public:
   int valuePosition(int index);
 
   //! Returns the attribute types as a list.
-  QList<AttributeType> attributeTypes() const;
-  //! Sets the attribute types as a list.
-  void setAttributeTypes(const QList<AttributeType>& attributeTypes);
+  //  QList<PropertyValueState> valueStatus() const;
+  PropertyStatus* valueStatus(int index) const;
+  //  //! Sets the attribute types as a list.
+  //  void setAttributeTypes(const QList<AttributeType>& attributeTypes);
 
   //! Sets the check at index as bad.
   //!
@@ -272,6 +279,7 @@ public:
   void setPropertyNameCheck(enum NodeState check);
   bool isValidPropertyName() const;
   bool isFuzzyName() const;
+  bool isFinalProperty();
   //  void setValidPropertyName(bool valid);
   bool isValid(bool finalProperty = false);
 
@@ -288,12 +296,13 @@ public:
   void setPropertyEndMarkerCursor(QTextCursor position);
 
   NodeSection* sectionIfIn(QPoint pos) override;
+  QList<PartialType> sectionIfIn(int start, int end);
 
 protected:
   QStringList m_values;
   QList<NodeState> m_checks;
   QList<QTextCursor> m_cursors;
-  QList<AttributeType> m_attributeTypes;
+  QList<PropertyStatus*> m_valueStatus;
 
   NodeStates m_propertyState = NodeState::BadNodeState;
   QTextCursor m_propertyMarkerCursor;
@@ -337,8 +346,8 @@ public:
   void setEndCommentCursor(QTextCursor cursor);
 
   NodeSection* sectionIfIn(QPoint pos) override;
-  bool isIn(int pos) override {return false;}
-  bool isIn(QPoint pos) override {return false;}
+  bool isIn(int pos) override { return false; }
+  bool isIn(QPoint pos) override { return false; }
 
 private:
   bool m_validComment = true;

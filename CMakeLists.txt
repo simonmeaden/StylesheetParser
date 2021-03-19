@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(StylesheetParser LANGUAGES CXX)
+project(StylesheetEditor LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOUIC ON)
@@ -9,7 +9,11 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_definitions(Q_COMPILER_INITIALIZER_LISTS)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+include(FetchContent)
 
 #==== Qt 5 core gui and widgets ==================================
 include("CMakeLists.qt5.in")
@@ -24,16 +28,25 @@ find_package(Qt5 COMPONENTS Core REQUIRED)
 
 find_package(yaml-cpp REQUIRED)
 #find_package(qyamlcpp REQUIRED)
+FetchContent_Declare(
+   rapidfuzz
+   SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/RapidFuzz
+   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/rapidfuzz
+   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> "${CMAKE_OPT_ARGS}"
+ )
+ FetchContent_MakeAvailable(rapidfuzz)
 
+#add_library(stylesheet_edit "")
+#target_sources(stylesheet_edit
 add_executable(tst_parser "")
 target_sources(tst_parser
    PUBLIC
 
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/StylesheetParser_global.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheetedit.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/stylesheeteditdialog.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/mainwindow.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetparser/x11colors.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/StylesheetParser_global.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/stylesheetedit.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/stylesheeteditdialog.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/mainwindow.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/x11colors.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledwidget.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledspinbox.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledlineedit.h>
@@ -41,11 +54,11 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledspinbox.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledcombobox.h>
 
-      $<INSTALL_INTERFACE:include/stylesheetparser/StylesheetParser_global.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/stylesheetedit.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/stylesheeteditdialog.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/mainwindow.h>
-      $<INSTALL_INTERFACE:include/stylesheetparser/x11colors.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/StylesheetParser_global.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/stylesheetedit.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/stylesheeteditdialog.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/mainwindow.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/x11colors.h>
       $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledwidget.h>
       $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledspinbox.h>
       $<INSTALL_INTERFACE:include/sm_widgets/labelledlineedit.h>
@@ -95,8 +108,9 @@ target_include_directories(tst_parser
 
 target_link_libraries(tst_parser PRIVATE Qt5::Core Qt5::Gui Qt5::Widgets)
 target_link_libraries(tst_parser PRIVATE yaml-cpp)# qyamlcpp)
+target_link_libraries(tst_parser PRIVATE rapidfuzz::rapidfuzz)
 #target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libmemprims.a")
 #target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libsafec-1.0.a")
 #target_link_libraries(tst_parser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/lib/libsafeccore.a")
 
-target_compile_definitions(tst_parser PRIVATE STYLESHEETPARSER_LIBRARY)
+target_compile_definitions(tst_parser PRIVATE STYLESHEETEDITOR_LIBRARY)

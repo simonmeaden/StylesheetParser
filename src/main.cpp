@@ -21,17 +21,18 @@
 */
 
 #include <QApplication>
-#include <Qt>
 #include <QTextCharFormat>
+#include <Qt>
 
 #include "parserstate.h"
-#include "stylesheetparser/mainwindow.h"
+#include "stylesheetedit/mainwindow.h"
 
 int
 main(int argc, char* argv[])
 {
   qRegisterMetaType<ParserState::Error>("ParserError::Error");
-  qRegisterMetaType<QTextCharFormat::UnderlineStyle>("QTextCharFormat::UnderlineStyle");
+  qRegisterMetaType<QTextCharFormat::UnderlineStyle>(
+    "QTextCharFormat::UnderlineStyle");
 
   QApplication a(argc, argv);
   MainWindow w;

@@ -21,23 +21,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "common.h"
 #include "node.h"
 
-int
-PropertyStatus::offset() const
-{
-  return m_offset;
-}
-
-QString
-PropertyStatus::name() const
-{
-  return m_name;
-}
-
-SectionType PropertyStatus::status() const
-{
-  return m_status;
-}
-
 bool
 operator==(NodeSection& left, NodeSection& right)
 {

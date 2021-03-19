@@ -23,8 +23,8 @@
 
 #include <QtDebug>
 
+#include "stylesheetedit/stylesheetedit.h"
 #include "stylesheetedit_p.h"
-#include "stylesheetparser/stylesheetedit.h"
 
 NamedNode::NamedNode(const QString& name,
                      QTextCursor cursor,
@@ -70,6 +70,22 @@ Node::Node(QTextCursor cursor,
   , m_type(type)
   , m_editor(editor)
 {}
+
+QDebug
+operator<<(QDebug debug, const Node& node)
+{
+  QDebugStateSaver saver(debug);
+  debug.nospace() << "Pos : " << node.position();
+  return debug;
+}
+
+QDebug
+operator<<(QDebug debug, const NamedNode& node)
+{
+  QDebugStateSaver saver(debug);
+  debug.nospace() << "Pos : " << node.position() << " : " << node.name();
+  return debug;
+}
 
 Node::Node(const Node& other) {}
 
@@ -916,10 +932,18 @@ PropertyNode::setValueCursor(int index, QTextCursor cursor)
   }
 }
 
-QList<AttributeType>
-PropertyNode::attributeTypes() const
+// QList<PropertyValueState>
+// PropertyNode::valueStatus() const
+//{
+//  return m_valueStatus;
+//}
+
+PropertyStatus*
+PropertyNode::valueStatus(int index) const
 {
-  return m_attributeTypes;
+  if (index >= 0 && index < m_valueStatus.size())
+    return m_valueStatus.at(index);
+  return nullptr;
 }
 
 void
@@ -976,12 +1000,12 @@ void
 PropertyNode::addValue(const QString& value,
                        NodeState check,
                        QTextCursor cursor,
-                       AttributeType attType = NoAttributeValue)
+                       PropertyStatus* status)
 {
   m_values.append(value);
   m_checks.append(check);
   m_cursors.append(cursor);
-  m_attributeTypes.append(attType);
+  m_valueStatus.append(status);
 }
 
 QString
@@ -1216,10 +1240,74 @@ PropertyNode::sectionIfIn(QPoint pos)
   return isin;
 }
 
-void
-PropertyNode::setAttributeTypes(const QList<AttributeType>& attributeTypes)
+QList<PartialType>
+PropertyNode::sectionIfIn(int start, int end)
 {
-  m_attributeTypes = attributeTypes;
+  QList<PartialType> partials;
+  int valueEnd;
+  if (start >= position() && start < NamedNode::end()) {
+    PartialType pt;
+    pt.start = start;
+    pt.type = PartialType::Name;
+    valueEnd = position() + m_name.length();
+    if (end >= valueEnd) {
+      pt.end = start + m_name.length();
+    } else {
+      pt.end = end;
+    }
+    partials.append(pt);
+  }
+
+  if (hasPropertyMarker()) {
+    PartialType pt;
+    auto pos = m_propertyMarkerCursor.anchor();
+    if (pos >= start && pos < end) {
+      pt.start = pos;
+      pt.end = pos + 1;
+      pt.type = PartialType::Marker;
+      partials.append(pt);
+    }
+  }
+
+  for (int i = 0; i < m_values.count(); i++) {
+    auto offset = m_cursors.at(i).anchor();
+    if (end < offset)
+      break;
+    auto value = m_values.at(i);
+    valueEnd = offset + value.length();
+    PartialType pt;
+    if (start <= offset) {
+      if (end > offset) {
+        pt.start = offset;
+      }
+    } else if (start < valueEnd) {
+      pt.start = start;
+    }
+    if (end >= start) {
+      if (end < valueEnd) {
+        pt.end = end;
+      } else {
+        pt.end = valueEnd;
+      }
+    }
+    if (start != -1 && end != -1) {
+      pt.type = PartialType::Value;
+      partials.append(pt);
+    }
+  }
+
+  if (hasPropertyEndMarker()) {
+    PartialType pt;
+    auto pos = m_endMarkerCursor.anchor();
+    if (pos >= start && pos < end) {
+      pt.start = pos;
+      pt.end = pos + 1;
+      pt.type = PartialType::EndMarker;
+      partials.append(pt);
+    }
+  }
+
+  return partials;
 }
 
 CommentNode::CommentNode(QTextCursor start,
@@ -1687,4 +1775,10 @@ IDSelector::isValid() const
     return true;
   }
   return false;
+}
+
+bool
+PropertyNode::isFinalProperty()
+{
+  return m_isFinalProperty;
 }

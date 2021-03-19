@@ -76,20 +76,20 @@ public:
     QBrush underline = QBrush(Qt::red),
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   void setBadIdSelectorFormat(QTextCharFormat format);
-  void setIDSelectorMarkerFormat(
+  void setIdSelectorMarkerFormat(
     QBrush color,
     QBrush back,
     QFont font,
     QBrush underline = QBrush(),
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
-  void setIDSelectorMarkerFormat(QTextCharFormat format);
-  void setBadIDSelectorMarkerFormat(
+  void setIdSelectorMarkerFormat(QTextCharFormat format);
+  void setBadIdSelectorMarkerFormat(
     QBrush color,
     QBrush back,
     QFont font,
     QBrush underline = QBrush(),
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
-  void setBadIDSelectorMarkerFormat(QTextCharFormat format);
+  void setBadIdSelectorMarkerFormat(QTextCharFormat format);
   void setPseudoStateFormat(
     QBrush color,
     QBrush back,

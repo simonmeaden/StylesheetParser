@@ -952,62 +952,119 @@ WidgetModel::checkFontWeight(const QString& value) const
   return status;
 }
 
+QPair<PropertyStatus*, int>
+WidgetModel::calculateNumericalStatus(const QString& section,
+                                      const QString& cleanValue,
+                                      const QString& name,
+                                      const QString& number,
+                                      int offset,
+                                      QStringList parts) const
+{
+  auto next = new PropertyStatus();
+  next->name = section;
+  next->length = section.length();
+  next->offset = cleanValue.indexOf(name, offset);
+  if (parts.size() == 3) {
+    next->state = PropertyStatus::BadGradientValueCount;
+  } else if (!checkGradientNumber(number.trimmed())) {
+    next->state = PropertyStatus::BadGradientValue;
+  } else {
+    next->state = PropertyStatus::GoodPropertyValue;
+  }
+  offset += next->length;
+  return qMakePair<PropertyStatus*, int>(next, offset);
+}
+
+QPair<PropertyStatus*, int>
+WidgetModel::calculateStopStatus(const QString& section,
+                                 const QString& cleanValue,
+                                 const QString& name,
+                                 const QString& number,
+                                 const QString& color,
+                                 int offset,
+                                 QStringList parts) const
+{
+  auto next = new PropertyStatus();
+  next->name = section;
+  next->length = section.length();
+  next->offset = cleanValue.indexOf(name, offset);
+  if (parts.size() == 2) {
+    next->state = PropertyStatus::BadGradientValueCount;
+  } else if (!checkGradientNumber(number.trimmed())) {
+    next->state = PropertyStatus::BadGradientNumericalValue;
+  } else if (!checkGradientColor(color.trimmed())) {
+    next->state = PropertyStatus::BadGradientColorValue;
+  }
+  offset += next->length;
+  return qMakePair<PropertyStatus*, int>(next, offset);
+}
+
+GradientCheck*
+WidgetModel::getCorrectCheck(const QString& name, PropertyStatus* status) const
+{
+  if (name == "qlineargradient") {
+    return new LinearCheck(status);
+  } else if (name == "qradialgradient") {
+    return new RadialCheck(status);
+  } else if (name == "qconicalgradient") {
+    return new ConicalCheck(status);
+  }
+  return nullptr;
+}
+
 PropertyStatus*
 WidgetModel::checkGradient(const QString& value) const
 {
-  auto status = new PropertyStatus();
+  PropertyStatus *first = nullptr, *status = first;
   QString cleanValue = value.simplified().toLower();
-  bool contains = false;
+  QString correctType;
+  GradientCheck* gCheck = nullptr;
+  LinearCheck* linearCheck = nullptr;
+  RadialCheck* radialCheck = nullptr;
+  ConicalCheck* conicalCheck = nullptr;
 
   for (auto& gradient : m_gradient) {
     if (cleanValue.contains(gradient)) {
-      contains = true;
+      auto status = new PropertyStatus(
+        PropertyStatus::GoodGradientName, gradient, 0, gradient.length());
+      gCheck = getCorrectCheck(gradient, status);
+      first = status;
       break;
-    }
-    auto left = cleanValue.split("(").first();
-    double score =
-      rapidfuzz::fuzz::ratio(gradient.toStdString(), left.toStdString());
-    if (score < 100.0 && score > 90.0) { // TODO Increase minimum ??
-      status->state = PropertyStatus::FuzzyGradientName;
-      return status;
+    } else {
+      auto fuzzy = cleanValue.split("(").first();
+      double score =
+        rapidfuzz::fuzz::ratio(gradient.toStdString(), fuzzy.toStdString());
+      if (score < 100.0 && score > 90.0) { // TODO Increase minimum ??
+        auto status = new PropertyStatus(
+          PropertyStatus::FuzzyGradientName, fuzzy, 0, fuzzy.length());
+        gCheck = getCorrectCheck(correctType, status);
+        first = status;
+        correctType = gradient; // the type it SHOULD be!
+        break;
+      }
     }
   }
 
-  if (!contains) {
-    status->state = PropertyStatus::IrrelevantValue;
+  if (!gCheck) {
+    status = new PropertyStatus(PropertyStatus::IrrelevantValue, 0);
     return status;
   }
 
   auto sections =
     cleanValue.split(QRegularExpression("[,()]"), Qt::SkipEmptyParts);
+  auto offset = cleanValue.indexOf("(");
 
-  bool linear = false;
-  bool radial = false;
-  bool conical = false;
   QString name, number, color;
 
   for (auto& section : sections) {
-    if (!(linear || radial || conical)) {
-      if (section == "qlineargradient") {
-        linear = true;
-        continue;
-      } else if (section == "qradialgradient") {
-        radial = true;
-        continue;
-      } else if (section == "qconicalgradient") {
-        conical = true;
-        continue;
-      } else {
-        status->state = PropertyStatus::BadGradientName; // bad name
-        return status;
-      }
+    if (!gCheck) {
     }
     auto parts =
       section.split(QRegularExpression("[\\s:]"), Qt::SkipEmptyParts);
 
     // only two or three parts is valid.
     if (parts.size() < 2 || parts.size() > 3) {
-      status->state = PropertyStatus::BadGradientValue;
+      status->state = PropertyStatus::BadGradientValueCount;
       return status;
     }
 
@@ -1017,74 +1074,92 @@ WidgetModel::checkGradient(const QString& value) const
       color = parts.at(2);
     }
 
-    if (linear) {
-      if (name == "x1" || name == "y1" || name == "x2" || name == "y2") {
-        if (parts.size() == 3) {
-          status->state = PropertyStatus::BadGradientValueCount;
-        } else if (!checkGradientNumber(number.trimmed()))
-          status->state = PropertyStatus::BadGradientValue;
-        return status;
-      } else if (name == "stop") {
-        if (parts.size() == 2)
-          status->state = PropertyStatus::BadGradientValueCount;
-        if (!checkGradientNumber(number.trimmed()))
-          status->state = PropertyStatus::BadGradientNumericalValue;
-        if (!checkGradientColor(color.trimmed()))
-          status->state = PropertyStatus::BadGradientColorValue;
-        return status;
+    if ((linearCheck = dynamic_cast<LinearCheck*>(gCheck))) {
+      auto check = gCheck->set(name);
+      if (check == GradientCheck::GoodName) {
+        offset = cleanValue.indexOf(name, offset);
+        auto [next, nextOffset] = calculateNumericalStatus(
+          section, cleanValue, name, number, offset, parts);
+        offset = nextOffset;
+        gCheck->addStatus(next);
+        continue;
+      } else if (check == GradientCheck::Stop) {
+        auto [next, nextOffset] = calculateStopStatus(
+          section, cleanValue, name, number, color, offset, parts);
+        offset = nextOffset;
+        gCheck->addStatus(next);
+        continue;
+      } else if (check == GradientCheck::Repeat) {
+        PropertyStatus* next = new PropertyStatus();
+        status->state = PropertyStatus::RepeatedGradientValue;
+        status->offset = offset;
+        gCheck->addStatus(next);
       } else {
-        // an invalid name.
+        PropertyStatus* next = new PropertyStatus();
         status->state = PropertyStatus::BadGradientValueName;
-        return status;
+        status->offset = offset;
+        gCheck->addStatus(next);
+        continue;
       }
-    } else if (radial) {
-      if (name == "cx" || name == "cy" || name == "angle") {
-        if (parts.size() == 3) {
-          status->state = PropertyStatus::BadGradientValueCount;
-        } else if (!checkGradientNumber(number.trimmed()))
-          status->state = PropertyStatus::BadGradientValue;
-        return status;
-      } else if (name == "stop") {
-        if (parts.size() == 2)
-          status->state = PropertyStatus::BadGradientValueCount;
-        if (!checkGradientNumber(number.trimmed()))
-          status->state = PropertyStatus::BadGradientNumericalValue;
-        if (!checkGradientColor(color.trimmed()))
-          status->state = PropertyStatus::BadGradientColorValue;
-        return status;
+    } else if ((radialCheck = dynamic_cast<RadialCheck*>(gCheck))) {
+      auto check = gCheck->set(name);
+      if (check == GradientCheck::GoodName) {
+        auto [next, nextOffset] = calculateNumericalStatus(
+          section, cleanValue, name, number, offset, parts);
+        offset = nextOffset;
+        gCheck->addStatus(next);
+        continue;
+      } else if (check == GradientCheck::Stop) {
+        auto [next, nextOffset] = calculateStopStatus(
+          section, cleanValue, name, number, color, offset, parts);
+        offset = nextOffset;
+        gCheck->addStatus(next);
+        continue;
+      } else if (check == GradientCheck::Repeat) {
+        PropertyStatus* next = new PropertyStatus();
+        status->state = PropertyStatus::RepeatedGradientValue;
+        status->offset = offset;
+        gCheck->addStatus(next);
       } else {
         // an invalid name.
+        PropertyStatus* next = new PropertyStatus();
         status->state = PropertyStatus::BadGradientValueName;
-        return status;
+        status->offset = offset;
+        gCheck->addStatus(next);
       }
-    } else if (conical) {
-      if (name == "cx" || name == "cy" || name == "radius" || name == "fx" ||
-          name == "fy") {
-        if (parts.size() == 3) {
-          status->state = PropertyStatus::BadGradientValueCount;
-        } else if (!checkGradientNumber(number.trimmed()))
-          status->state = PropertyStatus::BadGradientValue;
-        return status;
-      } else if (name == "stop") {
-        if (parts.size() == 2)
-          status->state = PropertyStatus::BadGradientValueCount;
-        if (!checkGradientNumber(number.trimmed()))
-          status->state = PropertyStatus::BadGradientNumericalValue;
-        if (!checkGradientColor(color.trimmed()))
-          status->state = PropertyStatus::BadGradientColorValue;
-        return status;
+    } else if ((conicalCheck = dynamic_cast<ConicalCheck*>(gCheck))) {
+      auto check = gCheck->set(name);
+      if (check == GradientCheck::GoodName) {
+        auto [next, nextOffset] = calculateNumericalStatus(
+          section, cleanValue, name, number, offset, parts);
+        offset = nextOffset;
+        gCheck->addStatus(next);
+        continue;
+      } else if (check == GradientCheck::Stop) {
+        auto [next, nextOffset] = calculateStopStatus(
+          section, cleanValue, name, number, color, offset, parts);
+        offset = nextOffset;
+        gCheck->addStatus(next);
+        continue;
+      } else if (check == GradientCheck::Repeat) {
+        PropertyStatus* next = new PropertyStatus();
+        status->state = PropertyStatus::RepeatedGradientValue;
+        status->offset = offset;
+        gCheck->addStatus(next);
       } else {
-        // an invalid name.
+        PropertyStatus* next = new PropertyStatus();
         status->state = PropertyStatus::BadGradientValueName;
-        return status;
+        status->offset = offset;
+        gCheck->addStatus(next);
+        continue;
       }
     } /* else {
        return BadGradientName;
      }*/
   }
 
-  status->state = PropertyStatus::IrrelevantValue;
-  return status;
+  //  first->state = PropertyStatus::IrrelevantValue;
+  return first;
 }
 
 bool

@@ -346,6 +346,7 @@ enum NodeState
   BadSubControlForWidgetState = 0x800,
   SubControlSeperatorState = 0x1000,
   IdSelectorState = 0x2000,
+  ValidPropertyNameState = 0x4000,
   //
   PseudostateState = 0x10000,
   FuzzyPseudostateState = 0x20000,
@@ -398,30 +399,41 @@ struct PropertyStatus
     FuzzyColorValue,
     EmptyGradientValueName, //! Missing value
     FuzzyGradientName,
+    GoodGradientName,          //! Bad gradient name
     BadGradientName,           //! Bad gradient name
     BadGradientValue,          //! Bad gradient value.
     BadGradientNumericalValue, //! Bad gradient number.
     BadGradientColorValue,     //! Bad gradient color.
     BadGradientValueCount,     //! Bad gradient value count.
     BadGradientValueName,      //! Bad gradient value.
+    RepeatedGradientValue,     //! Bad gradient value.
   };
 
-  PropertyStatus(PropertyValueState s = GoodPropertyValue,
+  PropertyStatus(PropertyValueState s = IrrelevantValue,
                  const QString& n = QString(),
                  int o = -1,
-                 int l = 0)
+                 int l = -1)
     : state(s)
     , name(n)
     , offset(o)
-  //    , length(l)
+    , length(l)
   {}
+  ~PropertyStatus()
+  {
+    // delete any linked nodes.
+    auto n = next;
+    while (n) {
+      delete n;
+    }
+  }
 
   PropertyValueState state;
   int offset;
-  //  int length;
+  int length;
   QString name;
+  PropertyStatus* next = nullptr;
 
-  int length() const { return name.length(); }
+  //  int length() const { return name.length(); }
   bool notIrrelevant() const { return (state != IrrelevantValue); }
 };
 

@@ -892,7 +892,10 @@ PropertyNode::PropertyNode(const PropertyNode& other)
               other.type())
 {}
 
-PropertyNode::~PropertyNode() {}
+PropertyNode::~PropertyNode()
+{
+  qDeleteAll(m_valueStatus);
+}
 
 void
 PropertyNode::setWidgetNodes(WidgetNodes* widget)

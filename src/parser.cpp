@@ -561,80 +561,102 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
       auto valueStatus =
         m_datastore->isValidPropertyValueForProperty(propertyName, block);
       AttributeType attributeType = m_datastore->propertyValueAttribute(block);
-      valueStatus->offset = start;
+      //      valueStatus->offset = start;
 
-      if (valueStatus->state == PropertyStatus::GoodPropertyValue) {
-        // valid property and valid value.
-        valueStatus->name = block;
-        property->addValue(block,
-                           ValidPropertyValueState,
-                           getCursorForPosition((pos - block.length())),
-                           valueStatus);
-      } else if (valueStatus->state == PropertyStatus::FuzzyColorValue) {
-        valueStatus->name = block;
-        property->addValue(block,
-                           FuzzyPropertyValueState,
-                           getCursorForPosition((pos - block.length())),
-                           valueStatus);
-      } else if (valueStatus->state == PropertyStatus::FuzzyGradientName) {
-        valueStatus->name =
-          block.mid(valueStatus->offset, block.indexOf("(")).trimmed();
-        property->addValue(block,
-                           FuzzyPropertyValueState,
-                           getCursorForPosition((pos - block.length())),
-                           valueStatus);
-      } else if (valueStatus->state == PropertyStatus::BadGradientValue ||
-                 valueStatus->state == PropertyStatus::BadGradientValueCount ||
-                 valueStatus->state ==
-                   PropertyStatus::BadGradientNumericalValue ||
-                 valueStatus->state == PropertyStatus::BadGradientColorValue) {
-        property->addValue(block,
-                           BadPropertyValueState,
-                           getCursorForPosition((pos - block.length())),
-                           valueStatus);
-      } else {
-        if (attributeType == NoAttributeValue) {
-          // not a valid value for any property
-          auto [type, check] = checkType(block, BadNodeState, property);
-          switch (type) {
-            case NodeType::WidgetType:
-              stepBack(pos, block);
-              return;
+      while (valueStatus) {
+        switch (valueStatus->state) {
+          case PropertyStatus::GoodGradientName: {
+            //            valueStatus->name = block;
+            property->addValue(valueStatus->name,
+                               ValidPropertyNameState,
+                               getCursorForPosition((pos - block.length())),
+                               valueStatus);
+            break;
+          }
+          case PropertyStatus::GoodPropertyValue: {
+            // valid property and valid value.
+            //            valueStatus->name = block;
+            property->addValue(valueStatus->name,
+                               ValidPropertyValueState,
+                               getCursorForPosition((pos - block.length())),
+                               valueStatus);
+            break;
+          }
+          case PropertyStatus::FuzzyColorValue: {
+            //            valueStatus->name = block;
+            property->addValue(valueStatus->name,
+                               FuzzyPropertyValueState,
+                               getCursorForPosition((pos - block.length())),
+                               valueStatus);
+            break;
+          }
+          case PropertyStatus::FuzzyGradientName: {
+            //            valueStatus->name =
+            //            block.mid(valueStatus->offset,
+            //            block.indexOf("(")).trimmed();
+            property->addValue(valueStatus->name,
+                               FuzzyPropertyValueState,
+                               getCursorForPosition((pos - block.length())),
+                               valueStatus);
+            break;
+          }
+          case PropertyStatus::BadGradientValue:
+          case PropertyStatus::BadGradientValueCount:
+          case PropertyStatus::BadGradientNumericalValue:
+          case PropertyStatus::BadGradientColorValue: {
+            property->addValue(block,
+                               BadPropertyValueState,
+                               getCursorForPosition((pos - block.length())),
+                               valueStatus);
+            break;
+          }
+          default: {
+            if (attributeType == NoAttributeValue) {
+              // not a valid value for any property
+              auto [type, check] = checkType(block, BadNodeState, property);
+              switch (type) {
+                case NodeType::WidgetType:
+                  stepBack(pos, block);
+                  return;
 
-            case NodeType::PropertyType: {
-              // another property follows incomplete property.
-              stepBack(pos, block);
-              return;
-            }
+                case NodeType::PropertyType: {
+                  // another property follows incomplete property.
+                  stepBack(pos, block);
+                  return;
+                }
 
-            case NodeType::PropertyValueType:
-              switch (check) {
-                case GoodPropertyState:
+                case NodeType::PropertyValueType:
+                  switch (check) {
+                    case GoodPropertyState:
+                      break;
+
+                    case BadPropertyValueState:
+                      break;
+
+                    case FuzzyPropertyValueState:
+                      break;
+                  }
+
                   break;
 
-                case BadPropertyValueState:
-                  break;
-
-                case FuzzyPropertyValueState:
-                  break;
+                default:
+                  property->addValue(
+                    block,
+                    BadNodeState,
+                    getCursorForPosition((pos - block.length())),
+                    valueStatus);
               }
-
-              break;
-
-            default:
+            } else {
+              // invalid property name but this is a valid property attribute
+              // anyway.
               property->addValue(block,
-                                 BadNodeState,
+                                 ValidPropertyValueState,
                                  getCursorForPosition((pos - block.length())),
                                  valueStatus);
+            }
           }
-        } else {
-          // invalid property name but this is a valid property attribute
-          // anyway.
-          property->addValue(block,
-                             ValidPropertyValueState,
-                             getCursorForPosition((pos - block.length())),
-                             valueStatus);
         }
+        valueStatus = valueStatus->next;
       }
     }
   }

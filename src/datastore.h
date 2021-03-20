@@ -46,6 +46,194 @@ class StylesheetData;
 class Node;
 class WidgetNode;
 
+class GradientCheck
+{
+  bool linear = false;
+  bool radial = false;
+  bool conical = false;
+  PropertyStatus* head;
+  PropertyStatus* foot;
+
+  virtual bool isRepeated() = 0;
+
+public:
+  enum Check
+  {
+    GoodName,
+    Stop,
+    BadName,
+    Repeat,
+  };
+  GradientCheck(PropertyStatus* status)
+    : head(status)
+    , foot(head)
+  {}
+
+  void addStatus(PropertyStatus* next)
+  {
+    foot->next = next;
+    foot = foot->next;
+  }
+
+  virtual Check set(const QString& name) = 0;
+};
+
+class LinearCheck : GradientCheck
+{
+  bool x1 = false, x2 = false, y1 = false, y2 = false;
+  bool x1_r = false, x2_r = false, y1_r = false, y2_r = false;
+
+  bool isRepeated() override { return (x1_r || x2_r || y1_r || y2_r); }
+
+public:
+  LinearCheck(PropertyStatus* status)
+    : GradientCheck(status)
+  {}
+
+  Check set(const QString& name) override
+  {
+    if (name == "x1") {
+      if (x1) {
+        x1_r = true;
+      } else {
+        x1 = true;
+      }
+    } else if (name == "y1") {
+      if (x2) {
+        x2_r = true;
+      } else {
+        x2 = true;
+      }
+    } else if (name == "x2") {
+      if (y1) {
+        y1_r = true;
+      } else {
+        y1 = true;
+      }
+    } else if (name == "y2") {
+      if (y2) {
+        y2_r = true;
+      } else {
+        y2 = true;
+      }
+    } else if (name == "stop") {
+      return Stop;
+    } else {
+      return BadName;
+    }
+    if (isRepeated()) {
+      return Repeat;
+    } else {
+      return GoodName;
+    }
+  }
+};
+
+class RadialCheck : GradientCheck
+{
+  bool cx = false, cy = false, cx_r = false, cy_r = false, angle = false,
+       angle_r = false;
+
+  bool isRepeated() override { return (cx_r || cy_r || angle_r); }
+
+public:
+  RadialCheck(PropertyStatus* status)
+    : GradientCheck(status)
+  {}
+
+  bool set(const QString& name) override
+  {
+    if (name == "cx") {
+      if (cx) {
+        cx_r = true;
+      } else {
+        cx = true;
+      }
+    } else if (name == "cy") {
+      if (cy) {
+        cy_r = true;
+      } else {
+        cy = true;
+      }
+    } else if (name == "angle") {
+      if (angle) {
+        angle_r = true;
+      } else {
+        angle = true;
+      }
+    } else if (name == "stop") {
+      return Stop;
+    } else {
+      return BadName;
+    }
+    if (isRepeated()) {
+      return Repeat;
+    } else {
+      return GoodName;
+    }
+  }
+};
+
+class ConicalCheck : GradientCheck
+{
+  bool cx = false, cy = false, cx_r = false, cy_r = false, fx = false,
+       fx_r = false, fy = false, fy_r = false, radius = false, radius_r = false;
+
+  bool isRepeated() override
+  {
+    return (cx_r || cy_r || fx_r || fy_r || radius_r);
+  }
+
+public:
+  ConicalCheck(PropertyStatus* status)
+    : GradientCheck(status)
+  {}
+
+  bool set(const QString& name) override
+  {
+    if (name == "cx") {
+      if (cx) {
+        cx_r = true;
+      } else {
+        cx = true;
+      }
+    } else if (name == "cy") {
+      if (cy) {
+        cy_r = true;
+      } else {
+        cy = true;
+      }
+    } else if (name == "fx") {
+      if (fx) {
+        fx_r = true;
+      } else {
+        fx = true;
+      }
+    } else if (name == "fy") {
+      if (fy) {
+        fy_r = true;
+      } else {
+        fy = true;
+      }
+    } else if (name == "radius") {
+      if (radius) {
+        radius_r = true;
+      } else {
+        radius = true;
+      }
+    } else if (name == "stop") {
+      return Stop;
+    } else {
+      return BadName;
+    }
+    if (isRepeated()) {
+      return Repeat;
+    } else {
+      return GoodName;
+    }
+  }
+};
+
 class Property
 {
 public:
@@ -248,6 +436,22 @@ private:
   PropertyStatus* checkTextDecoration(const QString& value) const;
 
   QStringList eraseDuplicates(QStringList list);
+  QPair<PropertyStatus*, int> calculateNumericalStatus(
+    const QString& section,
+    const QString& cleanValue,
+    const QString& name,
+    const QString& number,
+    int offset,
+    QStringList parts) const;
+  QPair<PropertyStatus*, int> calculateStopStatus(const QString& section,
+                                                  const QString& cleanValue,
+                                                  const QString& name,
+                                                  const QString& number,
+                                                  const QString& color,
+                                                  int offset,
+                                                  QStringList parts) const;
+  GradientCheck* getCorrectCheck(const QString& name,
+                                 PropertyStatus* status) const;
 };
 
 class DataStore : public QObject

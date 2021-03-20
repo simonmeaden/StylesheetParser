@@ -2081,6 +2081,10 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
               } else if (property->check(section->position) ==
                          BadPropertyValueState) {
                 switch (property->valueStatus(section->position)->state) {
+                  case PropertyStatus::BadGradientValue:
+                    hover.append(tr("Bad gradient value <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
                   case PropertyStatus::BadGradientValueCount:
                     hover.append(tr("Wrong number of parameters <em>%1</em>")
                                    .arg(property->value(section->position)));

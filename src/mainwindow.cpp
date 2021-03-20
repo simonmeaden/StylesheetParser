@@ -192,9 +192,17 @@ MainWindow::initGui()
     //    "color: rd;\n"   // bad property value
     //    "color: blu;\n"  // bad property value
     //    "color blue;\n"  // no property marker
-    "background: \n" // bad gradient name
-    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
-    "    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "background: \n" // bad gradient name
+    //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
+    //    "    #6ea1f1, stop: 1 #567dbc);\n"
+    "background: \n"               // bad color no #, wrong no of numerals
+    "    qlineargradient(x1: ,\n"  // missing numerical value
+    "                    y1: 0,\n" // good value
+    "                    x: 0,\n"  // wrong name (x2)
+    "                    y2: 1, \n"
+    "                    y2: 1, \n"         // repeated name
+    "                    stop: 0 6ea1f1,\n" // bad color no
+    "                    stop: 1 #7dbc);\n" // wrong no of numerals (3 or 6)
   //    "background: \n" // Bad x1 - no value
   //    "    qlineargradient(x1: , y1: 0, x2: 0, y2: 1, stop: 0\n"
   //    "    #6ea1f1, stop: 1 #567dbc);\n"

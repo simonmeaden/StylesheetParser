@@ -165,7 +165,7 @@ struct PartialType
 
   int start = -1;
   int end = -1;
-  int offest = -1;
+  int offset = -1;
   Type type;
 };
 
@@ -274,6 +274,9 @@ enum NodeType
   CommentStartMarkerType,
   CommentEndMarkerType,
 };
+
+bool
+operator!=(NodeSection& left, NodeType& right);
 
 struct NodeStateData
 {
@@ -389,35 +392,35 @@ struct MenuData
 };
 Q_DECLARE_METATYPE(MenuData);
 
+enum PropertyValueState
+{
+  IrrelevantValue = -1,   // Not relevant for this check.
+  GoodPropertyValue = 0,  //! Good value for this property name
+  BadPropertyValue = 0x1, //! Bad general value
+  FuzzyColorValue = 0x2,
+  EmptyGradientValueName = 0x4, //! Missing value
+  FuzzyGradientName = 0x8,
+  GoodGradientName = 0x10,                   //! Bad gradient name
+  BadGradientName = 0x20,                    //! Bad gradient name
+  BadGradientValue = 0x40,                   //! Bad gradient value.
+  BadGradientNumericalValue = 0x80,          //! Bad gradient number.
+  BadGradientColorValue = 0x100,             //! Bad gradient color.
+  BadGradientNumericalAndColorValue = 0x200, //! Bad gradient number and color.
+  BadGradientValueCount = 0x400,             //! Bad gradient value count.
+  BadGradientValueName = 0x800,              //! Bad gradient value.
+  RepeatedGradientValue = 0x1000,            //! Bad gradient value.
+};
+Q_DECLARE_FLAGS(PropertyValueStates, PropertyValueState);
+Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyValueStates)
+
 struct PropertyStatus
 {
-  enum PropertyValueState
-  {
-    IrrelevantValue,   // Not relevant for this check.
-    GoodPropertyValue, //! Good value for this property name
-    BadPropertyValue,  //! Bad general value
-    FuzzyColorValue,
-    EmptyGradientValueName, //! Missing value
-    FuzzyGradientName,
-    GoodGradientName,          //! Bad gradient name
-    BadGradientName,           //! Bad gradient name
-    BadGradientValue,          //! Bad gradient value.
-    BadGradientNumericalValue, //! Bad gradient number.
-    BadGradientColorValue,     //! Bad gradient color.
-    BadGradientValueCount,     //! Bad gradient value count.
-    BadGradientValueName,      //! Bad gradient value.
-    RepeatedGradientValue,     //! Bad gradient value.
-  };
+  static const QStringList names;
 
   PropertyStatus(PropertyValueState s = IrrelevantValue,
                  const QString& n = QString(),
                  int o = -1,
-                 int l = -1)
-    : state(s)
-    , name(n)
-    , offset(o)
-    , length(l)
-  {}
+                 int l = -1);
   ~PropertyStatus()
   {
     // delete any linked nodes.
@@ -427,7 +430,7 @@ struct PropertyStatus
     }
   }
 
-  PropertyValueState state;
+  PropertyValueStates state;
   int offset;
   int length;
   QString name;
@@ -435,6 +438,11 @@ struct PropertyStatus
 
   //  int length() const { return name.length(); }
   bool notIrrelevant() const { return (state != IrrelevantValue); }
+
+  //  QString toString() const { return names.at(int(state)); }
 };
+
+// QDebug
+// operator<<(QDebug debug, const PropertyStatus& status);
 
 #endif // COMMON_H

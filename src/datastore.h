@@ -64,6 +64,13 @@ public:
     BadName,
     Repeat,
   };
+  enum FuzzyCheck
+  {
+    Good,
+    Fuzzy,
+    Bad,
+  };
+
   GradientCheck(PropertyStatus* status)
     : head(status)
     , foot(head)
@@ -75,10 +82,12 @@ public:
     foot = foot->next;
   }
 
+  PropertyStatus* status() { return head; }
+
   virtual Check set(const QString& name) = 0;
 };
 
-class LinearCheck : GradientCheck
+class LinearCheck : public GradientCheck
 {
   bool x1 = false, x2 = false, y1 = false, y2 = false;
   bool x1_r = false, x2_r = false, y1_r = false, y2_r = false;
@@ -129,7 +138,7 @@ public:
   }
 };
 
-class RadialCheck : GradientCheck
+class RadialCheck : public GradientCheck
 {
   bool cx = false, cy = false, cx_r = false, cy_r = false, angle = false,
        angle_r = false;
@@ -141,7 +150,7 @@ public:
     : GradientCheck(status)
   {}
 
-  bool set(const QString& name) override
+  Check set(const QString& name) override
   {
     if (name == "cx") {
       if (cx) {
@@ -174,7 +183,7 @@ public:
   }
 };
 
-class ConicalCheck : GradientCheck
+class ConicalCheck : public GradientCheck
 {
   bool cx = false, cy = false, cx_r = false, cy_r = false, fx = false,
        fx_r = false, fy = false, fy_r = false, radius = false, radius_r = false;
@@ -189,7 +198,7 @@ public:
     : GradientCheck(status)
   {}
 
-  bool set(const QString& name) override
+  Check set(const QString& name) override
   {
     if (name == "cx") {
       if (cx) {
@@ -416,7 +425,7 @@ private:
   PropertyStatus* checkFontSize(const QString& value) const;
   PropertyStatus* checkFontWeight(const QString& value) const;
   PropertyStatus* checkGradient(const QString& value) const;
-  bool checkGradientColor(const QString& value) const;
+  GradientCheck::FuzzyCheck checkGradientColor(const QString& value) const;
   bool checkGradientNumber(const QString& value) const;
   PropertyStatus* checkIcon(const QString& value) const;
   PropertyStatus* checkLength(const QString& value) const;

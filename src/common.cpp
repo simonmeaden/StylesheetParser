@@ -33,3 +33,76 @@ operator!=(NodeSection& left, NodeSection& right)
 {
   return !(left == right);
 }
+
+const QStringList PropertyStatus::names =
+  QStringList() << "IrrelevantValue" << // Not relevant for this check.
+  "GoodPropertyValue" <<                //! Good value for this property name
+  "BadPropertyValue" <<                 //! Bad general value
+  "FuzzyColorValue"
+                << "EmptyGradientValueName" << //! Missing value
+  "FuzzyGradientName"
+                << "GoodGradientName" << //! Bad gradient name
+  "BadGradientName" <<                   //! Bad gradient name
+  "BadGradientValue" <<                  //! Bad gradient value.
+  "BadGradientNumericalValue" <<         //! Bad gradient number.
+  "BadGradientColorValue" <<             //! Bad gradient color.
+  "BadGradientNumericalAndColorValue" << //! Bad gradient number and color.
+  "BadGradientValueCount" <<             //! Bad gradient value count.
+  "BadGradientValueName" <<              //! Bad gradient value.
+  "RepeatedGradientValue";               //! Bad gradient value.
+
+PropertyStatus::PropertyStatus(PropertyValueState s,
+                               const QString& n,
+                               int o,
+                               int l)
+  : state(IrrelevantValue)
+  , offset(o)
+  , length(l)
+  , name(n)
+{}
+
+// QDebug
+// operator<<(QDebug debug, const PropertyStatus& status)
+//{
+//  QDebugStateSaver saver(debug);
+//  debug.nospace() << "State : " << status.toString()
+//                  << " name : " << status.name;
+//  debug.nospace() << "  offset : " << status.offset
+//                  << " length : " << status.length;
+//  return debug;
+//}
+
+static const QStringList NodeTypeNames = QStringList()
+                                         << "NoType" <<
+                                         //  "NodeType"<<
+                                         "WidgetType"
+                                         << "WidgetsType" <<
+                                         //  "FuzzyWidgetType"<<
+                                         "PseudoStateType" <<
+                                         //  "FuzzyPseudoStateType"<<
+                                         "PseudoStateMarkerType"
+                                         << "SubControlType" <<
+                                         //  "FuzzySubControlType"<<
+                                         "SubControlMarkerType"
+                                         << "IdSelectorType"
+                                         << "IdSelectorMarkerType"
+                                         << "ColonType"
+                                         << "StartBraceType"
+                                         << "EndBraceType"
+                                         << "NewlineType"
+                                         << "PropertyType" <<
+                                         //  "FuzzyPropertyType"<<
+                                         "PropertyMarkerType"
+                                         << "PropertyValueType" <<
+                                         //  "FuzzyPropertyValueType"<<
+                                         "BadNodeType"
+                                         << "CommentType"
+                                         << "CommentStartMarkerType"
+                                         << "CommentEndMarkerType";
+QDebug
+operator<<(QDebug debug, const NodeType& status)
+{
+  QDebugStateSaver saver(debug);
+  debug.nospace() << "State : " << NodeTypeNames.at(int(status));
+  return debug;
+}

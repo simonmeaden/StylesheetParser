@@ -189,9 +189,10 @@ MainWindow::initGui()
     "    #6ea1f1, stop: 1 #567dbc);\n"
 #elif defined(BADPROPERTY)
 
-    //    "color: rd;\n"   // bad property value
-    //    "color: blu;\n"  // bad property value
-    //    "color blue;\n"  // no property marker
+    //    "color: rd;\n"  // bad property value
+    //                    //    "color: blu;\n"  // bad property value
+    //    "color blue;\n" // no property marker
+    //    "colr: blue;\n" // no property marker
     //    "background: \n" // bad gradient name
     //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
     //    "    #6ea1f1, stop: 1 #567dbc);\n"

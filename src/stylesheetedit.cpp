@@ -1993,6 +1993,11 @@ void
 StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
 {
   auto pos = event->pos();
+  auto cursorPos = cursorForPosition(pos).anchor();
+  if (cursorPos >= toPlainText().length()) {
+    // outside text
+    return;
+  }
   NodeSection* section = nullptr;
   QString hover;
   m_parser->nodeForPoint(pos, &section);
@@ -2051,11 +2056,9 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
               if (!property->isValidPropertyName()) {
                 hover.append(tr("Invalid property name <em>%1</em>")
                                .arg(property->name()));
-              }
-              if (!property->hasPropertyMarker()) {
+              } else if (!property->hasPropertyMarker()) {
                 setHoverBadPropertyMarker(hover);
-              }
-              if (!property->hasPropertyEndMarker()) {
+              } else if (!property->hasPropertyEndMarker()) {
                 setHoverBadPropertyEndMarker(hover, property->end());
               }
               break;
@@ -2065,45 +2068,41 @@ StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
                 setHoverBadPropertyEndMarker(hover, property->end());
               } else if (!property->hasPropertyMarker()) {
                 setHoverBadPropertyMarker(hover);
-              } else if (property->check(section->position) ==
-                         FuzzyPropertyValueState) {
-                switch (property->valueStatus(section->position)->state) {
-                  case PropertyStatus::FuzzyColorValue:
-                    hover.append(tr("Bad color value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case PropertyStatus::FuzzyGradientName:
-                    hover.append(tr("Bad gradient name <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                }
-
-              } else if (property->check(section->position) ==
-                         BadPropertyValueState) {
-                switch (property->valueStatus(section->position)->state) {
-                  case PropertyStatus::BadGradientValue:
-                    hover.append(tr("Bad gradient value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case PropertyStatus::BadGradientValueCount:
-                    hover.append(tr("Wrong number of parameters <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case PropertyStatus::BadGradientNumericalValue:
-                    hover.append(tr("Bad numerical value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case PropertyStatus::BadGradientColorValue:
-                    hover.append(tr("Bad color value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                }
-
               } else if (!property->isValueValid(section->position)) {
                 hover.append(tr("Invalid property value <em>%1</em>")
                                .arg(property->name()));
+              } else {
+                switch (property->valueStatus(section->position)->state) {
+                  case FuzzyColorValue:
+                    hover.append(tr("Fuzzy color value <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                  case FuzzyGradientName:
+                    hover.append(tr("Fuzzy gradient name <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                  case BadGradientValue:
+                    hover.append(tr("Bad gradient value <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                  case BadGradientValueCount:
+                    hover.append(tr("Wrong number of parameters <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                  case BadGradientNumericalValue:
+                    hover.append(tr("Bad numerical value <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                  case BadGradientNumericalAndColorValue:
+                    hover.append(tr("Bad numerical & color values <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                  case BadGradientColorValue:
+                    hover.append(tr("Bad color value <em>%1</em>")
+                                   .arg(property->value(section->position)));
+                    break;
+                }
               }
-              break;
             }
             case SectionType::PropertyEndMarker:
             default:

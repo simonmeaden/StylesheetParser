@@ -90,7 +90,7 @@ Parser::checkType(const QString& block,
   if (property) {
     auto propertyState =
       m_datastore->isValidPropertyValueForProperty(property->name(), block);
-    if (propertyState->state == PropertyStatus::GoodPropertyValue) {
+    if (propertyState->state == GoodPropertyValue) {
       return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
                                             NodeState::GoodPropertyState);
     } else {
@@ -536,127 +536,129 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
                                 int& pos,
                                 QString& block)
 {
-  QString propertyName = property->name();
-
-  while (!(block = findNext(text, pos)).isEmpty()) {
-    if (block == ":") {
-      if (!property->hasPropertyMarker()) {
-        property->setPropertyMarker(true);
-        property->setPropertyMarkerCursor(getCursorForPosition(pos - 1));
-      } else {
-        /*TODO error too many :*/
-      }
-    } else if (block == "/*") {
-      parseComment(nodes, text, start, pos);
-    } else if (block == "\n") {
-      stashNewline(nodes, pos++);
-    } else if (block == ";") {
-      property->setPropertyEndMarker(true);
-      property->setPropertyEndMarkerCursor(getCursorForPosition(pos - 1));
-      break;
-    } else if (block == "}") {
-      stepBack(pos, block);
-      break;
-    } else {
-      auto valueStatus =
-        m_datastore->isValidPropertyValueForProperty(propertyName, block);
-      AttributeType attributeType = m_datastore->propertyValueAttribute(block);
-      //      valueStatus->offset = start;
-
-      while (valueStatus) {
-        switch (valueStatus->state) {
-          case PropertyStatus::GoodGradientName: {
-            //            valueStatus->name = block;
-            property->addValue(valueStatus->name,
-                               ValidPropertyNameState,
-                               getCursorForPosition((pos - block.length())),
-                               valueStatus);
-            break;
-          }
-          case PropertyStatus::GoodPropertyValue: {
-            // valid property and valid value.
-            //            valueStatus->name = block;
-            property->addValue(valueStatus->name,
-                               ValidPropertyValueState,
-                               getCursorForPosition((pos - block.length())),
-                               valueStatus);
-            break;
-          }
-          case PropertyStatus::FuzzyColorValue: {
-            //            valueStatus->name = block;
-            property->addValue(valueStatus->name,
-                               FuzzyPropertyValueState,
-                               getCursorForPosition((pos - block.length())),
-                               valueStatus);
-            break;
-          }
-          case PropertyStatus::FuzzyGradientName: {
-            //            valueStatus->name =
-            //            block.mid(valueStatus->offset,
-            //            block.indexOf("(")).trimmed();
-            property->addValue(valueStatus->name,
-                               FuzzyPropertyValueState,
-                               getCursorForPosition((pos - block.length())),
-                               valueStatus);
-            break;
-          }
-          case PropertyStatus::BadGradientValue:
-          case PropertyStatus::BadGradientValueCount:
-          case PropertyStatus::BadGradientNumericalValue:
-          case PropertyStatus::BadGradientColorValue: {
-            property->addValue(block,
-                               BadPropertyValueState,
-                               getCursorForPosition((pos - block.length())),
-                               valueStatus);
-            break;
-          }
-          default: {
-            if (attributeType == NoAttributeValue) {
-              // not a valid value for any property
-              auto [type, check] = checkType(block, BadNodeState, property);
-              switch (type) {
-                case NodeType::WidgetType:
-                  stepBack(pos, block);
-                  return;
-
-                case NodeType::PropertyType: {
-                  // another property follows incomplete property.
-                  stepBack(pos, block);
-                  return;
-                }
-
-                case NodeType::PropertyValueType:
-                  switch (check) {
-                    case GoodPropertyState:
-                      break;
-
-                    case BadPropertyValueState:
-                      break;
-
-                    case FuzzyPropertyValueState:
-                      break;
-                  }
-
-                  break;
-
-                default:
-                  property->addValue(
-                    block,
-                    BadNodeState,
-                    getCursorForPosition((pos - block.length())),
-                    valueStatus);
-              }
-            } else {
-              // invalid property name but this is a valid property attribute
-              // anyway.
-              property->addValue(block,
-                                 ValidPropertyValueState,
-                                 getCursorForPosition((pos - block.length())),
-                                 valueStatus);
-            }
-          }
+  if (property->isValidPropertyName()) {
+    QString propertyName = property->name();
+    while (!(block = findNext(text, pos)).isEmpty()) {
+      if (block == ":") {
+        if (!property->hasPropertyMarker()) {
+          property->setPropertyMarker(true);
+          property->setPropertyMarkerCursor(getCursorForPosition(pos - 1));
+        } else {
+          /*TODO error too many :*/
         }
-        valueStatus = valueStatus->next;
+      } else if (block == "/*") {
+        parseComment(nodes, text, start, pos);
+      } else if (block == "\n") {
+        stashNewline(nodes, pos++);
+      } else if (block == ";") {
+        property->setPropertyEndMarker(true);
+        property->setPropertyEndMarkerCursor(getCursorForPosition(pos - 1));
+        break;
+      } else if (block == "}") {
+        stepBack(pos, block);
+        break;
+      } else {
+        auto valueStatus =
+          m_datastore->isValidPropertyValueForProperty(propertyName, block);
+        //        AttributeType attributeType =
+        //          m_datastore->propertyValueAttribute(block);
+        property->addValue(valueStatus->name,
+                           ValidPropertyNameState,
+                           getCursorForPosition((pos - block.length())),
+                           valueStatus);
+
+        //        while (valueStatus) {
+        //          switch (valueStatus->state) {
+        //            case PropertyStatus::GoodGradientName: {
+        //              //            valueStatus->name = block;
+        //              property->addValue(valueStatus->name,
+        //                                 ValidPropertyNameState,
+        //                                 getCursorForPosition((pos -
+        //                                 block.length())), valueStatus);
+        //              break;
+        //            }
+        //            case GoodPropertyValue: {
+        //              // valid property and valid value.
+        //              property->addValue(valueStatus->name,
+        //                                 ValidPropertyValueState,
+        //                                 getCursorForPosition((pos -
+        //                                 block.length())), valueStatus);
+        //              break;
+        //            }
+        //            case FuzzyColorValue:
+        //            case FuzzyGradientName: {
+        //              property->addValue(valueStatus->name,
+        //                                 FuzzyPropertyValueState,
+        //                                 getCursorForPosition((pos -
+        //                                 block.length())), valueStatus);
+        //              break;
+        //            }
+        //            case BadGradientValue:
+        //            case BadGradientValueName:
+        //            case BadGradientValueCount:
+        //            case BadGradientNumericalValue:
+        //            case BadGradientColorValue:
+        //            case BadGradientNumericalAndColorValue:
+        //            case RepeatedGradientValue: {
+        //              property->addValue(block,
+        //                                 BadPropertyValueState,
+        //                                 getCursorForPosition((pos -
+        //                                 block.length())), valueStatus);
+        //              break;
+        //            }
+        //            case IrrelevantValue:
+        //              // these are not used or stored so dump them here.
+        //              delete valueStatus;
+        //              break;
+        //            default: {
+        //              if (attributeType == NoAttributeValue) {
+        //                // not a valid value for any property
+        //                auto [type, check] = checkType(block, BadNodeState,
+        //                property); switch (type) {
+        //                  case NodeType::WidgetType:
+        //                    stepBack(pos, block);
+        //                    return;
+
+        //                  case NodeType::PropertyType: {
+        //                    // another property follows incomplete property.
+        //                    stepBack(pos, block);
+        //                    return;
+        //                  }
+
+        //                  case NodeType::PropertyValueType:
+        //                    switch (check) {
+        //                      case GoodPropertyState:
+        //                        break;
+
+        //                      case BadPropertyValueState:
+        //                        break;
+
+        //                      case FuzzyPropertyValueState:
+        //                        break;
+        //                    }
+
+        //                    break;
+
+        //                  default:
+        //                    property->addValue(
+        //                      block,
+        //                      BadNodeState,
+        //                      getCursorForPosition((pos - block.length())),
+        //                      valueStatus);
+        //                }
+        //              } else {
+        //                // invalid property name but this is a valid property
+        //                attribute
+        //                // anyway.
+        //                property->addValue(block,
+        //                                   ValidPropertyValueState,
+        //                                   getCursorForPosition((pos -
+        //                                   block.length())), valueStatus);
+        //              }
+        //            }
+        //          }
+        //          valueStatus = valueStatus->next;
+        //        }
       }
     }
   }

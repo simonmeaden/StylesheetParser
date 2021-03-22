@@ -160,8 +160,12 @@ StylesheetHighlighter::formatVisiblePart(int blockStart,
     l = blockEnd - blockStart;
   }
 
-  if (l > 0)
+  if (l > 0) {
+    //    qDebug() << "bs = " << blockStart << ", be =  = " << blockEnd;
+    //    qDebug() << "position = " << position << ", length = " << length;
+    //    qDebug() << "p = " << p << ", l = " << l;
     setFormat(p, l, format);
+  }
 }
 
 void
@@ -284,7 +288,10 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
       for (auto pt : partialTypes) {
         switch (pt.type) {
           case PartialType::Name:
-            if (property->isValidPropertyName()) {
+            if (!property->hasPropertyMarker()) {
+              formatVisiblePart(
+                blockStart, blockEnd, position, length, m_badPropertyFormat);
+            } else if (property->isValidPropertyName()) {
               formatVisiblePart(
                 blockStart, blockEnd, position, length, m_propertyFormat);
             } else {
@@ -321,30 +328,46 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
       break;
 
     if (isInBlock(position, length, blockStart, blockEnd)) {
-      PropertyStatus::PropertyValueState state = status->state;
-      switch (state) {
-        case PropertyStatus::FuzzyGradientName: {
-          formatVisiblePart(position - blockStart,
-                            position - blockStart + status->name.length(),
-                            position - blockStart,
-                            status->name.length(),
-                            m_badValueFormat);
-          break;
+      switch (status->state) {
+        case GoodPropertyValue: {
+          //          qDebug() << *status << " format : m_valueFormat";
+          if (!property->hasPropertyMarker()) {
+            formatVisiblePart(
+              blockStart, blockEnd, position, length, m_badPropertyFormat);
+          } else {
+            formatVisiblePart(
+              blockStart, blockEnd, position, status->length, m_valueFormat);
+          }
+          continue;
         }
-        case PropertyStatus::FuzzyColorValue: {
-          formatVisiblePart(status->offset,
-                            position + status->name.length(),
-                            position,
-                            length,
-                            m_badValueFormat);
-          break;
+        case GoodGradientName: {
+          //          qDebug() << *status << " format : m_valueFormat";
+          formatVisiblePart(
+            blockStart, blockEnd, position, status->length, m_valueFormat);
+          continue;
+        }
+        case FuzzyGradientName:
+        case RepeatedGradientValue:
+        case BadGradientValueName:
+        case BadGradientValueCount:
+        case BadGradientValue:
+        case BadGradientNumericalValue:
+        case BadGradientColorValue:
+        case BadGradientNumericalAndColorValue:
+        case FuzzyColorValue: {
+          //          qDebug() << *status << " format : m_badValueFormat";
+          formatVisiblePart(
+            blockStart, blockEnd, position, status->length, m_badValueFormat);
+          continue;
         }
           //      if (check == ValidPropertyValueState) {
           //        formatVisiblePart(
-          //          blockStart, blockEnd, position, length, m_valueFormat);
+          //          blockStart, blockEnd, position, length,
+          //          m_valueFormat);
           //      } else {
           //        formatVisiblePart(
-          //          blockStart, blockEnd, position, length, m_badValueFormat);
+          //          blockStart, blockEnd, position, length,
+          //          m_badValueFormat);
           //      }
       }
     }
@@ -498,56 +521,13 @@ StylesheetHighlighter::highlightBlock(const QString& text)
       }
 
       case NodeType::PropertyType: {
+        //        qDebug() << "PropertyType : " << type <, " name : " << text;
         PropertyNode* property = qobject_cast<PropertyNode*>(node);
         auto t = m_editor->toPlainText();
         bool finalBlock = checkForEmpty(t.mid(property->end()));
         formatProperty(property, blockStart, blockEnd, finalBlock);
         break;
       }
-
-        //      case NodeType::StartBraceType: {
-        //        StartBraceNode* startbrace =
-        //        qobject_cast<StartBraceNode*>(node); if
-        //        (startbrace->isBraceAtCursor()) {
-        //          if (startbrace->hasEndBrace()) {
-        //            setFormat(nodeStart, node->length(),
-        //            m_braceMatchFormat);
-        //          } else {
-        //            setFormat(nodeStart, node->length(),
-        //            m_badBraceMatchFormat);
-        //          }
-        //        } else {
-        //          if (startbrace->hasEndBrace()) {
-        //            setFormat(nodeStart, node->length(),
-        //            m_startBraceFormat);
-        //          } else {
-        //            setFormat(nodeStart, node->length(),
-        //            m_badStartBraceFormat);
-        //          }
-        //        }
-        //        break;
-        //      }
-
-        //      case NodeType::EndBraceType: {
-        //        EndBraceNode* endbrace = qobject_cast<EndBraceNode*>(node);
-        //        if (endbrace->isBraceAtCursor()) {
-        //          if (endbrace->hasStartBrace()) {
-        //            setFormat(nodeStart, node->length(),
-        //            m_braceMatchFormat);
-        //          } else {
-        //            setFormat(nodeStart, node->length(),
-        //            m_badBraceMatchFormat);
-        //          }
-        //        } else {
-        //          if (endbrace->hasStartBrace()) {
-        //            setFormat(nodeStart, node->length(), m_endBraceFormat);
-        //          } else {
-        //            setFormat(nodeStart, node->length(),
-        //            m_badEndBraceFormat);
-        //          }
-        //        }
-        //        break;
-        //      }
 
       default:
         break;

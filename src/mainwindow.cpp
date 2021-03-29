@@ -274,7 +274,7 @@ MainWindow::initGui()
   //    "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0
   //    #6ea1f1, stop: 1 #567dbc);\n"
   //    "}"
-  ;
+  //  ;
   //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
   //    MISSING END
   //                                                                 // BRACE

@@ -55,22 +55,24 @@ PropertyStatus::PropertyStatus(PropertyValueState s,
                                const QString& n,
                                int o,
                                int l)
-  : state(IrrelevantValue)
+  : state(s)
   , offset(o)
   , length(l)
   , name(n)
-{}
+{
+  qDebug();
+}
 
-// QDebug
-// operator<<(QDebug debug, const PropertyStatus& status)
-//{
-//  QDebugStateSaver saver(debug);
-//  debug.nospace() << "State : " << status.toString()
-//                  << " name : " << status.name;
-//  debug.nospace() << "  offset : " << status.offset
-//                  << " length : " << status.length;
-//  return debug;
-//}
+QDebug
+operator<<(QDebug debug, const PropertyStatus& status)
+{
+  QDebugStateSaver saver(debug);
+  debug.nospace() << "State : " << status.toString()
+                  << " name : " << status.name;
+  debug.nospace() << "  offset : " << status.offset
+                  << " length : " << status.length;
+  return debug;
+}
 
 static const QStringList NodeTypeNames = QStringList()
                                          << "NoType" <<
@@ -100,9 +102,9 @@ static const QStringList NodeTypeNames = QStringList()
                                          << "CommentStartMarkerType"
                                          << "CommentEndMarkerType";
 QDebug
-operator<<(QDebug debug, const NodeType& status)
+operator<<(QDebug debug, const NodeType& type)
 {
   QDebugStateSaver saver(debug);
-  debug.nospace() << "State : " << NodeTypeNames.at(int(status));
+  debug.nospace() << "Type : " << NodeTypeNames.at(int(type));
   return debug;
 }

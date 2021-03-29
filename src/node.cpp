@@ -1060,15 +1060,19 @@ PropertyNode::end() const
 int
 PropertyNode::length() const
 {
-  if (m_cursors.isEmpty()) {
+  if (hasPropertyEndMarker()) {
+    return m_endMarkerCursor.anchor() - position();
+  } else if (m_cursors.isEmpty()) {
     if (!hasPropertyMarker()) {
       return m_name.length();
     } else {
       return propertyMarkerCursor().anchor() + 1;
     }
   } else {
-    return m_cursors.last().anchor() - m_cursor.anchor() +
-           m_values.last().length();
+    auto value = m_values.last();
+    auto status = m_valueStatus.last();
+    return m_cursors.last().anchor() + position() + status->offset +
+           value.length();
   }
 
   return 0;

@@ -631,6 +631,7 @@ StylesheetEditor::StylesheetEditor(DataStore* datastore, QWidget* parent)
   , m_parseComplete(false)
   , m_oldSection(new NodeSection(this))
 {
+  m_datastore->setEditor(this);
   setFont(QFont("Source Code Pro", 9));
   setMouseTracking(true);
   loadYamlConfig();
@@ -1992,135 +1993,138 @@ StylesheetEditor::mousePressEvent(QMouseEvent* event)
 void
 StylesheetEditor::mouseMoveEvent(QMouseEvent* event)
 {
-  auto pos = event->pos();
-  auto cursorPos = cursorForPosition(pos).anchor();
-  if (cursorPos >= toPlainText().length()) {
-    // outside text
-    return;
-  }
-  NodeSection* section = nullptr;
-  QString hover;
-  m_parser->nodeForPoint(pos, &section);
-  setToolTip(QString());
-  if (section) {
-    if (*section != *m_oldSection) {
-      if (section->node) {
-        auto node = section->node;
-        if (section->isWidgetType()) {
-          auto widget = qobject_cast<WidgetNode*>(node);
-          switch (section->type) {
-            case SectionType::WidgetName: {
-              if (widget && widget->isNameFuzzy()) {
-                setHoverFuzzyWidgetName(hover, widget->name());
-              }
-              break;
-            }
-            case SectionType::WidgetSubControlMarker:
-            case SectionType::WidgetSubControlName: {
-              //              if (widget->isSubControlFuzzy()) {
-              //                setHoverFuzzySubControl(hover,
-              //                widget->subControls()->name());
-              //              } else if (widget->isSubControlBad()) {
-              //                setHoverBadSubControl(
-              //                  hover, widget->name(),
-              //                  widget->subControls()->name());
-              //              }
-              break;
-            }
-            case SectionType::WidgetPseudoStateMarker:
-            case SectionType::WidgetPseudoState: {
-              //              if (widget->isSubControlFuzzy()) {
-              //                if (widget->isPseudoState()) {
-              //                  setHoverFuzzyPseudoState(hover,
-              //                  widget->extensionName());
-              //                }
-              //              }
-              break;
-            }
-            case WidgetPropertyName:
-              break;
-            case WidgetPropertyValue:
-              break;
-            case WidgetStartBrace:
-            case WidgetEndBrace:
-              break;
-            default: {
-              qWarning();
-              break;
-            }
-          }
-        } else if (section->isPropertyType()) {
-          auto property = qobject_cast<PropertyNode*>(node);
-          switch (section->type) {
-            case SectionType::PropertyName: {
-              if (!property->isValidPropertyName()) {
-                hover.append(tr("Invalid property name <em>%1</em>")
-                               .arg(property->name()));
-              } else if (!property->hasPropertyMarker()) {
-                setHoverBadPropertyMarker(hover);
-              } else if (!property->hasPropertyEndMarker()) {
-                setHoverBadPropertyEndMarker(hover, property->end());
-              }
-              break;
-            }
-            case SectionType::PropertyValue: {
-              if (!property->hasPropertyEndMarker()) {
-                setHoverBadPropertyEndMarker(hover, property->end());
-              } else if (!property->hasPropertyMarker()) {
-                setHoverBadPropertyMarker(hover);
-              } else if (!property->isValueValid(section->position)) {
-                hover.append(tr("Invalid property value <em>%1</em>")
-                               .arg(property->name()));
-              } else {
-                switch (property->valueStatus(section->position)->state) {
-                  case FuzzyColorValue:
-                    hover.append(tr("Fuzzy color value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case FuzzyGradientName:
-                    hover.append(tr("Fuzzy gradient name <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case BadGradientValue:
-                    hover.append(tr("Bad gradient value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case BadGradientValueCount:
-                    hover.append(tr("Wrong number of parameters <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case BadGradientNumericalValue:
-                    hover.append(tr("Bad numerical value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case BadGradientNumericalAndColorValue:
-                    hover.append(tr("Bad numerical & color values <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                  case BadGradientColorValue:
-                    hover.append(tr("Bad color value <em>%1</em>")
-                                   .arg(property->value(section->position)));
-                    break;
-                }
-              }
-            }
-            case SectionType::PropertyEndMarker:
-            default:
-              break;
-          }
-        }
-      }
-      if (!hover.isEmpty()) {
-        QToolTip::showText(event->globalPos(), hover, this, viewport()->rect());
-      } else {
-        QToolTip::hideText();
-      }
-      m_oldSection = section;
-    }
-  } else {
-    QToolTip::hideText();
-    m_oldSection->clear();
-  }
+  //  auto pos = event->pos();
+  //  auto cursorPos = cursorForPosition(pos).anchor();
+  //  if (cursorPos >= toPlainText().length()) {
+  //    // outside text
+  //    return;
+  //  }
+  //  NodeSection* section = nullptr;
+  //  QString hover;
+  //  m_parser->nodeForPoint(pos, &section);
+  //  setToolTip(QString());
+  //  if (section) {
+  //    if (*section != *m_oldSection) {
+  //      if (section->node) {
+  //        auto node = section->node;
+  //        if (section->isWidgetType()) {
+  //          auto widget = qobject_cast<WidgetNode*>(node);
+  //          switch (section->type) {
+  //            case SectionType::WidgetName: {
+  //              if (widget && widget->isNameFuzzy()) {
+  //                setHoverFuzzyWidgetName(hover, widget->name());
+  //              }
+  //              break;
+  //            }
+  //            case SectionType::WidgetSubControlMarker:
+  //            case SectionType::WidgetSubControlName: {
+  //              //              if (widget->isSubControlFuzzy()) {
+  //              //                setHoverFuzzySubControl(hover,
+  //              //                widget->subControls()->name());
+  //              //              } else if (widget->isSubControlBad()) {
+  //              //                setHoverBadSubControl(
+  //              //                  hover, widget->name(),
+  //              //                  widget->subControls()->name());
+  //              //              }
+  //              break;
+  //            }
+  //            case SectionType::WidgetPseudoStateMarker:
+  //            case SectionType::WidgetPseudoState: {
+  //              //              if (widget->isSubControlFuzzy()) {
+  //              //                if (widget->isPseudoState()) {
+  //              //                  setHoverFuzzyPseudoState(hover,
+  //              //                  widget->extensionName());
+  //              //                }
+  //              //              }
+  //              break;
+  //            }
+  //            case WidgetPropertyName:
+  //              break;
+  //            case WidgetPropertyValue:
+  //              break;
+  //            case WidgetStartBrace:
+  //            case WidgetEndBrace:
+  //              break;
+  //            default: {
+  //              qWarning();
+  //              break;
+  //            }
+  //          }
+  //        } else if (section->isPropertyType()) {
+  //          auto property = qobject_cast<PropertyNode*>(node);
+  //          switch (section->type) {
+  //            case SectionType::PropertyName: {
+  //              if (!property->isValidPropertyName()) {
+  //                hover.append(tr("Invalid property name <em>%1</em>")
+  //                               .arg(property->name()));
+  //              } else if (!property->hasPropertyMarker()) {
+  //                setHoverBadPropertyMarker(hover);
+  //              } else if (!property->hasPropertyEndMarker()) {
+  //                setHoverBadPropertyEndMarker(hover, property->end());
+  //              }
+  //              break;
+  //            }
+  //            case SectionType::PropertyValue: {
+  //              if (!property->hasPropertyEndMarker()) {
+  //                setHoverBadPropertyEndMarker(hover, property->end());
+  //              } else if (!property->hasPropertyMarker()) {
+  //                setHoverBadPropertyMarker(hover);
+  //              } else if (!property->isValueValid(section->position)) {
+  //                hover.append(tr("Invalid property value <em>%1</em>")
+  //                               .arg(property->name()));
+  //              } else {
+  //                switch (property->valueStatus(section->position)->state) {
+  //                  case FuzzyColorValue:
+  //                    hover.append(tr("Fuzzy color value <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                  case FuzzyGradientName:
+  //                    hover.append(tr("Fuzzy gradient name <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                  case BadGradientValue:
+  //                    hover.append(tr("Bad gradient value <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                  case BadGradientValueCount:
+  //                    hover.append(tr("Wrong number of parameters
+  //                    <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                  case BadGradientNumericalValue:
+  //                    hover.append(tr("Bad numerical value <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                  case BadGradientNumericalAndColorValue:
+  //                    hover.append(tr("Bad numerical & color values
+  //                    <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                  case BadGradientColorValue:
+  //                    hover.append(tr("Bad color value <em>%1</em>")
+  //                                   .arg(property->value(section->position)));
+  //                    break;
+  //                }
+  //              }
+  //            }
+  //            case SectionType::PropertyEndMarker:
+  //            default:
+  //              break;
+  //          }
+  //        }
+  //      }
+  //      if (!hover.isEmpty()) {
+  //        QToolTip::showText(event->globalPos(), hover, this,
+  //        viewport()->rect());
+  //      } else {
+  //        QToolTip::hideText();
+  //      }
+  //      m_oldSection = section;
+  //    }
+  //  } else {
+  //    QToolTip::hideText();
+  //    m_oldSection->clear();
+  //  }
   QPlainTextEdit::mouseMoveEvent(event);
 }
 

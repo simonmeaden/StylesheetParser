@@ -275,8 +275,8 @@ enum NodeType
   CommentEndMarkerType,
 };
 
-bool
-operator!=(NodeSection& left, NodeType& right);
+QDebug
+operator<<(QDebug debug, const NodeType& type);
 
 struct NodeStateData
 {
@@ -394,24 +394,27 @@ Q_DECLARE_METATYPE(MenuData);
 
 enum PropertyValueState
 {
-  IrrelevantValue = -1,   // Not relevant for this check.
-  GoodPropertyValue = 0,  //! Good value for this property name
-  BadPropertyValue = 0x1, //! Bad general value
-  FuzzyColorValue = 0x2,
-  EmptyGradientValueName = 0x4, //! Missing value
-  FuzzyGradientName = 0x8,
-  GoodGradientName = 0x10,                   //! Bad gradient name
-  BadGradientName = 0x20,                    //! Bad gradient name
-  BadGradientValue = 0x40,                   //! Bad gradient value.
-  BadGradientNumericalValue = 0x80,          //! Bad gradient number.
-  BadGradientColorValue = 0x100,             //! Bad gradient color.
-  BadGradientNumericalAndColorValue = 0x200, //! Bad gradient number and color.
-  BadGradientValueCount = 0x400,             //! Bad gradient value count.
-  BadGradientValueName = 0x800,              //! Bad gradient value.
-  RepeatedGradientValue = 0x1000,            //! Bad gradient value.
+  IrrelevantValue,   // Not relevant for this check.
+  GoodPropertyValue, //! Good value for this property name
+  BadPropertyValue,  //! Bad general value
+  FuzzyColorValue,
+  EmptyGradientValueName, //! Missing value
+  FuzzyGradientName,
+  GoodGradientName,                  //! Bad gradient name
+  BadGradientName,                   //! Bad gradient name
+  BadGradientValue,                  //! Bad gradient value.
+  BadGradientNumericalValue,         //! Bad gradient number.
+  BadGradientColorValue,             //! Bad gradient color.
+  BadGradientNumericalAndColorValue, //! Bad gradient number and color.
+  BadGradientValueCount,             //! Bad gradient value count.
+  BadGradientValueName,              //! Bad gradient value.
+  RepeatedGradientValue,             //! Bad gradient value.
+  OpenParentheses,
+  CloseParentheses,
+  BadColorValue,
 };
-Q_DECLARE_FLAGS(PropertyValueStates, PropertyValueState);
-Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyValueStates)
+// Q_DECLARE_FLAGS(PropertyValueStates, PropertyValueState);
+// Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyValueStates)
 
 struct PropertyStatus
 {
@@ -435,14 +438,15 @@ struct PropertyStatus
   int length;
   QString name;
   PropertyStatus* next = nullptr;
+  QRect rect;
 
   //  int length() const { return name.length(); }
   bool notIrrelevant() const { return (state != IrrelevantValue); }
 
-  //  QString toString() const { return names.at(int(state)); }
+  QString toString() const { return names.at(int(state)); }
 };
 
-// QDebug
-// operator<<(QDebug debug, const PropertyStatus& status);
+QDebug
+operator<<(QDebug debug, const PropertyStatus& status);
 
 #endif // COMMON_H

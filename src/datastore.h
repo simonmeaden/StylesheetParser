@@ -45,6 +45,7 @@ class StylesheetEditor;
 class StylesheetData;
 class Node;
 class WidgetNode;
+class DataStore;
 
 class GradientCheck
 {
@@ -82,6 +83,18 @@ public:
     foot = foot->next;
   }
 
+  void setHead(PropertyValueState state,
+               const QString& name,
+               int offset,
+               int length)
+  {
+    head->state = state;
+    head->offset = offset;
+    head->length = length;
+    head->name = name;
+    head->next = nullptr;
+  }
+
   PropertyStatus* status() { return head; }
 
   virtual Check set(const QString& name) = 0;
@@ -95,8 +108,8 @@ class LinearCheck : public GradientCheck
   bool isRepeated() override { return (x1_r || x2_r || y1_r || y2_r); }
 
 public:
-  LinearCheck(PropertyStatus* status)
-    : GradientCheck(status)
+  LinearCheck()
+    : GradientCheck(new PropertyStatus())
   {}
 
   Check set(const QString& name) override
@@ -146,8 +159,8 @@ class RadialCheck : public GradientCheck
   bool isRepeated() override { return (cx_r || cy_r || angle_r); }
 
 public:
-  RadialCheck(PropertyStatus* status)
-    : GradientCheck(status)
+  RadialCheck()
+    : GradientCheck(new PropertyStatus())
   {}
 
   Check set(const QString& name) override
@@ -194,8 +207,8 @@ class ConicalCheck : public GradientCheck
   }
 
 public:
-  ConicalCheck(PropertyStatus* status)
-    : GradientCheck(status)
+  ConicalCheck()
+    : GradientCheck(new PropertyStatus())
   {}
 
   Check set(const QString& name) override
@@ -287,7 +300,7 @@ private:
 class WidgetModel
 {
 public:
-  WidgetModel();
+  WidgetModel(DataStore* datastore);
 
   void addWidget(const QString& parentName,
                  const QString& name,
@@ -306,6 +319,7 @@ public:
   bool isValidSubControlForWidget(const QString& widgetName,
                                   const QString& subcontrol);
   PropertyStatus* isValidPropertyValueForProperty(const QString& propertyname,
+                                                  int start,
                                                   const QString& valuename);
   //  bool ifValidStylesheetValue(const QString& propertyname,
   //                              const QString& valuename,
@@ -350,6 +364,7 @@ public:
 
 private:
   WidgetItem* m_root;
+  DataStore* m_datastore;
   QMap<QString, WidgetItem*> m_widgets;
   QMap<QString, QList<WidgetItem*>> m_subControls;
   QMap<QString, AttributeType> m_attributes;
@@ -407,42 +422,47 @@ private:
   void initAttributeMap();
 
   PropertyStatus* checkPropertyValue(AttributeType propertyAttribute,
+                                     int start,
                                      const QString& valuename);
-  PropertyStatus* checkAlignment(const QString& value) const;
-  PropertyStatus* checkAttachment(const QString& value) const;
-  PropertyStatus* checkBackground(const QString& value) const;
-  PropertyStatus* checkBool(const QString& value) const;
-  PropertyStatus* checkBoolean(const QString& value) const;
-  PropertyStatus* checkBorder(const QString& value) const;
-  PropertyStatus* checkBorderImage(const QString& value) const;
-  PropertyStatus* checkBorderStyle(const QString& value) const;
-  PropertyStatus* checkBoxColors(const QString& value) const;
-  PropertyStatus* checkBoxLengths(const QString& value) const;
-  PropertyStatus* checkBrush(const QString& value) const;
-  PropertyStatus* checkColor(const QString& value) const;
-  PropertyStatus* checkFontStyle(const QString& value) const;
-  PropertyStatus* checkFont(const QString& value) const;
-  PropertyStatus* checkFontSize(const QString& value) const;
-  PropertyStatus* checkFontWeight(const QString& value) const;
-  PropertyStatus* checkGradient(const QString& value) const;
-  GradientCheck::FuzzyCheck checkGradientColor(const QString& value) const;
+  PropertyStatus* checkAlignment(const QString& value, int start = -1) const;
+  PropertyStatus* checkAttachment(const QString& value, int start = -1) const;
+  PropertyStatus* checkBackground(const QString& value, int start = -1) const;
+  PropertyStatus* checkBool(const QString& value, int start = -1) const;
+  PropertyStatus* checkBoolean(const QString& value, int start = -1) const;
+  PropertyStatus* checkBorder(const QString& value, int start = -1) const;
+  PropertyStatus* checkBorderImage(const QString& value, int start = -1) const;
+  PropertyStatus* checkBorderStyle(const QString& value, int start = -1) const;
+  PropertyStatus* checkBoxColors(const QString& value, int start = -1) const;
+  PropertyStatus* checkBoxLengths(const QString& value, int start = -1) const;
+  PropertyStatus* checkBrush(const QString& value, int start = -1) const;
+  PropertyStatus* checkColor(const QString& value, int start = -1) const;
+  PropertyStatus* checkFontStyle(const QString& value, int start = -1) const;
+  PropertyStatus* checkFont(const QString& value, int start = -1) const;
+  PropertyStatus* checkFontSize(const QString& value, int start = -1) const;
+  PropertyStatus* checkFontWeight(const QString& value, int start = -1) const;
+  PropertyStatus* checkGradient(const QString& value, int start = -1) const;
+  GradientCheck::FuzzyCheck checkGradientColor(const QString& value,
+                                               int start = -1) const;
   bool checkGradientNumber(const QString& value) const;
-  PropertyStatus* checkIcon(const QString& value) const;
-  PropertyStatus* checkLength(const QString& value) const;
-  PropertyStatus* checkNumber(const QString& value) const;
-  PropertyStatus* checkOutline(const QString& value) const;
-  PropertyStatus* checkOrigin(const QString& value) const;
-  PropertyStatus* checkOutlineStyle(const QString& value) const;
-  PropertyStatus* checkOutlineColor(const QString& value) const;
-  PropertyStatus* checkOutlineWidth(const QString& value) const;
-  PropertyStatus* checkOutlineOffset(const QString& value) const;
-  PropertyStatus* checkOutlineRadius(const QString& value) const;
-  PropertyStatus* checkPaletteRole(const QString& value) const;
-  PropertyStatus* checkRadius(const QString& value) const;
-  PropertyStatus* checkRepeat(const QString& value) const;
-  PropertyStatus* checkUrl(const QString& value) const;
-  PropertyStatus* checkPosition(const QString& value) const;
-  PropertyStatus* checkTextDecoration(const QString& value) const;
+  PropertyStatus* checkIcon(const QString& value, int start = -1) const;
+  PropertyStatus* checkLength(const QString& value, int start = -1) const;
+  PropertyStatus* checkNumber(const QString& value, int start = -1) const;
+  PropertyStatus* checkOutline(const QString& value, int start = -1) const;
+  PropertyStatus* checkOrigin(const QString& value, int start = -1) const;
+  PropertyStatus* checkOutlineStyle(const QString& value, int start = -1) const;
+  PropertyStatus* checkOutlineColor(const QString& value, int start = -1) const;
+  PropertyStatus* checkOutlineWidth(const QString& value, int start = -1) const;
+  PropertyStatus* checkOutlineOffset(const QString& value,
+                                     int start = -1) const;
+  PropertyStatus* checkOutlineRadius(const QString& value,
+                                     int start = -1) const;
+  PropertyStatus* checkPaletteRole(const QString& value, int start = -1) const;
+  PropertyStatus* checkRadius(const QString& value, int start = -1) const;
+  PropertyStatus* checkRepeat(const QString& value, int start = -1) const;
+  PropertyStatus* checkUrl(const QString& value, int start = -1) const;
+  PropertyStatus* checkPosition(const QString& value, int start = -1) const;
+  PropertyStatus* checkTextDecoration(const QString& value,
+                                      int start = -1) const;
 
   QStringList eraseDuplicates(QStringList list);
   QPair<PropertyStatus*, int> calculateNumericalStatus(
@@ -459,8 +479,10 @@ private:
                                                   const QString& color,
                                                   int offset,
                                                   QStringList parts) const;
-  GradientCheck* getCorrectCheck(const QString& name,
-                                 PropertyStatus* status) const;
+  GradientCheck* getCorrectCheck(PropertyValueState state,
+                                 const QString& name,
+                                 int offset,
+                                 int length) const;
 };
 
 class DataStore : public QObject
@@ -469,6 +491,11 @@ class DataStore : public QObject
 public:
   explicit DataStore(QWidget* parent = nullptr);
   ~DataStore();
+
+  void setEditor(StylesheetEditor* editor);
+
+  QTextCursor getCursorForPosition(int position);
+  QRect getRectForText(int start, const QString& text);
 
   void addWidget(const QString& widget, const QString& parent);
   QStringList widgets() { return m_widgetModel->widgets(); }
@@ -487,6 +514,7 @@ public:
   //                              const QString& valuename,
   //                              StylesheetData* data);
   PropertyStatus* isValidPropertyValueForProperty(const QString& propertyname,
+                                                  int start,
                                                   const QString& value);
   AttributeType propertyValueAttribute(const QString& value);
 
@@ -589,6 +617,7 @@ signals:
 
 private:
   QWidget* m_parent;
+  StylesheetEditor* m_editor;
   const QIcon m_invalidIcon, m_validIcon, m_addSemiColonIcon, m_addDColonIcon,
     m_addColonIcon, m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon,
     m_fuzzyIcon;

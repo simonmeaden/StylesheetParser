@@ -161,9 +161,9 @@ StylesheetHighlighter::formatVisiblePart(int blockStart,
   }
 
   if (l > 0) {
-    //    qDebug() << "bs = " << blockStart << ", be =  = " << blockEnd;
-    //    qDebug() << "position = " << position << ", length = " << length;
-    //    qDebug() << "p = " << p << ", l = " << l;
+    qDebug() << "bs = " << blockStart << ", be =  = " << blockEnd;
+    qDebug() << "position = " << position << ", length = " << length;
+    qDebug() << "p = " << p << ", l = " << l;
     setFormat(p, l, format);
   }
 }
@@ -319,57 +319,71 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   QString value;
 
   for (int i = 0; i < property->count(); i++) {
+    position = property->valuePosition(i);
+    status = property->valueStatus(i);
     value = property->value(i);
     check = property->check(i);
-    status = property->valueStatus(i);
-    position = property->valuePosition(i);
     length = value.length();
-    if (position >= blockEnd)
-      break;
 
-    if (isInBlock(position, length, blockStart, blockEnd)) {
-      switch (status->state) {
-        case GoodPropertyValue: {
-          //          qDebug() << *status << " format : m_valueFormat";
-          if (!property->hasPropertyMarker()) {
-            formatVisiblePart(
-              blockStart, blockEnd, position, length, m_badPropertyFormat);
-          } else {
-            formatVisiblePart(
-              blockStart, blockEnd, position, status->length, m_valueFormat);
+    while (status) {
+      if (isInBlock(position, length, blockStart, blockEnd)) {
+        auto start = position + status->offset;
+        auto end = start + status->length;
+        if (start >= blockEnd) {
+          return;
+        }
+        if (end < blockStart) {
+          status = status->next;
+          continue;
+        }
+
+        switch (status->state) {
+          case GoodPropertyValue: {
+            //          qDebug() << *status << " format : m_valueFormat";
+            if (!property->hasPropertyMarker()) {
+              formatVisiblePart(blockStart,
+                                blockEnd,
+                                position + status->offset,
+                                length,
+                                m_badPropertyFormat);
+            } else {
+              formatVisiblePart(blockStart,
+                                blockEnd,
+                                position + status->offset,
+                                status->length,
+                                m_valueFormat);
+            }
+            break;
           }
-          continue;
+          case GoodGradientName: {
+            //          qDebug() << *status << " format : m_valueFormat";
+            formatVisiblePart(blockStart,
+                              blockEnd,
+                              position + status->offset,
+                              status->length,
+                              m_valueFormat);
+            break;
+          }
+          case FuzzyGradientName:
+          case RepeatedGradientValue:
+          case BadGradientValueName:
+          case BadGradientValueCount:
+          case BadGradientValue:
+          case BadGradientNumericalValue:
+          case BadGradientColorValue:
+          case BadGradientNumericalAndColorValue:
+          case FuzzyColorValue: {
+            //          qDebug() << *status << " format : m_badValueFormat";
+            formatVisiblePart(blockStart,
+                              blockEnd,
+                              position + status->offset,
+                              status->length,
+                              m_badValueFormat);
+            break;
+          }
         }
-        case GoodGradientName: {
-          //          qDebug() << *status << " format : m_valueFormat";
-          formatVisiblePart(
-            blockStart, blockEnd, position, status->length, m_valueFormat);
-          continue;
-        }
-        case FuzzyGradientName:
-        case RepeatedGradientValue:
-        case BadGradientValueName:
-        case BadGradientValueCount:
-        case BadGradientValue:
-        case BadGradientNumericalValue:
-        case BadGradientColorValue:
-        case BadGradientNumericalAndColorValue:
-        case FuzzyColorValue: {
-          //          qDebug() << *status << " format : m_badValueFormat";
-          formatVisiblePart(
-            blockStart, blockEnd, position, status->length, m_badValueFormat);
-          continue;
-        }
-          //      if (check == ValidPropertyValueState) {
-          //        formatVisiblePart(
-          //          blockStart, blockEnd, position, length,
-          //          m_valueFormat);
-          //      } else {
-          //        formatVisiblePart(
-          //          blockStart, blockEnd, position, length,
-          //          m_badValueFormat);
-          //      }
       }
+      status = status->next;
     }
 
     if (property->hasPropertyEndMarker()) {
@@ -521,7 +535,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
       }
 
       case NodeType::PropertyType: {
-        //        qDebug() << "PropertyType : " << type <, " name : " << text;
+        qDebug() << type << " text : " << text;
         PropertyNode* property = qobject_cast<PropertyNode*>(node);
         auto t = m_editor->toPlainText();
         bool finalBlock = checkForEmpty(t.mid(property->end()));

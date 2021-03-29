@@ -131,7 +131,7 @@ private:
   QString findNext(const QString& text, int& pos);
   void skipBlanks(const QString& text, int& pos);
 
-  QTextCursor getCursorForPosition(int position);
+  //  QTextCursor getCursorForPosition(int position);
   CursorData getNodeAtCursor(QTextCursor cursor);
   CursorData getNodeAtCursor(int position);
   void nodeAtCursorPosition(CursorData* data, int position);
@@ -202,7 +202,8 @@ private:
   void actionPropertyMarker(PropertyNode* property);
   void actionPropertyEndMarker(PropertyNode* property);
   void stepBack(int& pos, const QString& block);
-  QPair<NodeType, NodeState> checkType(const QString& block,
+  QPair<NodeType, NodeState> checkType(int start,
+                                       const QString& block,
                                        NodeState lastState,
                                        PropertyNode* property = nullptr) const;
   QWidgetAction* getWidgetAction(const QIcon& icon,

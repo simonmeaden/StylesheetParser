@@ -79,7 +79,8 @@ Parser::stepBack(int& pos, const QString& block)
 }
 
 QPair<enum NodeType, enum NodeState>
-Parser::checkType(const QString& block,
+Parser::checkType(int start,
+                  const QString& block,
                   enum NodeState lastState,
                   PropertyNode* property) const
 {
@@ -88,8 +89,8 @@ Parser::checkType(const QString& block,
                                           NodeState::IdSelectorState);
   }
   if (property) {
-    auto propertyState =
-      m_datastore->isValidPropertyValueForProperty(property->name(), block);
+    auto propertyState = m_datastore->isValidPropertyValueForProperty(
+      property->name(), start, block);
     if (propertyState->state == GoodPropertyValue) {
       return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
                                             NodeState::GoodPropertyState);
@@ -189,12 +190,12 @@ Parser::parseText(const QString& text)
     QTextCursor cursor;
 
     NodeState lastState = BadNodeState;
-    auto [type, state] = checkType(block, lastState);
+    auto [type, state] = checkType(start, block, lastState);
     WidgetNodes* widgetnodes = nullptr;
 
     switch (type) {
       case NodeType::WidgetType: {
-        cursor = getCursorForPosition(start);
+        cursor = m_datastore->getCursorForPosition(start);
         if (!widgetnodes) {
           widgetnodes = new WidgetNodes(cursor, m_editor, this);
           nodes.insert(cursor, widgetnodes);
@@ -208,10 +209,10 @@ Parser::parseText(const QString& text)
 
         while (!(block = findNext(text, pos)).isEmpty()) {
           start = pos - block.length();
-          cursor = getCursorForPosition(start);
+          cursor = m_datastore->getCursorForPosition(start);
           //          auto leaveWidget = false;
 
-          auto [type, state] = checkType(block, lastState);
+          auto [type, state] = checkType(start, block, lastState);
           if (type == NodeType::ColonType) {
             // a single colon could be either a pseudo state marker or a
             // property marker. if a property is detected then it should be
@@ -393,7 +394,7 @@ Parser::parseText(const QString& text)
         continue;
       }
       case NodeType::PropertyType: {
-        cursor = getCursorForPosition(start);
+        cursor = m_datastore->getCursorForPosition(start);
         PropertyNode* property =
           new PropertyNode(block, cursor, m_editor, state, this);
         nodes.insert(cursor, property);
@@ -424,7 +425,7 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsPseudoState(nextBlock)) {
-              cursor = getCursorForPosition(start);
+              cursor = m_datastore->getCursorForPosition(start);
               auto widget =
                 new WidgetNode(block, cursor, m_editor, state, this);
               widgetnodes->addWidget(widget);
@@ -432,11 +433,12 @@ Parser::parseText(const QString& text)
 
             } else if (m_datastore->propertyValueAttribute(nextBlock) !=
                        NoAttributeValue) {
-              cursor = getCursorForPosition(start);
+              cursor = m_datastore->getCursorForPosition(start);
               PropertyNode* property =
                 new PropertyNode(block, cursor, m_editor, state, this);
               property->setPropertyMarker(true);
-              property->setPropertyMarkerCursor(getCursorForPosition(colonPos));
+              property->setPropertyMarkerCursor(
+                m_datastore->getCursorForPosition(colonPos));
               nodes.insert(cursor, property);
               pos -= block.length(); // step back
               parsePropertyWithValues(
@@ -448,7 +450,7 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsSubControl(nextBlock)) {
-              cursor = getCursorForPosition(start);
+              cursor = m_datastore->getCursorForPosition(start);
               auto widget =
                 new WidgetNode(block, cursor, m_editor, state, this);
               widgetnodes->addWidget(widget);
@@ -464,7 +466,7 @@ Parser::parseText(const QString& text)
           }
           // step back
           pos = oldPos;
-          cursor = getCursorForPosition(start);
+          cursor = m_datastore->getCursorForPosition(start);
           auto widget = new WidgetNode(block, cursor, m_editor, state, this);
           widgetnodes->addWidget(widget);
         } else { // anomalous type - see what comes next.
@@ -475,7 +477,7 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsPseudoState(nextBlock)) {
-              cursor = getCursorForPosition(start);
+              cursor = m_datastore->getCursorForPosition(start);
               auto widget =
                 new WidgetNode(block, cursor, m_editor, state, this);
               widgetnodes->addWidget(widget);
@@ -483,11 +485,12 @@ Parser::parseText(const QString& text)
 
             } else if (m_datastore->propertyValueAttribute(nextBlock) !=
                        NoAttributeValue) {
-              cursor = getCursorForPosition(start);
+              cursor = m_datastore->getCursorForPosition(start);
               PropertyNode* property =
                 new PropertyNode(block, cursor, m_editor, state, this);
               property->setPropertyMarker(true);
-              property->setPropertyMarkerCursor(getCursorForPosition(oldPos));
+              property->setPropertyMarkerCursor(
+                m_datastore->getCursorForPosition(oldPos));
               nodes.insert(cursor, property);
               pos -= block.length(); // step back
               parsePropertyWithValues(
@@ -499,7 +502,7 @@ Parser::parseText(const QString& text)
             nextBlock = findNext(text, pos);
 
             if (m_datastore->containsSubControl(nextBlock)) {
-              cursor = getCursorForPosition(start);
+              cursor = m_datastore->getCursorForPosition(start);
               auto widget =
                 new WidgetNode(block, cursor, m_editor, state, this);
               widgetnodes->addWidget(widget);
@@ -542,7 +545,8 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
       if (block == ":") {
         if (!property->hasPropertyMarker()) {
           property->setPropertyMarker(true);
-          property->setPropertyMarkerCursor(getCursorForPosition(pos - 1));
+          property->setPropertyMarkerCursor(
+            m_datastore->getCursorForPosition(pos - 1));
         } else {
           /*TODO error too many :*/
         }
@@ -552,113 +556,22 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
         stashNewline(nodes, pos++);
       } else if (block == ";") {
         property->setPropertyEndMarker(true);
-        property->setPropertyEndMarkerCursor(getCursorForPosition(pos - 1));
+        property->setPropertyEndMarkerCursor(
+          m_datastore->getCursorForPosition(pos - 1));
         break;
       } else if (block == "}") {
         stepBack(pos, block);
         break;
       } else {
-        auto valueStatus =
-          m_datastore->isValidPropertyValueForProperty(propertyName, block);
+        auto valueStatus = m_datastore->isValidPropertyValueForProperty(
+          propertyName, start, block);
         //        AttributeType attributeType =
         //          m_datastore->propertyValueAttribute(block);
-        property->addValue(valueStatus->name,
-                           ValidPropertyNameState,
-                           getCursorForPosition((pos - block.length())),
-                           valueStatus);
-
-        //        while (valueStatus) {
-        //          switch (valueStatus->state) {
-        //            case PropertyStatus::GoodGradientName: {
-        //              //            valueStatus->name = block;
-        //              property->addValue(valueStatus->name,
-        //                                 ValidPropertyNameState,
-        //                                 getCursorForPosition((pos -
-        //                                 block.length())), valueStatus);
-        //              break;
-        //            }
-        //            case GoodPropertyValue: {
-        //              // valid property and valid value.
-        //              property->addValue(valueStatus->name,
-        //                                 ValidPropertyValueState,
-        //                                 getCursorForPosition((pos -
-        //                                 block.length())), valueStatus);
-        //              break;
-        //            }
-        //            case FuzzyColorValue:
-        //            case FuzzyGradientName: {
-        //              property->addValue(valueStatus->name,
-        //                                 FuzzyPropertyValueState,
-        //                                 getCursorForPosition((pos -
-        //                                 block.length())), valueStatus);
-        //              break;
-        //            }
-        //            case BadGradientValue:
-        //            case BadGradientValueName:
-        //            case BadGradientValueCount:
-        //            case BadGradientNumericalValue:
-        //            case BadGradientColorValue:
-        //            case BadGradientNumericalAndColorValue:
-        //            case RepeatedGradientValue: {
-        //              property->addValue(block,
-        //                                 BadPropertyValueState,
-        //                                 getCursorForPosition((pos -
-        //                                 block.length())), valueStatus);
-        //              break;
-        //            }
-        //            case IrrelevantValue:
-        //              // these are not used or stored so dump them here.
-        //              delete valueStatus;
-        //              break;
-        //            default: {
-        //              if (attributeType == NoAttributeValue) {
-        //                // not a valid value for any property
-        //                auto [type, check] = checkType(block, BadNodeState,
-        //                property); switch (type) {
-        //                  case NodeType::WidgetType:
-        //                    stepBack(pos, block);
-        //                    return;
-
-        //                  case NodeType::PropertyType: {
-        //                    // another property follows incomplete property.
-        //                    stepBack(pos, block);
-        //                    return;
-        //                  }
-
-        //                  case NodeType::PropertyValueType:
-        //                    switch (check) {
-        //                      case GoodPropertyState:
-        //                        break;
-
-        //                      case BadPropertyValueState:
-        //                        break;
-
-        //                      case FuzzyPropertyValueState:
-        //                        break;
-        //                    }
-
-        //                    break;
-
-        //                  default:
-        //                    property->addValue(
-        //                      block,
-        //                      BadNodeState,
-        //                      getCursorForPosition((pos - block.length())),
-        //                      valueStatus);
-        //                }
-        //              } else {
-        //                // invalid property name but this is a valid property
-        //                attribute
-        //                // anyway.
-        //                property->addValue(block,
-        //                                   ValidPropertyValueState,
-        //                                   getCursorForPosition((pos -
-        //                                   block.length())), valueStatus);
-        //              }
-        //            }
-        //          }
-        //          valueStatus = valueStatus->next;
-        //        }
+        property->addValue(
+          block,
+          ValidPropertyNameState,
+          m_datastore->getCursorForPosition((pos - block.length())),
+          valueStatus);
       }
     }
   }
@@ -670,7 +583,7 @@ Parser::parseComment(QMap<QTextCursor, Node*>* nodes,
                      int start,
                      int& pos)
 {
-  QTextCursor cursor = getCursorForPosition(start);
+  QTextCursor cursor = m_datastore->getCursorForPosition(start);
 
   QChar c;
   CommentNode* comment = new CommentNode(cursor, m_editor);
@@ -682,7 +595,7 @@ Parser::parseComment(QMap<QTextCursor, Node*>* nodes,
     if (c.isSpace()) {
       pos++;
     } else {
-      comment->setTextCursor(getCursorForPosition(pos));
+      comment->setTextCursor(m_datastore->getCursorForPosition(pos));
       pos++;
       break;
     }
@@ -699,7 +612,8 @@ Parser::parseComment(QMap<QTextCursor, Node*>* nodes,
 
         if (c == '/') {
           comment->setEndCommentExists(true);
-          comment->setEndCommentCursor(getCursorForPosition(pos - 2));
+          comment->setEndCommentCursor(
+            m_datastore->getCursorForPosition(pos - 2));
           break;
 
         } else {
@@ -815,13 +729,13 @@ Parser::skipBlanks(const QString& text, int& pos)
   }
 }
 
-QTextCursor
-Parser::getCursorForPosition(int position)
-{
-  QTextCursor c(m_editor->document());
-  c.setPosition(position);
-  return c;
-}
+// QTextCursor
+// Parser::getCursorForPosition(int position)
+//{
+//  QTextCursor c(m_editor->document());
+//  c.setPosition(position);
+//  return c;
+//}
 
 void
 Parser::nodeForPoint(const QPoint& pos, NodeSection** nodeSection)
@@ -923,7 +837,7 @@ Parser::nodeAtCursorPosition(CursorData* data, int position)
 void
 Parser::stashNewline(QMap<QTextCursor, Node*>* nodes, int position)
 {
-  auto cursor = getCursorForPosition(position);
+  auto cursor = m_datastore->getCursorForPosition(position);
   auto newline = new NewlineNode(cursor, m_editor);
   //  m_datastore->insertNode(cursor, newline);
   (*nodes).insert(cursor, newline);
@@ -1676,54 +1590,123 @@ Parser::handleMouseClicked(const QPoint& pos)
             break;
           }
           case SectionType::PropertyValue: {
+            auto x = pos.x();
+            auto y = pos.y();
             auto valName = property->value(section->position);
-            if (property->isValidPropertyName()) {
-              if (property->isValueValid(section->position)) {
-                if (!property->hasPropertyEndMarker() &&
-                    !property->isFinalProperty()) {
-                  suggestionsMenu->clear();
-                  auto widgetact =
-                    getWidgetAction(m_datastore->badDColonIcon(),
-                                    tr("Property has no end marker (;)"),
-                                    suggestionsMenu);
-                  suggestionsMenu->addAction(widgetact);
-                  suggestionsMenu->addSeparator();
-                  auto act = new QAction(m_datastore->addColonIcon(),
-                                         tr("Add end marker"));
-                  suggestionsMenu->addAction(act);
-                  setMenuData(act, property, SectionType::PropertyEndMarker);
-                  m_editor->connect(act,
-                                    &QAction::triggered,
-                                    m_editor,
-                                    &StylesheetEditor::suggestionMade);
-                } else {
-                  // must have a valid property to check value types.
-                  auto matches = m_datastore->fuzzySearchPropertyValue(
-                    property->name(), valName);
-                  updateValidPropertyValueContextMenu(
-                    matches, pos, property, valName, &suggestionsMenu);
+            auto status = property->valueStatus(section->position);
+            while (status) {
+              if (x >= status->rect.left() && x < status->rect.right() &&
+                  y >= status->rect.top() && y < status->rect.bottom()) {
+                switch (status->state) {
+                  case BadPropertyValue: {
+                    suggestionsMenu->clear();
+                    auto widgetact = getWidgetAction(
+                      m_datastore->invalidIcon(),
+                      tr("Property value is invalid %1").arg(status->name),
+                      suggestionsMenu);
+                    suggestionsMenu->addAction(widgetact);
+                    break;
+                  }
+                  case FuzzyColorValue:
+                    break;
+                  case BadColorValue:
+                    break;
+                  case EmptyGradientValueName: {
+                    suggestionsMenu->clear();
+                    auto widgetact = getWidgetAction(
+                      m_datastore->invalidIcon(),
+                      tr("No gradient value %1").arg(status->name),
+                      suggestionsMenu);
+                    suggestionsMenu->addAction(widgetact);
+                    break;
+                  }
+                  case FuzzyGradientName:
+                    break;
+                  case BadGradientName:
+                    break;
+                  case BadGradientValue:
+                    break;
+                  case BadGradientColorValue:
+                    break;
+                  case BadGradientNumericalValue:
+                    break;
+                  case BadGradientNumericalAndColorValue:
+                    break;
+                  case BadGradientValueCount:
+                    break;
+                  case BadGradientValueName:
+                    break;
+                  case RepeatedGradientValue:
+                    break;
                 }
-              } else {
-                auto matches = m_datastore->fuzzySearchPropertyValue(
-                  property->name(), valName);
-                updateInvalidPropertyValueContextMenu(
-                  matches, pos, property, valName, &suggestionsMenu);
+
+                break;
               }
-            } else {
-              auto matches = m_datastore->fuzzySearchProperty(property->name());
-              QMultiMap<int, QPair<QString, QString>> propValMatches;
-              for (auto& name : matches) {
-                QMultiMap<int, QString> vMatches =
-                  m_datastore->fuzzySearchPropertyValue(name, valName);
-                for (auto [key, value] : asKeyValueRange(vMatches)) {
-                  propValMatches.insert(
-                    key,
-                    qMakePair<QString, QString>(name, vMatches.value(key)));
-                }
-              }
-              updateInvalidNameAndPropertyValueContextMenu(
-                propValMatches, property, valName, pos, &suggestionsMenu);
+              status = status->next;
             }
+            if (status) {
+            }
+            //            if (property->isValidPropertyName()) {
+            //              if (property->isValueValid(section->position)) {
+            //                if (!property->hasPropertyEndMarker() &&
+            //                    !property->isFinalProperty()) {
+            //                  suggestionsMenu->clear();
+            //                  auto widgetact =
+            //                    getWidgetAction(m_datastore->badDColonIcon(),
+            //                                    tr("Property has no end marker
+            //                                    (;)"), suggestionsMenu);
+            //                  suggestionsMenu->addAction(widgetact);
+            //                  suggestionsMenu->addSeparator();
+            //                  auto act = new
+            //                  QAction(m_datastore->addColonIcon(),
+            //                                         tr("Add end marker"));
+            //                  suggestionsMenu->addAction(act);
+            //                  setMenuData(act, property,
+            //                  SectionType::PropertyEndMarker);
+            //                  m_editor->connect(act,
+            //                                    &QAction::triggered,
+            //                                    m_editor,
+            //                                    &StylesheetEditor::suggestionMade);
+            //                } else {
+            //                  // must have a valid property to check value
+            //                  types. if (!property->isValidPropertyName()) {
+            //                    auto matches =
+            //                    m_datastore->fuzzySearchPropertyValue(
+            //                      property->name(), valName);
+            //                    updateValidPropertyValueContextMenu(
+            //                      matches, pos, property, valName,
+            //                      &suggestionsMenu);
+            //                  } else {
+            //                  }
+            //                }
+            //              } else {
+            //                auto matches =
+            //                m_datastore->fuzzySearchPropertyValue(
+            //                  property->name(), valName);
+            //                updateInvalidPropertyValueContextMenu(
+            //                  matches, pos, property, valName,
+            //                  &suggestionsMenu);
+            //              }
+            //            } else {
+            //              auto matches =
+            //              m_datastore->fuzzySearchProperty(property->name());
+            //              QMultiMap<int, QPair<QString, QString>>
+            //              propValMatches; for (auto& name : matches) {
+            //                QMultiMap<int, QString> vMatches =
+            //                  m_datastore->fuzzySearchPropertyValue(name,
+            //                  valName);
+            //                for (auto [key, value] :
+            //                asKeyValueRange(vMatches)) {
+            //                  propValMatches.insert(
+            //                    key,
+            //                    qMakePair<QString, QString>(name,
+            //                    vMatches.value(key)));
+            //                }
+            //              }
+            //              updateInvalidNameAndPropertyValueContextMenu(
+            //                propValMatches, property, valName, pos,
+            //                &suggestionsMenu);
+            //            }
             break;
           }
           case SectionType::Comment: {
@@ -1867,7 +1850,8 @@ Parser::handleSuggestions(QAction* act)
         widget->setWidgetCheck(NodeState::WidgetState);
         if (widget->hasSubControl()) {
           auto subcontrol = widget->subControl(pos);
-          auto [type, state] = checkType(subcontrol->name(), BadNodeState);
+          auto [type, state] =
+            checkType(subcontrol->position(), subcontrol->name(), BadNodeState);
           switch (state) {
             case NodeState::SubControlState:
             case NodeState::FuzzySubControlState:

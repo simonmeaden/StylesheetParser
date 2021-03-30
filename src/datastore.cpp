@@ -478,6 +478,13 @@ DataStore::fuzzySearchSubControl(const QString& name)
   return m_widgetModel->fuzzySearchSubControl(name);
 }
 
+QMultiMap<int, QString>
+DataStore::fuzzySearchColorNames(const QString& name)
+{
+  QMutexLocker locker(&m_mutex);
+  return m_widgetModel->fuzzySearchColorNames(name);
+}
+
 bool
 DataStore::addCustomWidget(const QString& name, const QString& parent)
 {
@@ -542,113 +549,99 @@ DataStore::checkSubControlForWidget(const QString& widget, const QString& name)
 PropertyStatus*
 WidgetModel::checkAlignment(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_alignmentValues.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkAttachment(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_attachment.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkBackground(const QString& value, int start) const
 {
   auto status = checkBrush(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkUrl(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkRepeat(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkAlignment(value, start);
-  if (status->notIrrelevant()) {
-    return status;
-  }
 
-  status->state = IrrelevantValue;
   return status;
 }
 
 PropertyStatus*
 WidgetModel::checkBool(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (value == "true" || value == "false") {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkBoolean(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (value == "0" || value == "1") {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    return status;
   }
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkBorder(const QString& value, int start) const
 {
   auto status = checkBorderStyle(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkLength(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkBrush(value, start);
-  if (status->notIrrelevant()) {
-    return status;
-  }
 
-  status->state = IrrelevantValue;
   return status;
 }
 
@@ -656,37 +649,45 @@ PropertyStatus*
 WidgetModel::checkBorderImage(const QString& value, int start) const
 {
   auto status = checkUrl(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkNumber(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
+    return status;
+
+  if (m_borderImage.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, value);
+      status->rect = rect;
+    }
     return status;
   }
 
-  if (m_borderImage.contains(value)) {
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
-  }
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkBorderStyle(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_borderStyle.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, value);
+      status->rect = rect;
+    }
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
-  return status;
+
+  return nullptr;
 }
 
 PropertyStatus*
@@ -705,261 +706,275 @@ PropertyStatus*
 WidgetModel::checkBrush(const QString& value, int start) const
 {
   auto status = checkColor(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkGradient(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkPaletteRole(value, start);
-  if (status->notIrrelevant()) {
+
+  return status;
+}
+
+PropertyStatus*
+WidgetModel::checkColorName(int start, const QString& value) const
+{
+  if (m_colors.contains(value)) {
+    auto status = new PropertyStatus(
+      PropertyValueState::GoodValue, value, start, value.length());
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, value);
+      status->rect = rect;
+    }
+    return status;
+  }
+  return nullptr;
+}
+
+PropertyStatus*
+WidgetModel::checkColorHashValue(int start, const QString& value) const
+{
+  if (value.startsWith("#")) {
+    auto status = new PropertyStatus(
+      PropertyValueState::BadColorValue, value, start, value.length());
+    if (value.length() == 4 || value.length() == 7) {
+      bool ok = false;
+      QString val = value.right(value.length() - 1);
+      val.toUInt(&ok, 16);
+      if (ok) {
+        status->state = PropertyValueState::GoodValue;
+      }
+    }
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, value);
+      status->rect = rect;
+    }
+    return status;
+  }
+  return nullptr;
+}
+
+PropertyStatus*
+WidgetModel::checkColorRGB(int start, const QString& value) const
+{
+  QString name;
+  int count = 0;
+  PropertyStatus* first = nullptr;
+  if (value.startsWith("rgba")) {
+    count = 4;
+    name = "rgba";
+  } else if (value.startsWith("rgb")) {
+    count = 3;
+    name = "rgb";
+  }
+  if (count < 3 || count > 4)
+    return nullptr;
+
+  auto status =
+    new PropertyStatus(PropertyValueState::BadColorValue, value, start);
+  status->name = name;
+  status->state = PropertyValueState::GoodName;
+  first = status;
+
+  auto offset = value.indexOf('(');
+  if (offset) {
+    auto next =
+      new PropertyStatus(PropertyValueState::OpenParentheses, "(", offset, 1);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, "(");
+      next->rect = rect;
+    }
+    status->next = next;
+    status = next;
+  }
+
+  QString rgb = value.mid(offset);
+  QStringList parts = rgb.split(',');
+
+  if (parts.count() != count) {
+    auto next = new PropertyStatus(
+      PropertyValueState::BadValueCount, rgb, offset, rgb.length());
+    status->next = next;
+  } else {
+    bool ok = false;
+    int val, count = 0;
+
+    for (int i = 0; i < count; i++) {
+      auto part = parts.at(i).trimmed();
+      offset = value.indexOf(part);
+
+      if (part.endsWith('%')) {
+        auto next = new PropertyStatus(
+          PropertyValueState::GoodValue, part, offset, part.length());
+        part = part.left(part.length() - 1);
+        val = part.toInt(&ok);
+        if (!ok) {
+          next->state = PropertyValueState::BadNumericalValue;
+        }
+        if (val >= 0 && val <= 100) {
+          count++;
+        }
+        status->next = next;
+        status = next;
+      } else {
+        auto next = new PropertyStatus(
+          PropertyValueState::GoodValue, part, offset, part.length());
+        val = part.toInt(&ok);
+        if (!ok) {
+          next->state = PropertyValueState::BadNumericalValue;
+        }
+        if (val >= 0 && val <= 255) {
+          count++;
+        }
+        status->next = next;
+        status = next;
+      }
+    }
+
+    if (offset != -1) {
+      auto rect = m_datastore->getRectForText(offset, value);
+      status->rect = rect;
+    }
+  }
+
+  offset = value.indexOf(')');
+  if (offset) {
+    auto next =
+      new PropertyStatus(PropertyValueState::OpenParentheses, ")", offset, 1);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, ")");
+      next->rect = rect;
+    }
+    status->next = next;
+  }
+  return first;
+}
+
+PropertyStatus*
+WidgetModel::checkColorHS(int start, const QString& value) const
+{
+  QString name;
+  int count = 0;
+  PropertyStatus* first = nullptr;
+  if (value.startsWith("hsla")) {
+    count = 4;
+    name = "hsla";
+  } else if (value.startsWith("hsva")) {
+    count = 4;
+    name = "hsva";
+  } else if (value.startsWith("hsl")) {
+    count = 3;
+    name = "rgb";
+  } else if (value.startsWith("hvl")) {
+    count = 3;
+    name = "rgb";
+  }
+  if (count < 3 || count > 4)
+    return nullptr;
+
+  auto status =
+    new PropertyStatus(PropertyValueState::BadColorValue, value, start);
+  status->name = name;
+  status->state = PropertyValueState::GoodName;
+  first = status;
+
+  auto offset = value.indexOf('(');
+  if (offset) {
+    auto next =
+      new PropertyStatus(PropertyValueState::OpenParentheses, "(", offset, 1);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, "(");
+      next->rect = rect;
+    }
+    status->next = next;
+    status = next;
+  }
+
+  QString hs = value.mid(value.indexOf('('), value.indexOf(')'));
+  QStringList parts = hs.split(',');
+
+  if (parts.count() != count) {
+    status->state = PropertyValueState::BadColorValue;
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, value);
+      status->rect = rect;
+    }
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  bool ok = false;
+  int val;
+
+  for (int i = 0; i < count; i++) {
+    auto part = parts.at(i).trimmed();
+    offset = value.indexOf(part);
+
+    if (part.endsWith('%')) {
+      auto next = new PropertyStatus(
+        PropertyValueState::GoodValue, part, offset, part.length());
+      part = part.left(part.length() - 1);
+      val = part.toInt(&ok);
+      if (i == 0) {
+        // hue cannot be a percentage, a percentage here will cause a fail.
+        next->state = PropertyValueState::BadColorValue;
+      } else if (val >= 0 && val <= 100) {
+        next->state = PropertyValueState::BadColorValue;
+      }
+      status->next = next;
+      status = next;
+    } else {
+      auto next = new PropertyStatus(
+        PropertyValueState::GoodValue, part, offset, part.length());
+      val = part.toInt(&ok);
+      if (i == 0 && val >= 0 && val < 360) {
+        next->state = PropertyValueState::BadColorValue;
+      } else if (val >= 0 && val <= 100) {
+        next->state = PropertyValueState::BadColorValue;
+      }
+      status->next = next;
+      status = next;
+    }
+    if (offset != -1) {
+      auto rect = m_datastore->getRectForText(offset, value);
+      status->rect = rect;
+    }
+  }
+
+  offset = value.indexOf(')');
+  if (offset) {
+    auto next =
+      new PropertyStatus(PropertyValueState::OpenParentheses, ")", offset, 1);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, ")");
+      next->rect = rect;
+    }
+    status->next = next;
+  }
+  return first;
 }
 
 PropertyStatus*
 WidgetModel::checkColor(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
-  // check if this was a color name.
-  if (m_colors.contains(value)) {
-    status->state = GoodPropertyValue;
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
+  PropertyStatus* status = nullptr;
+  if ((status = checkColorName(start, value)))
     return status;
-  }
 
-  if (value.startsWith("#")) {
-    if (value.length() != 4 || value.length() != 7) {
-      status->state = BadColorValue;
-    } else {
-      bool ok = false;
-      QString val = value.right(value.length() - 1);
-      val.toUInt(&ok, 16);
-      if (ok) {
-        status->state = GoodPropertyValue;
-      }
-    }
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
+  if ((status = checkColorHashValue(start, value)))
     return status;
-  }
 
-  if (value.startsWith("rgba")) {
-    QString rgb = value.mid(value.indexOf('('), value.indexOf(')'));
-    QStringList cols = rgb.split(',');
-
-    if (cols.count() != 4) {
-      status->state = BadColorValue;
-    } else {
-      bool ok = false;
-      int val, count = 0;
-      for (int i = 0; i < 4; i++) {
-        auto col = cols.at(i).trimmed();
-
-        if (col.endsWith('%')) {
-          col = col.left(col.length() - 1);
-          val = col.toInt(&ok);
-
-          if (val >= 0 && val <= 100) {
-            count++;
-          }
-
-        } else {
-          val = col.toInt(&ok);
-
-          if (val >= 0 && val <= 255) {
-            count++;
-          }
-        }
-      }
-
-      if (count == 4) {
-        status->state = GoodPropertyValue;
-      } else {
-        status->state = BadColorValue;
-      }
-    }
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
+  if ((status = checkColorRGB(start, value)))
     return status;
-  }
 
-  if (value.startsWith("rgb")) { // include rgba in this case
-    QString rgb = value.mid(value.indexOf('('), value.indexOf(')'));
-    QStringList cols = rgb.split(',');
-
-    if (cols.count() != 3) {
-      status->state = BadColorValue;
-      if (start != -1) {
-        auto rect = m_datastore->getRectForText(start, value);
-        status->rect = rect;
-      }
-      return status;
-    } else {
-      bool ok = false;
-      int val, count = 0;
-      for (int i = 0; i < 3; i++) {
-        auto col = cols.at(i).trimmed();
-
-        if (col.endsWith('%')) {
-          col = col.left(col.length() - 1);
-          val = col.toInt(&ok);
-
-          if (val >= 0 && val <= 100) {
-            count++;
-          }
-
-        } else {
-          val = col.toInt(&ok);
-
-          if (val >= 0 && val <= 255) {
-            count++;
-          }
-        }
-      }
-
-      if (count == 3) {
-        status->state = GoodPropertyValue;
-      } else {
-        status->state = BadColorValue;
-      }
-    }
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
+  if ((status = checkColorHS(start, value)))
     return status;
-  }
 
-  if (value.startsWith("hsla") || value.startsWith("hsva")) {
-    QString rgb = value.mid(value.indexOf('('), value.indexOf(')'));
-    QStringList cols = rgb.split(',');
-
-    if (cols.count() != 4) {
-      status->state = BadColorValue;
-      if (start != -1) {
-        auto rect = m_datastore->getRectForText(start, value);
-        status->rect = rect;
-      }
-      return status;
-    }
-
-    bool ok = false;
-    int val, count = 0;
-
-    for (int i = 0; i < 4; i++) {
-      auto col = cols.at(i).trimmed();
-
-      if (col.endsWith('%')) {
-        col = col.left(col.length() - 1);
-        val = col.toInt(&ok);
-
-        if (i == 0) {
-          // hue cannot be a percentage.
-          // a percentage here will cause a fail.
-          continue;
-
-        } else if (val >= 0 && val <= 100) {
-          count++;
-        }
-
-      } else {
-        val = col.toInt(&ok);
-
-        if (i == 0 && val >= 0 && val < 360) {
-          count++;
-
-        } else if (val >= 0 && val <= 100) {
-          count++;
-        }
-      }
-    }
-
-    if (count == 4) {
-      status->state = GoodPropertyValue;
-    } else {
-      status->state = BadColorValue;
-    }
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
-    return status;
-  }
-
-  if (value.startsWith("hsl") || value.startsWith("hsv")) {
-    QString rgb = value.mid(value.indexOf('('), value.indexOf(')'));
-    QStringList cols = rgb.split(',');
-
-    if (cols.count() != 3) {
-      status->state = BadColorValue;
-      if (start != -1) {
-        auto rect = m_datastore->getRectForText(start, value);
-        status->rect = rect;
-      }
-      return status;
-    } else {
-
-      bool ok = false;
-      int val, count = 0;
-
-      for (int i = 0; i < 3; i++) {
-        auto col = cols.at(i).trimmed();
-
-        if (col.endsWith('%')) {
-          col = col.left(col.length() - 1);
-          val = col.toInt(&ok);
-
-          if (i == 0) {
-            // hue cannot be a percentage.
-            // a percentage here will cause a fail.
-            continue;
-
-          } else if (val >= 0 && val <= 100) {
-            count++;
-          }
-
-        } else {
-          val = col.toInt(&ok);
-
-          if (i == 0 && val >= 0 && val < 360) {
-            count++;
-
-          } else if (val >= 0 && val <= 100) {
-            count++;
-          }
-        }
-      }
-
-      if (count == 3) {
-        status->state = GoodPropertyValue;
-      } else {
-        status->state = BadColorValue;
-      }
-    }
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
-    return status;
-  }
-
+  status = new PropertyStatus(
+    PropertyValueState::FuzzyColorValue, value, start, value.length());
   auto fuzzylist = fuzzySearch(value, m_colors);
   if (!fuzzylist.isEmpty()) {
-    status->state = FuzzyColorValue;
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
@@ -967,90 +982,73 @@ WidgetModel::checkColor(const QString& value, int start) const
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkFontStyle(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_fontStyle.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
-  return status;
+
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkFont(const QString& value, int start) const
 {
   auto status = checkFontSize(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkFontStyle(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkFontWeight(value, start);
-  if (status->notIrrelevant()) {
-    return status;
-  }
-
-  status->state = IrrelevantValue;
   return status;
 }
 
 PropertyStatus*
 WidgetModel::checkFontSize(const QString& value, int start) const
 {
-  auto status = checkLength(value, start);
-  if (status->notIrrelevant()) {
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->rect = rect;
-    }
-    return status;
-  }
-
-  status->state = IrrelevantValue;
-  return status;
+  return checkLength(value, start);
 }
 
 PropertyStatus*
 WidgetModel::checkFontWeight(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_fontWeight.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
     return status;
   }
 
   bool ok;
   value.toInt(&ok);
   if (ok) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 QPair<PropertyStatus*, int>
@@ -1061,19 +1059,25 @@ WidgetModel::calculateNumericalStatus(const QString& section,
                                       int offset,
                                       QStringList parts) const
 {
-  auto next = new PropertyStatus();
-  next->name = section;
-  next->length = section.length();
-  next->offset = cleanValue.indexOf(name, offset);
+  int nextOffset = offset;
+  PropertyStatus* status = new PropertyStatus(
+    PropertyValueState::GoodValue, section, nextOffset, section.length());
+
   if (parts.size() == 3) {
-    next->state = BadGradientValueCount;
-  } else if (!checkGradientNumber(number.trimmed())) {
-    next->state = BadGradientNumericalValue;
-  } else {
-    next->state = GoodPropertyValue;
+    status->state = BadValueCount;
   }
-  offset += next->length;
-  return qMakePair<PropertyStatus*, int>(next, offset);
+
+  if (!checkGradientNumber(number.trimmed())) {
+    auto nextOffset = cleanValue.indexOf(number, offset);
+    PropertyStatus* next =
+      new PropertyStatus(PropertyValueState::BadNumericalValue,
+                         number,
+                         nextOffset,
+                         number.length());
+    status->next = next;
+    nextOffset += next->length;
+  }
+  return qMakePair<PropertyStatus*, int>(status, nextOffset);
 }
 
 QPair<PropertyStatus*, int>
@@ -1089,23 +1093,23 @@ WidgetModel::calculateStopStatus(const QString& section,
   next->name = section;
   next->length = section.length();
   next->offset = cleanValue.indexOf(name, offset);
-  if (parts.size() == 2) { // should be 3
-    next->state = BadGradientValueCount;
-  } else {
-    auto goodNumber = checkGradientNumber(number.trimmed());
-    auto colorCheck = checkGradientColor(color.trimmed());
-    if (!goodNumber && colorCheck == GradientCheck::Good) {
-      next->state = BadGradientNumericalAndColorValue;
-    } else if (!goodNumber) {
-      next->state = BadGradientNumericalValue;
-    } else if (colorCheck == GradientCheck::Bad) {
-      next->state = BadGradientColorValue;
-    } else if (colorCheck == GradientCheck::Fuzzy) {
-      next->state = FuzzyColorValue;
-    } else {
-      next->state = GoodPropertyValue;
-    }
-  }
+  //  if (parts.size() == 2) { // should be 3
+  //    next->state = BadGradientValueCount;
+  //  } else {
+  //    auto goodNumber = checkGradientNumber(number.trimmed());
+  //    auto colorCheck = checkGradientColor(color.trimmed());
+  //    if (!goodNumber && colorCheck == GradientCheck::Good) {
+  //      next->state = BadGradientNumericalAndColorValue;
+  //    } else if (!goodNumber) {
+  //      next->state = BadGradientNumericalValue;
+  //    } else if (colorCheck == GradientCheck::Bad) {
+  //      next->state = BadGradientColorValue;
+  //    } else if (colorCheck == GradientCheck::Fuzzy) {
+  //      next->state = FuzzyColorValue;
+  //    } else {
+  //      next->state = GoodPropertyValue;
+  //    }
+  //  }
   offset += next->length;
   return qMakePair<PropertyStatus*, int>(next, offset);
 }
@@ -1140,7 +1144,7 @@ WidgetModel::checkGradient(const QString& value, int start) const
 
   for (auto& g : m_gradient) {
     if (cleanValue.contains(g)) {
-      gCheck = getCorrectCheck(GoodGradientName, g, 0, g.length());
+      gCheck = getCorrectCheck(GoodName, g, 0, g.length());
       correctType = g; // the type it SHOULD be!
       actualType = g;
       break;
@@ -1149,12 +1153,18 @@ WidgetModel::checkGradient(const QString& value, int start) const
       double score =
         rapidfuzz::fuzz::ratio(g.toStdString(), fuzzy.toStdString());
       if (score < 100.0 && score > 90.0) { // TODO Increase minimum ??
-        gCheck = getCorrectCheck(FuzzyGradientName, fuzzy, 0, fuzzy.length());
+        gCheck = getCorrectCheck(FuzzyName, fuzzy, 0, fuzzy.length());
         correctType = g; // the type it SHOULD be!
         actualType = g;
         break;
       }
     }
+  }
+
+  if (!gCheck) {
+    auto status = new PropertyStatus(
+      PropertyValueState::BadName, value, start, value.length());
+    return status;
   }
 
   offset = cleanValue.indexOf("(");
@@ -1165,11 +1175,6 @@ WidgetModel::checkGradient(const QString& value, int start) const
       status->rect = rect;
     }
     gCheck->addStatus(status);
-  }
-
-  if (!gCheck) {
-    auto status = new PropertyStatus(IrrelevantValue, 0);
-    return status;
   }
 
   auto sections =
@@ -1188,8 +1193,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
 
     // only two or three parts is valid.
     if (parts.size() < 2 || parts.size() > 3) {
-      auto status = new PropertyStatus(
-        BadGradientValueCount, section, offset, section.length());
+      auto status =
+        new PropertyStatus(BadValueCount, section, offset, section.length());
       if (start != -1) {
         auto rect = m_datastore->getRectForText(start, section);
         status->rect = rect;
@@ -1231,15 +1236,15 @@ WidgetModel::checkGradient(const QString& value, int start) const
         continue;
       } else if (check == GradientCheck::Repeat) {
         PropertyStatus* next = new PropertyStatus(
-          RepeatedGradientValue, section, offset, section.length());
+          RepeatValueName, section, offset, section.length());
         if (start != -1) {
           auto rect = m_datastore->getRectForText(start, section);
           next->rect = rect;
         }
         gCheck->addStatus(next);
       } else {
-        PropertyStatus* next = new PropertyStatus(
-          BadGradientValueName, section, offset, section.length());
+        PropertyStatus* next =
+          new PropertyStatus(BadValueName, section, offset, section.length());
         if (start != -1) {
           auto rect = m_datastore->getRectForText(start, section);
           next->rect = rect;
@@ -1271,7 +1276,7 @@ WidgetModel::checkGradient(const QString& value, int start) const
         continue;
       } else if (check == GradientCheck::Repeat) {
         PropertyStatus* next = new PropertyStatus();
-        next->state = RepeatedGradientValue;
+        next->state = RepeatValueName;
         next->offset = offset;
         if (start != -1) {
           auto rect = m_datastore->getRectForText(start, section);
@@ -1281,7 +1286,7 @@ WidgetModel::checkGradient(const QString& value, int start) const
       } else {
         // an invalid name.
         PropertyStatus* next = new PropertyStatus();
-        next->state = BadGradientValueName;
+        next->state = BadValueName;
         next->offset = offset;
         if (start != -1) {
           auto rect = m_datastore->getRectForText(start, section);
@@ -1313,7 +1318,7 @@ WidgetModel::checkGradient(const QString& value, int start) const
         continue;
       } else if (check == GradientCheck::Repeat) {
         PropertyStatus* next = new PropertyStatus();
-        next->state = RepeatedGradientValue;
+        next->state = RepeatValueName;
         next->offset = offset;
         if (start != -1) {
           auto rect = m_datastore->getRectForText(start, section);
@@ -1322,7 +1327,7 @@ WidgetModel::checkGradient(const QString& value, int start) const
         gCheck->addStatus(next);
       } else {
         PropertyStatus* next = new PropertyStatus();
-        next->state = BadGradientValueName;
+        next->state = BadValueName;
         next->offset = offset;
         if (start != -1) {
           auto rect = m_datastore->getRectForText(start, section);
@@ -1331,13 +1336,11 @@ WidgetModel::checkGradient(const QString& value, int start) const
         gCheck->addStatus(next);
         continue;
       }
-    } /* else {
-       return BadGradientName;
-     }*/
+    }
   }
   offset = cleanValue.indexOf(")");
   if (offset) {
-    auto status = new PropertyStatus(CloseParentheses, ")", 1, offset);
+    auto status = new PropertyStatus(CloseParentheses, ")", offset, 1);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, ")");
       status->rect = rect;
@@ -1356,7 +1359,7 @@ WidgetModel::checkGradientColor(const QString& value, int start) const
     auto rect = m_datastore->getRectForText(start, value);
     status->rect = rect;
   }
-  if (status->state == GoodPropertyValue)
+  if (status->state == PropertyValueState::GoodValue)
     return GradientCheck::Good;
   else if (status->state == FuzzyColorValue)
     return GradientCheck::Fuzzy;
@@ -1378,12 +1381,12 @@ PropertyStatus*
 WidgetModel::checkIcon(const QString& value, int start) const
 {
   auto status = checkUrl(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   if (m_icon.contains(value)) {
-    status->state = GoodPropertyValue;
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
@@ -1391,24 +1394,24 @@ WidgetModel::checkIcon(const QString& value, int start) const
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkLength(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   bool ok;
 
   if (value.endsWith("px") || value.endsWith("pt") || value.endsWith("em") ||
       value.endsWith("ex")) {
+    auto status =
+      new PropertyStatus(PropertyValueState::BadValue, value, start);
     auto numValue = value.left(value.length() - 2);
     numValue.toDouble(&ok);
     if (ok) {
-      status->state = GoodPropertyValue;
+      status->state = PropertyValueState::GoodValue;
     } else {
-      status->state = BadPropertyValue;
+      status->state = PropertyValueState::BadNumericalValue;
     }
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
@@ -1416,12 +1419,14 @@ WidgetModel::checkLength(const QString& value, int start) const
     }
     return status;
   } else if (value.at(value.length() - 1).isDigit()) {
+    auto status =
+      new PropertyStatus(PropertyValueState::BadValue, value, start);
     auto numValue = value.left(value.length() - 2);
     numValue.toUInt(&ok);
     if (ok) {
-      status->state = GoodPropertyValue;
+      status->state = PropertyValueState::GoodValue;
     } else {
-      status->state = BadPropertyValue;
+      status->state = PropertyValueState::BadNumericalValue;
     }
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
@@ -1430,106 +1435,101 @@ WidgetModel::checkLength(const QString& value, int start) const
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkNumber(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   bool ok;
   // don't actually need the value, I only want to know
   // if it actually is a number.
   value.toDouble(&ok);
   if (ok) {
+    auto status =
+      new PropertyStatus(PropertyValueState::BadValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkOutline(const QString& value, int start) const
 {
   auto status = checkOutlineColor(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkOutlineColor(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkOutlineStyle(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkOutlineWidth(value, start);
-  if (status->notIrrelevant()) {
+  if (status)
     return status;
-  }
 
   status = checkOutlineOffset(value, start);
-  if (status->notIrrelevant()) {
-    return status;
-  }
 
-  status->state = IrrelevantValue;
   return status;
 }
 
 PropertyStatus*
 WidgetModel::checkOrigin(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_origin.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::BadValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    status->state = PropertyValueState::GoodValue;
+    return status;
   }
-  return status;
+
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkOutlineStyle(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_outlineStyle.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
-  } else {
-    status->state = IrrelevantValue;
+    return status;
   }
-  return status;
+
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkOutlineColor(const QString& value, int start) const
 {
   if (value == m_outlineColor) {
-    auto status = new PropertyStatus();
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
+    status->state = PropertyValueState::GoodValue;
     return status;
   }
+
   return checkColor(value, start);
 }
 
@@ -1537,14 +1537,15 @@ PropertyStatus*
 WidgetModel::checkOutlineWidth(const QString& value, int start) const
 {
   if (m_outlineWidth.contains(value)) {
-    auto status = new PropertyStatus();
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
     return status;
   }
+
   return checkLength(value, start);
 }
 
@@ -1557,25 +1558,23 @@ WidgetModel::checkOutlineOffset(const QString& value, int start) const
 PropertyStatus*
 WidgetModel::checkOutlineRadius(const QString& value, int start) const
 {
-  // check for 4 radius values.
   return checkRadius(value, start);
 }
 
 PropertyStatus*
 WidgetModel::checkPaletteRole(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_paletteRoles.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
@@ -1587,9 +1586,9 @@ WidgetModel::checkRadius(const QString& value, int start) const
 PropertyStatus*
 WidgetModel::checkRepeat(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_repeat.contains(value)) {
-    status->state = GoodPropertyValue;
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
@@ -1597,67 +1596,93 @@ WidgetModel::checkRepeat(const QString& value, int start) const
     return status;
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkUrl(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
-  auto cols = value.split("()");
-  if (cols.size() == 2) {
-    if (cols.at(0) == "url") {
-      QUrl url(cols.at(1));
+  auto parts = value.split("()");
+  PropertyStatus* first = nullptr;
+
+  if (parts.at(0) == "url") {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodName, "url", start, 3);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, "url");
+      status->rect = rect;
+    }
+    first = status;
+
+    auto offset = value.indexOf('(');
+    if (offset) {
+      auto next =
+        new PropertyStatus(PropertyValueState::OpenParentheses, "(", offset, 1);
+      auto rect = m_datastore->getRectForText(offset, "(");
+      status->rect = rect;
+      status->next = next;
+      status = next;
+    }
+
+    if (parts.size() == 2) {
+      auto part = parts.at(1);
+      QUrl url(parts.at(1));
+      auto next = new PropertyStatus(
+        PropertyValueState::BadUrlValue, part, offset, part.length());
       if (url.isValid()) {
-        status->state = GoodPropertyValue;
-      } else {
-        status->state = BadPropertyValue;
+        next->state = PropertyValueState::GoodValue;
       }
+      auto rect = m_datastore->getRectForText(offset, part);
+      status->rect = rect;
+      status->next = next;
+      status = next;
+    } else {
+      status->state = PropertyValueState::BadValueCount;
+    }
+
+    offset = value.indexOf(')');
+    if (offset) {
+      auto next =
+        new PropertyStatus(PropertyValueState::OpenParentheses, ")", offset, 1);
       if (start != -1) {
-        auto rect = m_datastore->getRectForText(start, value);
-        status->rect = rect;
+        auto rect = m_datastore->getRectForText(start, ")");
+        next->rect = rect;
       }
-      return status;
+      status->next = next;
     }
   }
 
-  status->state = IrrelevantValue;
-  return status;
+  return first;
 }
 
 PropertyStatus*
 WidgetModel::checkPosition(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_position.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
     return status;
   }
-
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 PropertyStatus*
 WidgetModel::checkTextDecoration(const QString& value, int start) const
 {
-  auto status = new PropertyStatus();
   if (m_textDecoration.contains(value)) {
+    auto status =
+      new PropertyStatus(PropertyValueState::GoodValue, value, start);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(start, value);
       status->rect = rect;
     }
-    status->state = GoodPropertyValue;
     return status;
   }
-
-  status->state = IrrelevantValue;
-  return status;
+  return nullptr;
 }
 
 void
@@ -1796,20 +1821,16 @@ WidgetModel::checkPropertyValue(AttributeType propertyAttribute,
     case String:
       // value IS a string.
       // might need to check the string contents here.
-      status->state = GoodPropertyValue;
+      status->state = PropertyValueState::GoodValue;
       break;
 
     case List:
       // This should never reach here.
-      status->state = GoodPropertyValue;
+      status->state = PropertyValueState::GoodValue;
       break;
   }
 
-  if (!status) {
-    status = new PropertyStatus(IrrelevantValue);
-  }
-
-  if (status->name.isEmpty()) {
+  if (status && status->name.isEmpty()) {
     status->name = valuename;
     status->length = valuename.length();
   }
@@ -2493,6 +2514,66 @@ WidgetModel::initProperties()
   addProperty("width");
   addProperty("-qt-background-role");
   addProperty("-qt-style-features");
+  // add icons: These are not actually properties
+  // but act and are set the same way
+  addProperty("backward-icon");         //  QStyle::SP_ArrowBack
+  addProperty("cd-icon");               //  Style::SP_DriveCDIcon
+  addProperty("computer-icon");         // 	QStyle::SP_ComputerIcon
+  addProperty("desktop-icon");          //	QStyle::SP_DesktopIcon
+  addProperty("dialog-apply-icon");     //	QStyle::SP_DialogApplyButton
+  addProperty("dialog-cancel-icon");    //	QStyle::SP_DialogCancelButton
+  addProperty("dialog-close-icon");     //	QStyle::SP_DialogCloseButton
+  addProperty("dialog-discard-icon");   //	QStyle::SP_DialogDiscardButton
+  addProperty("dialog-help-icon");      //	QStyle::SP_DialogHelpButton
+  addProperty("dialog-no-icon");        //	QStyle::SP_DialogNoButton
+  addProperty("dialog-ok-icon");        //	QStyle::SP_DialogOkButton
+  addProperty("dialog-open-icon");      //	QStyle::SP_DialogOpenButton
+  addProperty("dialog-reset-icon");     //	QStyle::SP_DialogResetButton
+  addProperty("dialog-save-icon");      //	QStyle::SP_DialogSaveButton
+  addProperty("dialog-yes-icon");       //	QStyle::SP_DialogYesButton
+  addProperty("directory-closed-icon"); //	QStyle::SP_DirClosedIcon
+  addProperty("directory-icon");        //	QStyle::SP_DirIcon
+  addProperty("directory-link-icon");   //	QStyle::SP_DirLinkIcon
+  addProperty("directory-open-icon");   //	QStyle::SP_DirOpenIcon
+  addProperty("dockwidget-close-icon"); //	QStyle::SP_DockWidgetCloseButton
+  addProperty("downarrow-icon");        //	QStyle::SP_ArrowDown
+  addProperty("dvd-icon");              //	QStyle::SP_DriveDVDIcon
+  addProperty("file-icon");             //	QStyle::SP_FileIcon
+  addProperty("file-link-icon");        //	QStyle::SP_FileLinkIcon
+  addProperty(
+    "filedialog-contentsview-icon"); //	QStyle::SP_FileDialogContentsView
+  addProperty(
+    "filedialog-detailedview-icon");       //	QStyle::SP_FileDialogDetailedView
+  addProperty("filedialog-end-icon");      //	QStyle::SP_FileDialogEnd
+  addProperty("filedialog-infoview-icon"); //	QStyle::SP_FileDialogInfoView
+  addProperty("filedialog-listview-icon"); //	QStyle::SP_FileDialogListView
+  addProperty(
+    "filedialog-new-directory-icon"); //	QStyle::SP_FileDialogNewFolder
+  addProperty(
+    "filedialog-parent-directory-icon");   //	QStyle::SP_FileDialogToParent
+  addProperty("filedialog-start-icon");    //	QStyle::SP_FileDialogStart
+  addProperty("floppy-icon");              //	QStyle::SP_DriveFDIcon
+  addProperty("forward-icon");             //	QStyle::SP_ArrowForward
+  addProperty("harddisk-icon");            //	QStyle::SP_DriveHDIcon
+  addProperty("home-icon");                //	QStyle::SP_DirHomeIcon
+  addProperty("leftarrow-icon");           //	QStyle::SP_ArrowLeft
+  addProperty("messagebox-critical-icon"); //	QStyle::SP_MessageBoxCritical
+  addProperty(
+    "messagebox-information-icon");        //	QStyle::SP_MessageBoxInformation
+  addProperty("messagebox-question-icon"); //	QStyle::SP_MessageBoxQuestion
+  addProperty("messagebox-warning-icon");  //	QStyle::SP_MessageBoxWarning
+  addProperty("network-icon");             //	QStyle::SP_DriveNetIcon
+  addProperty("rightarrow-icon");          //	QStyle::SP_ArrowRight
+  addProperty(
+    "titlebar-contexthelp-icon");        //	QStyle::SP_TitleBarContextHelpButton
+  addProperty("titlebar-maximize-icon"); //	QStyle::SP_TitleBarMaxButton
+  addProperty("titlebar-menu-icon");     //	QStyle::SP_TitleBarMenuButton
+  addProperty("titlebar-minimize-icon"); //	QStyle::SP_TitleBarMinButton
+  addProperty("titlebar-normal-icon");   //	QStyle::SP_TitleBarNormalButton
+  addProperty("titlebar-shade-icon");    //	QStyle::SP_TitleBarShadeButton
+  addProperty("titlebar-unshade-icon");  //	QStyle::SP_TitleBarUnshadeButton
+  addProperty("trash-icon");             //	QStyle::SP_TrashIcon
+  addProperty("uparrow-icon");           //  QStyle::SP_ArrowUp
   // I might as well add stylesheet stuff for this widget.
   addProperty("widget", true);
   addProperty("subcontrol", true);
@@ -2967,6 +3048,89 @@ WidgetModel::initAttributeMap()
   m_attributes.insert("width", Length);
   m_attributes.insert("-qt-background-role", PaletteRole);
   m_attributes.insert("-qt-style-features", List);
+  // add icons: These are not actually properties
+  // but act and are set the same way
+  m_attributes.insert("backward-icon", Url); //  QStyle::SP_ArrowBack
+  m_attributes.insert("cd-icon", Url);       //  Style::SP_DriveCDIcon
+  m_attributes.insert("computer-icon", Url); // 	QStyle::SP_ComputerIcon
+  m_attributes.insert("desktop-icon", Url);  //	QStyle::SP_DesktopIcon
+  m_attributes.insert("dialog-apply-icon",
+                      Url); //	QStyle::SP_DialogApplyButton
+  m_attributes.insert("dialog-cancel-icon",
+                      Url); //	QStyle::SP_DialogCancelButton
+  m_attributes.insert("dialog-close-icon",
+                      Url); //	QStyle::SP_DialogCloseButton
+  m_attributes.insert("dialog-discard-icon",
+                      Url); //	QStyle::SP_DialogDiscardButton
+  m_attributes.insert("dialog-help-icon",
+                      Url); //	QStyle::SP_DialogHelpButton
+  m_attributes.insert("dialog-no-icon",
+                      Url); //	QStyle::SP_DialogNoButton
+  m_attributes.insert("dialog-ok-icon",
+                      Url); //	QStyle::SP_DialogOkButton
+  m_attributes.insert("dialog-open-icon",
+                      Url); //	QStyle::SP_DialogOpenButton
+  m_attributes.insert("dialog-reset-icon",
+                      Url); //	QStyle::SP_DialogResetButton
+  m_attributes.insert("dialog-save-icon",
+                      Url);                    //	QStyle::SP_DialogSaveButton
+  m_attributes.insert("dialog-yes-icon", Url); //	QStyle::SP_DialogYesButton
+  m_attributes.insert("directory-closed-icon", Url); //	QStyle::SP_DirClosedIcon
+  m_attributes.insert("directory-icon", Url);        //	QStyle::SP_DirIcon
+  m_attributes.insert("directory-link-icon", Url);   //	QStyle::SP_DirLinkIcon
+  m_attributes.insert("directory-open-icon", Url);   //	QStyle::SP_DirOpenIcon
+  m_attributes.insert("dockwidget-close-icon",
+                      Url); //	QStyle::SP_DockWidgetCloseButton
+  m_attributes.insert("downarrow-icon", Url); //	QStyle::SP_ArrowDown
+  m_attributes.insert("dvd-icon", Url);       //	QStyle::SP_DriveDVDIcon
+  m_attributes.insert("file-icon", Url);      //	QStyle::SP_FileIcon
+  m_attributes.insert("file-link-icon", Url); //	QStyle::SP_FileLinkIcon
+  m_attributes.insert("filedialog-contentsview-icon",
+                      Url); //	QStyle::SP_FileDialogContentsView
+  m_attributes.insert("filedialog-detailedview-icon",
+                      Url); //	QStyle::SP_FileDialogDetailedView
+  m_attributes.insert("filedialog-end-icon", Url); //	QStyle::SP_FileDialogEnd
+  m_attributes.insert("filedialog-infoview-icon",
+                      Url); //	QStyle::SP_FileDialogInfoView
+  m_attributes.insert("filedialog-listview-icon",
+                      Url); //	QStyle::SP_FileDialogListView
+  m_attributes.insert("filedialog-new-directory-icon",
+                      Url); //	QStyle::SP_FileDialogNewFolder
+  m_attributes.insert("filedialog-parent-directory-icon",
+                      Url); //	QStyle::SP_FileDialogToParent
+  m_attributes.insert("filedialog-start-icon",
+                      Url);                   //	QStyle::SP_FileDialogStart
+  m_attributes.insert("floppy-icon", Url);    //	QStyle::SP_DriveFDIcon
+  m_attributes.insert("forward-icon", Url);   //	QStyle::SP_ArrowForward
+  m_attributes.insert("harddisk-icon", Url);  //	QStyle::SP_DriveHDIcon
+  m_attributes.insert("home-icon", Url);      //	QStyle::SP_DirHomeIcon
+  m_attributes.insert("leftarrow-icon", Url); //	QStyle::SP_ArrowLeft
+  m_attributes.insert("messagebox-critical-icon",
+                      Url); //	QStyle::SP_MessageBoxCritical
+  m_attributes.insert("messagebox-information-icon",
+                      Url); //	QStyle::SP_MessageBoxInformation
+  m_attributes.insert("messagebox-question-icon",
+                      Url); //	QStyle::SP_MessageBoxQuestion
+  m_attributes.insert("messagebox-warning-icon",
+                      Url);                    //	QStyle::SP_MessageBoxWarning
+  m_attributes.insert("network-icon", Url);    //	QStyle::SP_DriveNetIcon
+  m_attributes.insert("rightarrow-icon", Url); //	QStyle::SP_ArrowRight
+  m_attributes.insert("titlebar-contexthelp-icon",
+                      Url); //	QStyle::SP_TitleBarContextHelpButton
+  m_attributes.insert("titlebar-maximize-icon",
+                      Url); //	QStyle::SP_TitleBarMaxButton
+  m_attributes.insert("titlebar-menu-icon",
+                      Url); //	QStyle::SP_TitleBarMenuButton
+  m_attributes.insert("titlebar-minimize-icon",
+                      Url); //	QStyle::SP_TitleBarMinButton
+  m_attributes.insert("titlebar-normal-icon",
+                      Url); //	QStyle::SP_TitleBarNormalButton
+  m_attributes.insert("titlebar-shade-icon",
+                      Url); //	QStyle::SP_TitleBarShadeButton
+  m_attributes.insert("titlebar-unshade-icon",
+                      Url);                 //	QStyle::SP_TitleBarUnshadeButton
+  m_attributes.insert("trash-icon", Url);   //	QStyle::SP_TrashIcon
+  m_attributes.insert("uparrow-icon", Url); //  QStyle::SP_ArrowUp}
 }
 
 WidgetModel::WidgetModel(DataStore* datastore)
@@ -3146,7 +3310,7 @@ WidgetModel::isValidPropertyValueForProperty(const QString& propertyname,
                                              const QString& valuename)
 {
   if (valuename.isEmpty()) {
-    auto status = new PropertyStatus(BadPropertyValue);
+    auto status = new PropertyStatus(PropertyValueState::BadValueName);
     return status;
   }
 
@@ -3249,6 +3413,7 @@ WidgetModel::fuzzySearch(const QString& name, QStringList list) const
     strcpy(value, valueStr.toStdString().c_str());
 
     if (fts::fuzzy_match(pattern, value, score)) {
+      //      qDebug() << "Name: " << name << " " << score << " " << valueStr;
       matches.insert(score, valueStr);
     }
 
@@ -3400,97 +3565,105 @@ WidgetModel::fuzzySearchSubControl(const QString& name)
   return fuzzySearch(name, m_subControls.keys());
 }
 
+QMultiMap<int, QString>
+WidgetModel::fuzzySearchColorNames(const QString& name)
+{
+  return fuzzySearch(name, m_colors);
+}
+
 AttributeType
 WidgetModel::propertyValueAttribute(const QString& value)
 {
-  if (checkColor(value)->state == GoodPropertyValue) {
+  if (checkColor(value)->state == PropertyValueState::GoodValue) {
     return Color;
 
-  } else if (checkLength(value)->state == GoodPropertyValue) {
+  } else if (checkLength(value)->state == PropertyValueState::GoodValue) {
     return Length;
 
-  } else if (checkBorder(value)->state == GoodPropertyValue) {
+  } else if (checkBorder(value)->state == PropertyValueState::GoodValue) {
     return Border;
 
-  } else if (checkFont(value)->state == GoodPropertyValue) {
+  } else if (checkFont(value)->state == PropertyValueState::GoodValue) {
     return Font;
 
-  } else if (checkFontWeight(value)->state == GoodPropertyValue) {
+  } else if (checkFontWeight(value)->state == PropertyValueState::GoodValue) {
     return FontWeight;
 
-  } else if (checkRadius(value)->state == GoodPropertyValue) {
+  } else if (checkRadius(value)->state == PropertyValueState::GoodValue) {
     return Radius;
 
-  } else if (checkBrush(value)->state == GoodPropertyValue) {
+  } else if (checkBrush(value)->state == PropertyValueState::GoodValue) {
     return Brush;
 
-  } else if (checkFontStyle(value)->state == GoodPropertyValue) {
+  } else if (checkFontStyle(value)->state == PropertyValueState::GoodValue) {
     return FontStyle;
 
-  } else if (checkFontSize(value)->state == GoodPropertyValue) {
+  } else if (checkFontSize(value)->state == PropertyValueState::GoodValue) {
     return FontSize;
 
-  } else if (checkAlignment(value)->state == GoodPropertyValue) {
+  } else if (checkAlignment(value)->state == PropertyValueState::GoodValue) {
     return Alignment;
 
-  } else if (checkAttachment(value)->state == GoodPropertyValue) {
+  } else if (checkAttachment(value)->state == PropertyValueState::GoodValue) {
     return Attachment;
 
-  } else if (checkBackground(value)->state == GoodPropertyValue) {
+  } else if (checkBackground(value)->state == PropertyValueState::GoodValue) {
     return Background;
 
-  } else if (checkBool(value)->state == GoodPropertyValue) {
+  } else if (checkBool(value)->state == PropertyValueState::GoodValue) {
     return Bool;
 
-  } else if (checkBoolean(value)->state == GoodPropertyValue) {
+  } else if (checkBoolean(value)->state == PropertyValueState::GoodValue) {
     return Boolean;
 
-  } else if (checkBorderImage(value)->state == GoodPropertyValue) {
+  } else if (checkBorderImage(value)->state == PropertyValueState::GoodValue) {
     return BorderImage;
 
-  } else if (checkBorderStyle(value)->state == GoodPropertyValue) {
+  } else if (checkBorderStyle(value)->state == PropertyValueState::GoodValue) {
     return BorderStyle;
 
-  } else if (checkBoxColors(value)->state == GoodPropertyValue) {
+  } else if (checkBoxColors(value)->state == PropertyValueState::GoodValue) {
     return BoxColors;
 
-  } else if (checkBoxLengths(value)->state == GoodPropertyValue) {
+  } else if (checkBoxLengths(value)->state == PropertyValueState::GoodValue) {
     return BoxLengths;
 
-  } else if (checkGradient(value)->state == GoodPropertyValue) {
+  } else if (checkGradient(value)->state == PropertyValueState::GoodValue) {
     return Gradient;
 
-  } else if (checkIcon(value)->state == GoodPropertyValue) {
+  } else if (checkIcon(value)->state == PropertyValueState::GoodValue) {
     return Icon;
 
-  } else if (checkNumber(value)->state == GoodPropertyValue) {
+  } else if (checkNumber(value)->state == PropertyValueState::GoodValue) {
     return Number;
 
-  } else if (checkOutline(value)->state == GoodPropertyValue) {
+  } else if (checkOutline(value)->state == PropertyValueState::GoodValue) {
     return Outline;
 
-  } else if (checkOrigin(value)->state == GoodPropertyValue) {
+  } else if (checkOrigin(value)->state == PropertyValueState::GoodValue) {
     return Origin;
 
-  } else if (checkOutlineStyle(value)->state == GoodPropertyValue) {
+  } else if (checkOutlineStyle(value)->state == PropertyValueState::GoodValue) {
     return OutlineStyle;
 
-  } else if (checkOutlineRadius(value)->state == GoodPropertyValue) {
+  } else if (checkOutlineRadius(value)->state ==
+             PropertyValueState::GoodValue) {
     return OutlineRadius;
 
-  } else if (checkPaletteRole(value)->state == GoodPropertyValue) {
+  } else if (checkPaletteRole(value)->state == PropertyValueState::GoodValue) {
     return PaletteRole;
 
-  } else if (checkRepeat(value)->state == GoodPropertyValue) {
+  } else if (checkRepeat(value)->state == PropertyValueState::GoodValue) {
     return Repeat;
 
-  } else if (checkUrl(value)->state == GoodPropertyValue) {
+  } else if (checkUrl(value)->state == PropertyValueState::GoodValue) {
     return Url;
 
-  } else if (checkPosition(value)->state == GoodPropertyValue) {
+  } else if (checkPosition(value)->state == PropertyValueState::GoodValue) {
     return Position;
 
-  } else if (checkTextDecoration(value)->state == GoodPropertyValue) {
+  } else if (checkTextDecoration(value)->state ==
+             PropertyValueState::GoodValue) {
     return TextDecoration;
 
   } // TODO add property tests.

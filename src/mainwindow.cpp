@@ -161,49 +161,56 @@ MainWindow::initGui()
 
   text =
 #if defined(GOODSTYLE)
-    "QTabBar :: tab : selected , QTabBar::tab:hover {\n"
-    "background: qlineargradient(\n"
-    "x1: 0, y1: 0, x2: 0, y2: 1,\n"
-    "stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
-    "stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
-    "}\n"
-    "QPushButton#evilButton {\n"
-    "background-color: red;\n"
-    "border-style: outset;\n"
-    "border-width: 2px;\n"
-    "border-radius: 10px;\n"
-    "border-color: beige;\n"
-    "font: bold 14px;\n"
-    "min-width: 10em;\n"
-    "padding: 6px;\n"
-    "}\n"
-    "QPushButton#evilButton:pressed {\n"
-    "background-color: rgb(224, 0, 0);\n"
-    "border-style: inset;\n"
-    "}\n\n"
-    // Good property.
-    "color : red; \n"
-    "background-color: blue;\n"
-    "background-color: red\n" // good no end marker needed on last property
-    "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
-    "    #6ea1f1, stop: 1 #567dbc);\n"
+    "color: #567dbc;\n" // good color value GOOD
+    "color: #7db;\n"    // good color value
+    "color: blue;\n"    // good property
+    //    "QTabBar :: tab : selected , QTabBar::tab:hover {\n"
+    //    "background: qlineargradient(\n"
+    //    "x1: 0, y1: 0, x2: 0, y2: 1,\n"
+    //    "stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
+    //    "stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
+    //    "}\n"
+    //    "QPushButton#evilButton {\n"
+    //    "background-color: red;\n"
+    //    "border-style: outset;\n"
+    //    "border-width: 2px;\n"
+    //    "border-radius: 10px;\n"
+    //    "border-color: beige;\n"
+    //    "font: bold 14px;\n"
+    //    "min-width: 10em;\n"
+    //    "padding: 6px;\n"
+    //    "}\n"
+    //    "QPushButton#evilButton:pressed {\n"
+    //    "background-color: rgb(224, 0, 0);\n"
+    //    "border-style: inset;\n"
+    //    "}\n\n"
+    //    // Good property.
+    //    "color : red; \n"
+    //    "background-color: blue;\n"
+    //    "background-color: red\n" // good no end marker needed on last
+    //    property "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+    //    stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n" //
+    ;
 #elif defined(BADPROPERTY)
 
-    //    "color: rd;\n"  // bad property value
-    //                    //    "color: blu;\n"  // bad property value
-    //    "color blue;\n" // no property marker
-    //    "colr: blue;\n" // no property marker
-    //    "background: \n" // bad gradient name
-    //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
-    //    "    #6ea1f1, stop: 1 #567dbc);\n"
-    "background: \n"               // bad color no #, wrong no of numerals
-    "    qlineargradient(x1: ,\n"  // missing numerical value
-    "                    y1: 0,\n" // good value
-    "                    x: 0,\n"  // wrong name (x2)
-    "                    y2: 1, \n"
-    "                    y2: 1, \n"         // repeated name
-    "                    stop: 0 6ea1f1,\n" // bad color no
-    "                    stop: 1 #7dbc);\n" // wrong no of numerals (3 or 6)
+    //    "color: rd;\n"                         // bad property value FUZZY
+    //    "color: #7dbc;\n"                      // bad color value
+    //    "colr: blue;\n"                        // bad property name
+    "file-icon: url(:icons/add-dcolon);\n" // good url
+    "file-icon: url();\n"                  // no url value
+    ;
+  //    "background: \n" // bad gradient
+  //    name
+  //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
+  //    "    #6ea1f1, stop: 1 #567dbc);\n"
+  //    "background: \n"               // bad color no #, wrong no of numerals
+  //    "    qlineargradient(x1: ,\n"  // missing numerical value
+  //    "                    y1: 0,\n" // good value
+  //    "                    x: 0,\n"  // wrong name (x2)
+  //    "                    y2: 1, \n"
+  //    "                    y2: 1, \n"         // repeated name
+  //    "                    stop: 0 6ea1f1,\n" // bad color no
+  //    "                    stop: 1 #7dbc);\n" // wrong no of numerals (3 or 6)
   //    "background: \n" // Bad x1 - no value
   //    "    qlineargradient(x1: , y1: 0, x2: 0, y2: 1, stop: 0\n"
   //    "    #6ea1f1, stop: 1 #567dbc);\n"
@@ -218,11 +225,11 @@ MainWindow::initGui()
   //    "    #6ea1f1, stop: 1 #567dbc);\n"
   //    "border: green solid 1px\n"  // no end marker on non-final property
   //    "bckground-color: green; \n" // bad property name
+  //;
 
 #else
 
 #endif
-    ;
 
   // No Errors
   // Errors

@@ -91,7 +91,7 @@ Parser::checkType(int start,
   if (property) {
     auto propertyState = m_datastore->isValidPropertyValueForProperty(
       property->name(), start, block);
-    if (propertyState->state == GoodPropertyValue) {
+    if (property && propertyState->state == PropertyValueState::GoodValue) {
       return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
                                             NodeState::GoodPropertyState);
     } else {
@@ -564,9 +564,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
         break;
       } else {
         auto valueStatus = m_datastore->isValidPropertyValueForProperty(
-          propertyName, start, block);
-        //        AttributeType attributeType =
-        //          m_datastore->propertyValueAttribute(block);
+          propertyName, pos - block.length(), block);
         property->addValue(
           block,
           ValidPropertyNameState,
@@ -651,7 +649,7 @@ Parser::findNext(const QString& text, int& pos)
       } else if (c.isLetterOrNumber() || c == '-') {
         if (!block.isEmpty()) {
           QChar b = block.back();
-          if (b == '{' || b == '}' || b == ';' || b == ':' || b == '#') {
+          if (b == '{' || b == '}' || b == ';' || b == ':' /* || b == '#'*/) {
             return block;
           }
         }
@@ -1597,54 +1595,78 @@ Parser::handleMouseClicked(const QPoint& pos)
             while (status) {
               if (x >= status->rect.left() && x < status->rect.right() &&
                   y >= status->rect.top() && y < status->rect.bottom()) {
-                switch (status->state) {
-                  case BadPropertyValue: {
-                    suggestionsMenu->clear();
-                    auto widgetact = getWidgetAction(
-                      m_datastore->invalidIcon(),
-                      tr("Property value is invalid %1").arg(status->name),
-                      suggestionsMenu);
-                    suggestionsMenu->addAction(widgetact);
-                    break;
-                  }
-                  case FuzzyColorValue:
-                    break;
-                  case BadColorValue:
-                    break;
-                  case EmptyGradientValueName: {
-                    suggestionsMenu->clear();
-                    auto widgetact = getWidgetAction(
-                      m_datastore->invalidIcon(),
-                      tr("No gradient value %1").arg(status->name),
-                      suggestionsMenu);
-                    suggestionsMenu->addAction(widgetact);
-                    break;
-                  }
-                  case FuzzyGradientName:
-                    break;
-                  case BadGradientName:
-                    break;
-                  case BadGradientValue:
-                    break;
-                  case BadGradientColorValue:
-                    break;
-                  case BadGradientNumericalValue:
-                    break;
-                  case BadGradientNumericalAndColorValue:
-                    break;
-                  case BadGradientValueCount:
-                    break;
-                  case BadGradientValueName:
-                    break;
-                  case RepeatedGradientValue:
-                    break;
-                }
+                //                switch (status->state) {
+                //                  case BadPropertyValue: {
+                //                    suggestionsMenu->clear();
+                //                    auto widgetact = getWidgetAction(
+                //                      m_datastore->invalidIcon(),
+                //                      tr("Property value is invalid
+                //                      %1").arg(status->name),
+                //                      suggestionsMenu);
+                //                    suggestionsMenu->addAction(widgetact);
+                //                    break;
+                //                  }
+                //                  case FuzzyColorValue: {
+                //                    suggestionsMenu->clear();
+                //                    auto matches =
+                //                      m_datastore->fuzzySearchColorNames(status->name);
+                //                    matches.insert(1000, tr("Color choice"));
+                //                    suggestionsMenu->clear();
+                //                    auto colorsAct =
+                //                      getWidgetAction(m_datastore->fuzzyIcon(),
+                //                                      tr("Fuzzy color
+                //                                      %1.<br>Possible "
+                //                                         "values showing
+                //                                         below.")
+                //                                        .arg(status->name),
+                //                                      suggestionsMenu);
+                //                    suggestionsMenu->addAction(colorsAct);
+                //                    suggestionsMenu->addSeparator();
+                //                    updateMenu(matches,
+                //                               nullptr,
+                //                               pos,
+                //                               &suggestionsMenu,
+                //                               SectionType::FuzzyWidgetName);
+                //                    break;
+                //                  }
+                //                  case BadColorValue:
+                //                    break;
+                //                    //                  case
+                //                    EmptyGradientValueName: {
+                //                    // suggestionsMenu->clear();
+                //                    //                    auto widgetact =
+                //                    getWidgetAction(
+                //                    // m_datastore->invalidIcon(),
+                //                    //                      tr("No gradient
+                //                    value
+                //                    // %1").arg(status->name),
+                //                    //                      suggestionsMenu);
+                //                    // suggestionsMenu->addAction(widgetact);
+                //                    //                    break;
+                //                    //                  }
+                //                  case FuzzyGradientName:
+                //                    break;
+                //                    //                  case BadGradientName:
+                //                    //                    break;
+                //                  case BadGradientValue:
+                //                    break;
+                //                  case BadGradientColorValue:
+                //                    break;
+                //                  case BadGradientNumericalValue:
+                //                    break;
+                //                  case BadGradientNumericalAndColorValue:
+                //                    break;
+                //                  case BadGradientValueCount:
+                //                    break;
+                //                  case BadGradientValueName:
+                //                    break;
+                //                  case RepeatedGradientValue:
+                //                    break;
+                //                }
 
                 break;
               }
               status = status->next;
-            }
-            if (status) {
             }
             //            if (property->isValidPropertyName()) {
             //              if (property->isValueValid(section->position)) {

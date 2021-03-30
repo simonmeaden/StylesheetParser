@@ -39,10 +39,10 @@ const QStringList PropertyStatus::names =
   "GoodPropertyValue" <<                //! Good value for this property name
   "BadPropertyValue" <<                 //! Bad general value
   "FuzzyColorValue"
-                << "EmptyGradientValueName" << //! Missing value
+  //                << "EmptyGradientValueName" << //! Missing value
   "FuzzyGradientName"
                 << "GoodGradientName" << //! Bad gradient name
-  "BadGradientName" <<                   //! Bad gradient name
+  //  "BadGradientName" <<                   //! Bad gradient name
   "BadGradientValue" <<                  //! Bad gradient value.
   "BadGradientNumericalValue" <<         //! Bad gradient number.
   "BadGradientColorValue" <<             //! Bad gradient color.

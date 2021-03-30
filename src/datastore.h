@@ -345,6 +345,7 @@ public:
                                                    const QString& value);
   QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
   QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
+  QMultiMap<int, QString> fuzzySearchColorNames(const QString& name);
 
   AttributeType propertyValueAttribute(const QString& value);
 
@@ -361,6 +362,11 @@ public:
                                      QStringList values);
 
   QList<Theme*> customThemes() const;
+
+  PropertyStatus* checkColorName(int start, const QString& value) const;
+  PropertyStatus* checkColorHashValue(int start, const QString& value) const;
+  PropertyStatus* checkColorRGB(int start, const QString& value) const;
+  PropertyStatus* checkColorHS(int start, const QString& value) const;
 
 private:
   WidgetItem* m_root;
@@ -574,6 +580,7 @@ public:
                                                    const QString& value);
   QMultiMap<int, QString> fuzzySearchPseudoStates(const QString& name);
   QMultiMap<int, QString> fuzzySearchSubControl(const QString& name);
+  QMultiMap<int, QString> fuzzySearchColorNames(const QString& name);
 
   //! Adds a new custom widget, with it's specialised names and values.
   bool addCustomWidget(const QString& name, const QString& parent);

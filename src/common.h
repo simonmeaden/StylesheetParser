@@ -394,24 +394,23 @@ Q_DECLARE_METATYPE(MenuData);
 
 enum PropertyValueState
 {
-  IrrelevantValue,   // Not relevant for this check.
-  GoodPropertyValue, //! Good value for this property name
-  BadPropertyValue,  //! Bad general value
+  //  IrrelevantValue, // Not relevant for this check.
+  GoodName, //! Good value for this property name
+  BadName,
+  FuzzyName,
+  GoodValueName, //! Good value for this property name
+  BadValueName,
+  FuzzyValueName,
+  GoodValue,
+  BadValue,
+  BadValueCount,
+  BadNumericalValue,
+  BadColorValue,
+  BadUrlValue,
+  RepeatValueName,
   FuzzyColorValue,
-  EmptyGradientValueName, //! Missing value
-  FuzzyGradientName,
-  GoodGradientName,                  //! Bad gradient name
-  BadGradientName,                   //! Bad gradient name
-  BadGradientValue,                  //! Bad gradient value.
-  BadGradientNumericalValue,         //! Bad gradient number.
-  BadGradientColorValue,             //! Bad gradient color.
-  BadGradientNumericalAndColorValue, //! Bad gradient number and color.
-  BadGradientValueCount,             //! Bad gradient value count.
-  BadGradientValueName,              //! Bad gradient value.
-  RepeatedGradientValue,             //! Bad gradient value.
   OpenParentheses,
   CloseParentheses,
-  BadColorValue,
 };
 // Q_DECLARE_FLAGS(PropertyValueStates, PropertyValueState);
 // Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyValueStates)
@@ -420,7 +419,7 @@ struct PropertyStatus
 {
   static const QStringList names;
 
-  PropertyStatus(PropertyValueState s = IrrelevantValue,
+  PropertyStatus(PropertyValueState s = PropertyValueState::GoodValue,
                  const QString& n = QString(),
                  int o = -1,
                  int l = -1);
@@ -433,7 +432,7 @@ struct PropertyStatus
     }
   }
 
-  PropertyValueStates state;
+  PropertyValueState state;
   int offset;
   int length;
   QString name;
@@ -441,7 +440,10 @@ struct PropertyStatus
   QRect rect;
 
   //  int length() const { return name.length(); }
-  bool notIrrelevant() const { return (state != IrrelevantValue); }
+  //  bool notIrrelevant() const
+  //  {
+  //    return (state != PropertyValueState::IrrelevantValue);
+  //  }
 
   QString toString() const { return names.at(int(state)); }
 };

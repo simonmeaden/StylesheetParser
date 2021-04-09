@@ -85,7 +85,7 @@ public:
 
   void parseInitialText(const QString& text);
 
-  StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
+  //  StylesheetData* getStylesheetProperty(const QString& sheet, int& pos);
   void handleDocumentChanged(int offset, int charsRemoved, int charsAdded);
   void handleCursorPositionChanged(QTextCursor textCursor);
   QMenu* handleMouseClicked(const QPoint& pos);
@@ -128,8 +128,8 @@ private:
                     int start,
                     int& pos);
 
-  QString findNext(const QString& text, int& pos);
-  void skipBlanks(const QString& text, int& pos);
+  //  QString findNext(const QString& text, int& pos);
+  //  void skipBlanks(const QString& text, int& pos);
 
   //  QTextCursor getCursorForPosition(int position);
   CursorData getNodeAtCursor(QTextCursor cursor);
@@ -201,7 +201,7 @@ private:
                                  const QString& newName);
   void actionPropertyMarker(PropertyNode* property);
   void actionPropertyEndMarker(PropertyNode* property);
-  void stepBack(int& pos, const QString& block);
+  //  void stepBack(int& pos, const QString& block);
   QPair<NodeType, NodeState> checkType(int start,
                                        const QString& block,
                                        NodeState lastState,

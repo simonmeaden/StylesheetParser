@@ -1374,89 +1374,103 @@ StylesheetEditor::setStyleSheet(const QString& stylesheet)
         //        QFont::Weight fontWeight = QFont::Light;
         //        bool colorError = false;
 
-        while (pos < sheet.length()) {
-          data = m_parser->getStylesheetProperty(sheet, pos);
+        //        while (pos < sheet.length()) {
+        //          data = m_parser->getStylesheetProperty(sheet, pos);
 
-          if (data->name.isEmpty()) {
-            return;
-          }
+        //          if (data->name.isEmpty()) {
+        //            return;
+        //          }
 
-          //          color1 = (data->colors.size() > 0 ? data->colors.at(0) :
-          //          QColor()); color2 = (data->colors.size() > 1 ?
-          //          data->colors.at(1) : QColor()); color3 =
-          //          (data->colors.size() > 2 ? data->colors.at(1) :
-          //          QColor()); colorError = checkStylesheetColors(data,
-          //          color1, color2, color3); underlineStyle =
-          //            (data->underline.size() > 0 ? data->underline.at(0)
-          //                                        :
-          //                                        QTextCharFormat::NoUnderline);
-          //          fontWeight =
-          //            (data->weights.size() > 0 ? data->weights.at(0) :
-          //            QFont::Normal);
-          //          // TODO ignore any more than 3 colours or one weight or
-          //          underline
-          //          // type,
-          //          // TODO maybe drop earlier values.
-          //          QFont font("");
+        //          //          color1 = (data->colors.size() > 0 ?
+        //          data->colors.at(0) :
+        //          //          QColor()); color2 = (data->colors.size() > 1 ?
+        //          //          data->colors.at(1) : QColor()); color3 =
+        //          //          (data->colors.size() > 2 ? data->colors.at(1) :
+        //          //          QColor()); colorError =
+        //          checkStylesheetColors(data,
+        //          //          color1, color2, color3); underlineStyle =
+        //          //            (data->underline.size() > 0 ?
+        //          data->underline.at(0)
+        //          //                                        :
+        //          // QTextCharFormat::NoUnderline);
+        //          //          fontWeight =
+        //          //            (data->weights.size() > 0 ?
+        //          data->weights.at(0) :
+        //          //            QFont::Normal);
+        //          //          // TODO ignore any more than 3 colours or one
+        //          weight or
+        //          //          underline
+        //          //          // type,
+        //          //          // TODO maybe drop earlier values.
+        //          //          QFont font("");
 
-          //          if (data->name == WIDGET) {
-          //            m_highlighter->setWidgetFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          if (data->name == WIDGET) {
+        //          //            m_highlighter->setWidgetFormat(color1, color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == PSEUDOSTATE) {
-          //            m_highlighter->setSubControlFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == PSEUDOSTATE) {
+        //          //            m_highlighter->setSubControlFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "subcontrolmarker") {
-          //            m_highlighter->setSubControlMarkerFormat(
-          //              color1, color2, fontWeight);
-          //            continue;
+        //          //          } else if (data->name == "subcontrolmarker") {
+        //          //            m_highlighter->setSubControlMarkerFormat(
+        //          //              color1, color2, fontWeight);
+        //          //            continue;
 
-          //          } else if (data->name == PSEUDOSTATE) {
-          //            m_highlighter->setPseudoStateFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == PSEUDOSTATE) {
+        //          //            m_highlighter->setPseudoStateFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "pseudostatemarker") {
-          //            m_highlighter->setPseudoStateMarkerFormat(
-          //              color1, color2, fontWeight);
-          //            continue;
+        //          //          } else if (data->name == "pseudostatemarker") {
+        //          //            m_highlighter->setPseudoStateMarkerFormat(
+        //          //              color1, color2, fontWeight);
+        //          //            continue;
 
-          //          } else if (data->name == PROPERTY) {
-          //            m_highlighter->setPropertyFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == PROPERTY) {
+        //          //            m_highlighter->setPropertyFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "propertymarker") {
-          //            m_highlighter->setPropertyMarkerFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == "propertymarker") {
+        //          //            m_highlighter->setPropertyMarkerFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == PROPERTY) {
-          //            m_highlighter->setValueFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == PROPERTY) {
+        //          //            m_highlighter->setValueFormat(color1, color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "startbrace") {
-          //            m_highlighter->setStartBraceFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == "startbrace") {
+        //          //            m_highlighter->setStartBraceFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "endbrace") {
-          //            m_highlighter->setEndBraceFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == "endbrace") {
+        //          //            m_highlighter->setEndBraceFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "bracematch") {
-          //            m_highlighter->setBraceMatchFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == "bracematch") {
+        //          //            m_highlighter->setBraceMatchFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } else if (data->name == "comment") {
-          //            m_highlighter->setCommentFormat(color1, color2,
-          //            fontWeight); continue;
+        //          //          } else if (data->name == "comment") {
+        //          //            m_highlighter->setCommentFormat(color1,
+        //          color2,
+        //          //            fontWeight); continue;
 
-          //          } /* else if (data->name == BAD) {
+        //          //          } /* else if (data->name == BAD) {
 
-          //             m_highlighter->setBadValueFormat(
-          //               color1, color2, fontWeight, true, underlineStyle,
-          //               color3);
-          //             continue;
-          //           }*/
-        }
+        //          //             m_highlighter->setBadValueFormat(
+        //          //               color1, color2, fontWeight, true,
+        //          underlineStyle,
+        //          //               color3);
+        //          //             continue;
+        //          //           }*/
+        //        }
       }
     }
   }

@@ -34,33 +34,69 @@ operator!=(NodeSection& left, NodeSection& right)
   return !(left == right);
 }
 
-const QStringList PropertyStatus::names =
-  QStringList() << "IrrelevantValue" << // Not relevant for this check.
-  "GoodPropertyValue" <<                //! Good value for this property name
-  "BadPropertyValue" <<                 //! Bad general value
-  "FuzzyColorValue"
-  //                << "EmptyGradientValueName" << //! Missing value
-  "FuzzyGradientName"
-                << "GoodGradientName" << //! Bad gradient name
-  //  "BadGradientName" <<                   //! Bad gradient name
-  "BadGradientValue" <<                  //! Bad gradient value.
-  "BadGradientNumericalValue" <<         //! Bad gradient number.
-  "BadGradientColorValue" <<             //! Bad gradient color.
-  "BadGradientNumericalAndColorValue" << //! Bad gradient number and color.
-  "BadGradientValueCount" <<             //! Bad gradient value count.
-  "BadGradientValueName" <<              //! Bad gradient value.
-  "RepeatedGradientValue";               //! Bad gradient value.
+const QStringList PropertyStatus::names = QStringList() << "GoodName"
+                                                        << "BadName"
+                                                        << "FuzzyName"
+                                                        << "FuzzyColorValue"
+                                                        << "GoodValueName"
+                                                        << "BadValueName"
+                                                        << "FuzzyValueName"
+                                                        << "GoodValue"
+                                                        << "BadValue"
+                                                        << "BadValueCount"
+                                                        << "BadNumericalValue"
+                                                        << "BadColorValue"
+                                                        << "BadUrlValue"
+                                                        << "RepeatValueName"
+                                                        << "FuzzyColorValue"
+                                                        << "OpenParentheses"
+                                                        << "CloseParentheses";
 
-PropertyStatus::PropertyStatus(PropertyValueState s,
-                               const QString& n,
-                               int o,
-                               int l)
+PropertyStatus::PropertyStatus(PropertyValueState s, const QString& n, int o)
   : state(s)
   , offset(o)
-  , length(l)
   , name(n)
 {
   qDebug();
+}
+
+int
+PropertyStatus::length() const
+{
+  return name.length();
+}
+
+PropertyStatus*
+PropertyStatus::lastStatus()
+{
+  auto status = next;
+  while (status) {
+    if (status->next)
+      status = status->next;
+    else
+      return status;
+  }
+  return nullptr;
+}
+
+int
+PropertyStatus::lastOffset()
+{
+  auto next = lastStatus();
+  if (next)
+    return next->offset;
+  else
+    return offset;
+}
+
+int
+PropertyStatus::lastEnd()
+{
+  auto next = lastStatus();
+  if (next)
+    return next->offset + next->length();
+  else
+    return offset + length();
 }
 
 QDebug
@@ -70,7 +106,7 @@ operator<<(QDebug debug, const PropertyStatus& status)
   debug.nospace() << "State : " << status.toString()
                   << " name : " << status.name;
   debug.nospace() << "  offset : " << status.offset
-                  << " length : " << status.length;
+                  << " length : " << status.length();
   return debug;
 }
 

@@ -28,8 +28,8 @@
 #include <QXmlStreamReader>
 #include <QtDebug>
 
-//#define GOODSTYLE
-#define BADPROPERTY
+#define GOODSTYLE
+//#define BADPROPERTY
 
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
@@ -161,71 +161,165 @@ MainWindow::initGui()
 
   text =
 #if defined(GOODSTYLE)
-    "color: #567dbc;\n" // good color value GOOD
-    "color: #7db;\n"    // good color value
-    "color: blue;\n"    // good property
-    //    "QTabBar :: tab : selected , QTabBar::tab:hover {\n"
-    //    "background: qlineargradient(\n"
-    //    "x1: 0, y1: 0, x2: 0, y2: 1,\n"
-    //    "stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
-    //    "stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
-    //    "}\n"
-    //    "QPushButton#evilButton {\n"
-    //    "background-color: red;\n"
-    //    "border-style: outset;\n"
-    //    "border-width: 2px;\n"
-    //    "border-radius: 10px;\n"
-    //    "border-color: beige;\n"
-    //    "font: bold 14px;\n"
-    //    "min-width: 10em;\n"
-    //    "padding: 6px;\n"
-    //    "}\n"
-    //    "QPushButton#evilButton:pressed {\n"
-    //    "background-color: rgb(224, 0, 0);\n"
-    //    "border-style: inset;\n"
-    //    "}\n\n"
-    //    // Good property.
-    //    "color : red; \n"
-    //    "background-color: blue;\n"
-    //    "background-color: red\n" // good no end marker needed on last
-    //    property "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-    //    stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n" //
+    "background-position: bottom center;\n" // Good Alignment
+    "background-position: top left;\n"      // Good Alignment
+    "background-position: top right;\n"     // Good Alignment
+    "background-attachment: scroll;\n"
+    "background-attachment: fixed;\n"
+    "background: white url(:/images/ring.png);\n"
+    "background-repeat: repeat-x;\n"
+    "background-repeat: repeat-y;\n"
+    "background-repeat: repeat;\n"
+    "background-repeat: no-repeat;\n"
+    "background-position: top left;\n"
+    "background-position: bottom center;\n"
+    "background-position: left;\n"
+    "background-position: right;\n"
+    "background-position: center;\n"
+    "background-clip: margin;\n"
+    "background-clip: border;\n"
+    "background-clip: padding;\n"
+    "background-clip: content;\n"
+    "background-origin: margin;\n"
+    "background-origin: border;\n"
+    "background-origin: padding;\n"
+    "background-origin: content;\n"
+    "background: qlineargradient(\n" // good gradient
+    "  x1: 0, y1: 0, x2: 0, y2: 1,\n"
+    "  stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
+    "  stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
+    "}\n"
+    "background: qconicalgradient(cx:0.5, cy:0.5, angle:30,\n"
+    "  stop:0 white, stop:1 #00FF00);\n"
+    "background: qradialgradient(cx:0, cy:0, radius: 1,\n"
+    "  fx:0.5, fy:0.5, stop:0 white, stop:1 green);\n"
+    "border-color: red;\n"
+    "border-color: red blue;\n"
+    "border-color: red blue green;\n"
+    "border-color: red blue green yellow;\n"
+    "border-top-color: red;\n"
+    "border-right-color: red;\n"
+    "border-bottom-color: red;\n"
+    "border-left-color: red;\n"
+    "border-style: dashed;\n"
+    "border-style: dot-dash;\n"
+    "border-style: dot-dot-dash;\n"
+    "border-style: dotted;\n"
+    "border-style: double;\n"
+    "border-style: groove;\n"
+    "border-style: inset;\n"
+    "border-style: outset;\n"
+    "border-style: ridge;\n"
+    "border-style: solid;\n"
+    "border-style: none;\n"
+    "border-left-style: solid;\n"
+    "border-right-style: solid;\n"
+    "border-bottom-style: solid;\n"
+    "border-top-style: solid;\n"
+    "border-image: url(:/images/frame.png) 4;\n"
+    "border: 1px solid white;\n"
+    "border-top: 1px solid white;\n"
+    "border-bottom: 1px solid white;\n"
+    "border-left: 1px solid white;\n"
+    "border-right: 1px solid white;\n"
+    "border-radius: 4px;"
+    "border-top-left-radius: 4px;"
+    "border-bottom-left-radius: 4px;"
+    "border-top-right-radius: 4px;"
+    "border-bottom-right-radius: 4px;"
+    "border-width: 4px;"
+    "border-width: 4px 2px;"
+    "border-width: 4px 2px 4px;"
+    "border-width: 4px 2px 4px 2px;\n"
+    "border-width: 4px 2px 4px 2px 3px;\n"
+    "border-color: red blue green yellow;\n"
+    "border-color: red #fafafa"
+    "  rgba(255, 0, 0, 75%)"
+    "  hsva(240, 255, 255, 75%);\n "
+    "border-color: red "
+    "  #fafafa rgba(255, 0, 0, 75 %) "
+    "  hsva(240, 255, 255, 75%) "
+    "  pink;\n"
+    " color : #567dbc;\n"                      // good color value
+    "color: #7db;\n"                           // good color value
+    "color: blue;\n"                           // good property
+    "color: red;\n"                            // good property value
+    "color: #fafafa;\n"                        // good color value
+    "color: #FAFAFA;\n"                        // good color value
+    "color: rgb(0xfa, 0xf4, 0xf4);\n"          // good property name
+    "color: rgba(255, 0, 0, 75%);\n"           // good property name
+    "color: rgb(100%, 0%, 0%);\n"              // good property name
+    "color: hsv(60, 100%, 100%);\n"            // good property name
+    "color: hsva(240, 255, 255, 75%);\n"       // good property name
+    "color: hsl(60, 100%, 50%);\n"             // good property name
+    "color: hsla(240, 255, 50%, 75%);\n"       // good property name
+    "file-icon: url(\":icons/add-dcolon\");\n" // good url
+    "file-icon: url(:icons/add-dcolon);\n"     // good url
+    "bottom: 2px;\n"
+    //        "QTabBar :: tab : selected ,
+    //        QTabBar::tab:hover {\n"
+    //        "background:
+    //        qlineargradient(\n" "x1: 0, y1:
+    //        0, x2: 0, y2: 1,\n" "stop: 0
+    //        #fafafa, stop: 0.4 #f4f4f4,\n"
+    //        "stop: 0.5 #e7e7e7, stop: 1.0
+    //        #fafafa);\n"
+    //        "}\n"
+    //        "QPushButton#evilButton {\n"
+    //        "background-color: red;\n"
+    //        "border-style: outset;\n"
+    //        "border-width: 2px;\n"
+    //        "border-radius: 10px;\n"
+    //        "border-color: beige;\n"
+    //        "font: bold 14px;\n"
+    //        "min-width: 10em;\n"
+    //        "padding: 6px;\n"
+    //        "}\n"
+    //        "QPushButton#evilButton:pressed
+    //        {\n" "background-color:
+    //        rgb(224, 0, 0);\n"
+    //        "border-style: inset;\n"
+    //        "}\n\n"
+    //        // Good property.
+    //        "color : red; \n"
+    //        "background-color: blue;\n"
+    //        "background-color: red\n" //
+    //        good no end marker needed on
+    //        last property "background:
+    //        qlineargradient(x1: 0, y1: 0,
+    //        x2: 0, y2: 1, stop: 0\n" "
+    //        #6ea1f1, stop: 1 #567dbc);\n"
+    //    //
     ;
 #elif defined(BADPROPERTY)
 
-    //    "color: rd;\n"                         // bad property value FUZZY
-    //    "color: #7dbc;\n"                      // bad color value
-    //    "colr: blue;\n"                        // bad property name
-    "file-icon: url(:icons/add-dcolon);\n" // good url
-    "file-icon: url();\n"                  // no url value
+    "file-icon: url();\n" // no url value
+    //    "background: \n" // bad gradient
+    //    name
+    //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
+    //    "    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "background: \n"               // bad color no #, wrong no of numerals
+    //    "    qlineargradient(x1: ,\n"  // missing numerical value
+    //    "                    y1: 0,\n" // good value
+    //    "                    x: 0,\n"  // wrong name (x2)
+    //    "                    y2: 1, \n"
+    //    "                    y2: 1, \n"         // repeated name
+    //    "                    stop: 0 6ea1f1,\n" // bad color no
+    //    "                    stop: 1 #7dbc);\n" // wrong no of numerals (3 or
+    //    6) "background: \n" // Bad x1 - no value "    qlineargradient(x1: ,
+    //    y1: 0, x2: 0, y2: 1, stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "background: \n" // Bad x1 no comma
+    //    "    qlineargradient(x1: 0 y1: 0, x2: 0, y2: 1, stop: 0\n"
+    //    "    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "background: \n" // Bad x1 no comma and no y2 value
+    //    "    qlineargradient(x1: 0 y1: , x2: 0, y2: 1, stop: 0\n"
+    //    "    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "background: \n" // Good
+    //    "    qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
+    //    "    #6ea1f1, stop: 1 #567dbc);\n"
+    //    "border: green solid 1px\n"  // no end marker on non-final property
+    //    "bckground-color: green; \n" // bad property name
     ;
-  //    "background: \n" // bad gradient
-  //    name
-  //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
-  //    "    #6ea1f1, stop: 1 #567dbc);\n"
-  //    "background: \n"               // bad color no #, wrong no of numerals
-  //    "    qlineargradient(x1: ,\n"  // missing numerical value
-  //    "                    y1: 0,\n" // good value
-  //    "                    x: 0,\n"  // wrong name (x2)
-  //    "                    y2: 1, \n"
-  //    "                    y2: 1, \n"         // repeated name
-  //    "                    stop: 0 6ea1f1,\n" // bad color no
-  //    "                    stop: 1 #7dbc);\n" // wrong no of numerals (3 or 6)
-  //    "background: \n" // Bad x1 - no value
-  //    "    qlineargradient(x1: , y1: 0, x2: 0, y2: 1, stop: 0\n"
-  //    "    #6ea1f1, stop: 1 #567dbc);\n"
-  //    "background: \n" // Bad x1 no comma
-  //    "    qlineargradient(x1: 0 y1: 0, x2: 0, y2: 1, stop: 0\n"
-  //    "    #6ea1f1, stop: 1 #567dbc);\n"
-  //    "background: \n" // Bad x1 no comma and no y2 value
-  //    "    qlineargradient(x1: 0 y1: , x2: 0, y2: 1, stop: 0\n"
-  //    "    #6ea1f1, stop: 1 #567dbc);\n"
-  //    "background: \n" // Good
-  //    "    qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0\n"
-  //    "    #6ea1f1, stop: 1 #567dbc);\n"
-  //    "border: green solid 1px\n"  // no end marker on non-final property
-  //    "bckground-color: green; \n" // bad property name
-  //;
 
 #else
 

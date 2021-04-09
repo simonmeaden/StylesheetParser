@@ -398,7 +398,7 @@ enum PropertyValueState
   GoodName, //! Good value for this property name
   BadName,
   FuzzyName,
-  GoodValueName, //! Good value for this property name
+  GoodValueName,
   BadValueName,
   FuzzyValueName,
   GoodValue,
@@ -421,8 +421,7 @@ struct PropertyStatus
 
   PropertyStatus(PropertyValueState s = PropertyValueState::GoodValue,
                  const QString& n = QString(),
-                 int o = -1,
-                 int l = -1);
+                 int o = -1);
   ~PropertyStatus()
   {
     // delete any linked nodes.
@@ -432,18 +431,16 @@ struct PropertyStatus
     }
   }
 
+  int length() const;
+  PropertyStatus* lastStatus();
+  int lastOffset();
+  int lastEnd();
+
   PropertyValueState state;
   int offset;
-  int length;
   QString name;
   PropertyStatus* next = nullptr;
   QRect rect;
-
-  //  int length() const { return name.length(); }
-  //  bool notIrrelevant() const
-  //  {
-  //    return (state != PropertyValueState::IrrelevantValue);
-  //  }
 
   QString toString() const { return names.at(int(state)); }
 };

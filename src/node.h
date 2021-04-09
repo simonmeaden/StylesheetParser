@@ -233,10 +233,7 @@ public:
   //! Sets the value at index if index is valid.
   void setValue(int index, const QString& value);
   //! Adds a complete value/check/offset to the values.
-  void addValue(const QString& value,
-                NodeState check,
-                QTextCursor cursor,
-                PropertyStatus* status);
+  void addValue(NodeState check, PropertyStatus* status);
   QString value(int index);
 
   //! Returns the checks as a list.
@@ -247,12 +244,12 @@ public:
   void setStateFlag(int index, NodeState check);
   NodeState check(int index);
 
-  //! Returns the positions as a list.
-  QList<QTextCursor> valueCursors() const;
+  //  //! Returns the positions as a list.
+  //  QList<QTextCursor> valueCursors() const;
   //! Sets the position at index if index is valid.
-  void setValueCursor(int index, QTextCursor position);
-  //! Sets the positions to the supplied QTextCursor positions.
-  void setValueCursors(const QList<QTextCursor>& positions);
+  void setValueOffset(int index, int offset);
+  //  //! Sets the positions to the supplied QTextCursor positions.
+  //  void setValueCursors(const QList<QTextCursor>& positions);
   int valuePosition(int index);
 
   //! Returns the attribute types as a list.
@@ -280,7 +277,6 @@ public:
   bool isValidPropertyName() const;
   bool isFuzzyName() const;
   bool isFinalProperty();
-  //  void setValidPropertyName(bool valid);
   bool isValid(bool finalProperty = false);
 
   bool hasPropertyMarker() const;
@@ -298,10 +294,27 @@ public:
   NodeSection* sectionIfIn(QPoint pos) override;
   QList<PartialType> sectionIfIn(int start, int end);
 
+  int indexOf(const QString& name) const;
+
+  int statusCount(int index)
+  {
+    if (!m_valueStatus.isEmpty() && index >= 0 &&
+        index < m_valueStatus.size()) {
+      auto status = m_valueStatus.at(index);
+      int count = 1;
+      while (status->next) {
+        count++;
+        status = status->next;
+      }
+      return count;
+    }
+    return 0;
+  }
+
 protected:
-  QStringList m_values;
+  //  QStringList m_values;
   QList<NodeState> m_checks;
-  QList<QTextCursor> m_cursors;
+  //  QList<QTextCursor> m_cursors;
   QList<PropertyStatus*> m_valueStatus;
 
   NodeStates m_propertyState = NodeState::BadNodeState;

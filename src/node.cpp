@@ -909,11 +909,11 @@ PropertyNode::hasWidgetNodes()
   return (m_widgetnodes);
 }
 
-QStringList
-PropertyNode::values() const
-{
-  return m_values;
-}
+// QStringList
+// PropertyNode::values() const
+//{
+//  return m_values;
+//}
 
 QList<NodeState>
 PropertyNode::state() const
@@ -921,17 +921,19 @@ PropertyNode::state() const
   return m_checks;
 }
 
-QList<QTextCursor>
-PropertyNode::valueCursors() const
-{
-  return m_cursors;
-}
+// QList<QTextCursor>
+// PropertyNode::valueCursors() const
+//{
+//  return m_cursors;
+//}
 
 void
-PropertyNode::setValueCursor(int index, QTextCursor cursor)
+PropertyNode::setValueOffset(int index, int offset)
 {
-  if (index >= 0 && index < m_cursors.length()) {
-    m_cursors.replace(index, cursor);
+  if (index >= 0 && index < m_valueStatus.length()) {
+    auto status = m_valueStatus.at(index);
+    status->offset = offset;
+    m_valueStatus.replace(index, status);
   }
 }
 
@@ -949,19 +951,19 @@ PropertyNode::valueStatus(int index) const
   return nullptr;
 }
 
-void
-PropertyNode::setValues(const QStringList& values)
-{
-  m_values = values;
-}
+// void
+// PropertyNode::setValues(const QStringList& values)
+//{
+//  m_values = values;
+//}
 
-void
-PropertyNode::setValue(int index, const QString& value)
-{
-  if (index >= 0 && index < m_values.length()) {
-    m_values.replace(index, value);
-  }
-}
+// void
+// PropertyNode::setValue(int index, const QString& value)
+//{
+//  if (index >= 0 && index < m_values.length()) {
+//    m_values.replace(index, value);
+//  }
+//}
 
 void
 PropertyNode::setChecks(const QList<NodeState>& checks)
@@ -980,64 +982,44 @@ PropertyNode::setStateFlag(int index, NodeState check)
 NodeState
 PropertyNode::check(int index)
 {
-  if (index >= 0 && index < m_values.size())
+  if (index >= 0 && index < m_checks.size())
     return m_checks.at(index);
   return BadNodeState;
 }
 
-void
-PropertyNode::setValueCursors(const QList<QTextCursor>& positions)
-{
-  m_cursors = positions;
-}
+// void
+// PropertyNode::setValueCursors(const QList<QTextCursor>& positions)
+//{
+//  m_cursors = positions;
+//}
 
 int
 PropertyNode::valuePosition(int index)
 {
-  if (index >= 0 && index < m_cursors.size())
-    return m_cursors.at(index).anchor();
+  if (index >= 0 && index < m_valueStatus.size())
+    return m_valueStatus.at(index)->offset;
   return -1;
 }
 
 void
-PropertyNode::addValue(const QString& value,
-                       NodeState check,
-                       QTextCursor cursor,
-                       PropertyStatus* status)
+PropertyNode::addValue(NodeState check, PropertyStatus* status)
 {
-  m_values.append(value);
   m_checks.append(check);
-  m_cursors.append(cursor);
   m_valueStatus.append(status);
 }
 
 QString
 PropertyNode::value(int index)
 {
-  if (index >= 0 && index < m_values.size())
-    return m_values.at(index);
+  if (index >= 0 && index < m_valueStatus.size())
+    return m_valueStatus.at(index)->name;
   return QString();
 }
-
-// bool
-// PropertyNode::setBadCheck(PropertyValueCheck check, int index)
-//{
-//  if (index == -1 && !m_checks.isEmpty()) {
-//    m_checks[m_checks.length() - 1] = check;
-//    return true;
-
-//  } else if (index >= 0 && index < m_checks.length()) {
-//    m_checks[index] = check;
-//    return true;
-//  }
-
-//  return false;
-//}
 
 int
 PropertyNode::count()
 {
-  return m_cursors.size();
+  return m_valueStatus.size();
 }
 
 bool
@@ -1062,17 +1044,19 @@ PropertyNode::length() const
 {
   if (hasPropertyEndMarker()) {
     return m_endMarkerCursor.anchor() - position();
-  } else if (m_cursors.isEmpty()) {
+  } else if (m_valueStatus.isEmpty()) {
     if (!hasPropertyMarker()) {
       return m_name.length();
     } else {
       return propertyMarkerCursor().anchor() + 1;
     }
   } else {
-    auto value = m_values.last();
+    auto value = m_valueStatus.last()->name;
     auto status = m_valueStatus.last();
-    return m_cursors.last().anchor() + position() + status->offset +
-           value.length();
+    while (status->next) {
+      status = status->next;
+    }
+    return status->offset + status->length();
   }
 
   return 0;
@@ -1197,11 +1181,10 @@ PropertyNode::sectionIfIn(QPoint pos)
   int left, right;
   auto fm = m_editor->fontMetrics();
   int top, bottom;
-  QTextCursor cursor;
 
   // check marker;
   if (hasPropertyMarker()) {
-    cursor = propertyMarkerCursor();
+    auto cursor = propertyMarkerCursor();
     rect = m_editor->cursorRect(cursor);
     top = rect.y();
     bottom = top + rect.height();
@@ -1213,16 +1196,12 @@ PropertyNode::sectionIfIn(QPoint pos)
     }
   }
 
-  // then value(s)
-  QString value;
-  for (int i = 0; i < valueCursors().count(); i++) {
-    value = values().at(i);
-    cursor = valueCursors().at(i);
-    rect = m_editor->cursorRect(cursor);
+  for (int i = 0; i < m_valueStatus.count(); i++) {
+    rect = m_valueStatus.at(i)->rect;
     top = rect.y();
     bottom = top + rect.height();
     left = rect.x();
-    right = left + fm.horizontalAdvance(value);
+    right = left + fm.horizontalAdvance(m_valueStatus.at(i)->name);
 
     if (x >= left && x <= right && y >= top && y < bottom) {
       isin->type = SectionType::PropertyValue;
@@ -1232,7 +1211,7 @@ PropertyNode::sectionIfIn(QPoint pos)
   }
 
   if (hasPropertyEndMarker()) {
-    cursor = propertyEndMarkerCursor();
+    auto cursor = propertyEndMarkerCursor();
     rect = m_editor->cursorRect(cursor);
     top = rect.y();
     bottom = top + rect.height();
@@ -1252,7 +1231,7 @@ PropertyNode::sectionIfIn(int start, int end)
 {
   QList<PartialType> partials;
   int valueEnd;
-  if (start >= position() && start < NamedNode::end()) {
+  if (!(position() > end || NamedNode::end() < start)) {
     PartialType pt;
     pt.start = start;
     pt.type = PartialType::Name;
@@ -1276,11 +1255,12 @@ PropertyNode::sectionIfIn(int start, int end)
     }
   }
 
-  for (int i = 0; i < m_values.count(); i++) {
-    auto offset = m_cursors.at(i).anchor();
+  for (int i = 0; i < m_valueStatus.count(); i++) {
+    auto status = m_valueStatus.at(i);
+    auto offset = status->offset;
     if (end < offset)
       break;
-    auto value = m_values.at(i);
+    auto value = status->name;
     valueEnd = offset + value.length();
     PartialType pt;
     if (start <= offset) {
@@ -1315,6 +1295,28 @@ PropertyNode::sectionIfIn(int start, int end)
   }
 
   return partials;
+}
+
+int
+PropertyNode::indexOf(const QString& name) const
+{
+  for (auto i = 0; i < m_valueStatus.length(); i++) {
+    auto status = m_valueStatus.at(i);
+    if (status->name == name) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+void
+PropertyNode::setValue(int index, const QString& value)
+{
+  if (index >= 0 && index < m_valueStatus.length()) {
+    auto status = m_valueStatus.at(index);
+    status->name = value;
+    m_valueStatus.replace(index, status);
+  }
 }
 
 CommentNode::CommentNode(QTextCursor start,

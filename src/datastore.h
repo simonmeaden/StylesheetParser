@@ -52,8 +52,6 @@ class GradientCheck
   bool linear = false;
   bool radial = false;
   bool conical = false;
-  PropertyStatus* head;
-  PropertyStatus* foot;
 
   virtual bool isRepeated() = 0;
 
@@ -72,30 +70,8 @@ public:
     Bad,
   };
 
-  GradientCheck(PropertyStatus* status)
-    : head(status)
-    , foot(head)
-  {}
-
-  void addStatus(PropertyStatus* next)
-  {
-    foot->next = next;
-    foot = foot->next;
-  }
-
-  void setHead(PropertyValueState state,
-               const QString& name,
-               int offset,
-               int length)
-  {
-    head->state = state;
-    head->offset = offset;
-    head->length = length;
-    head->name = name;
-    head->next = nullptr;
-  }
-
-  PropertyStatus* status() { return head; }
+  GradientCheck() {}
+  ~GradientCheck() {}
 
   virtual Check set(const QString& name) = 0;
 };
@@ -109,7 +85,7 @@ class LinearCheck : public GradientCheck
 
 public:
   LinearCheck()
-    : GradientCheck(new PropertyStatus())
+    : GradientCheck()
   {}
 
   Check set(const QString& name) override
@@ -153,51 +129,6 @@ public:
 
 class RadialCheck : public GradientCheck
 {
-  bool cx = false, cy = false, cx_r = false, cy_r = false, angle = false,
-       angle_r = false;
-
-  bool isRepeated() override { return (cx_r || cy_r || angle_r); }
-
-public:
-  RadialCheck()
-    : GradientCheck(new PropertyStatus())
-  {}
-
-  Check set(const QString& name) override
-  {
-    if (name == "cx") {
-      if (cx) {
-        cx_r = true;
-      } else {
-        cx = true;
-      }
-    } else if (name == "cy") {
-      if (cy) {
-        cy_r = true;
-      } else {
-        cy = true;
-      }
-    } else if (name == "angle") {
-      if (angle) {
-        angle_r = true;
-      } else {
-        angle = true;
-      }
-    } else if (name == "stop") {
-      return Stop;
-    } else {
-      return BadName;
-    }
-    if (isRepeated()) {
-      return Repeat;
-    } else {
-      return GoodName;
-    }
-  }
-};
-
-class ConicalCheck : public GradientCheck
-{
   bool cx = false, cy = false, cx_r = false, cy_r = false, fx = false,
        fx_r = false, fy = false, fy_r = false, radius = false, radius_r = false;
 
@@ -207,8 +138,8 @@ class ConicalCheck : public GradientCheck
   }
 
 public:
-  ConicalCheck()
-    : GradientCheck(new PropertyStatus())
+  RadialCheck()
+    : GradientCheck()
   {}
 
   Check set(const QString& name) override
@@ -242,6 +173,51 @@ public:
         radius_r = true;
       } else {
         radius = true;
+      }
+    } else if (name == "stop") {
+      return Stop;
+    } else {
+      return BadName;
+    }
+    if (isRepeated()) {
+      return Repeat;
+    } else {
+      return GoodName;
+    }
+  }
+};
+
+class ConicalCheck : public GradientCheck
+{
+  bool cx = false, cy = false, cx_r = false, cy_r = false, angle = false,
+       angle_r = false;
+
+  bool isRepeated() override { return (cx_r || cy_r || angle_r); }
+
+public:
+  ConicalCheck()
+    : GradientCheck()
+  {}
+
+  Check set(const QString& name) override
+  {
+    if (name == "cx") {
+      if (cx) {
+        cx_r = true;
+      } else {
+        cx = true;
+      }
+    } else if (name == "cy") {
+      if (cy) {
+        cy_r = true;
+      } else {
+        cy = true;
+      }
+    } else if (name == "angle") {
+      if (angle) {
+        angle_r = true;
+      } else {
+        angle = true;
       }
     } else if (name == "stop") {
       return Stop;
@@ -319,11 +295,9 @@ public:
   bool isValidSubControlForWidget(const QString& widgetName,
                                   const QString& subcontrol);
   PropertyStatus* isValidPropertyValueForProperty(const QString& propertyname,
-                                                  int start,
-                                                  const QString& valuename);
-  //  bool ifValidStylesheetValue(const QString& propertyname,
-  //                              const QString& valuename,
-  //                              StylesheetData* data);
+                                                  int& start,
+                                                  const QString& valuename,
+                                                  const QString& text);
 
   QStringList possibleWidgetsForSubControl(const QString& name);
   QStringList possibleSubControlsForWidget(const QString& widget);
@@ -367,6 +341,14 @@ public:
   PropertyStatus* checkColorHashValue(int start, const QString& value) const;
   PropertyStatus* checkColorRGB(int start, const QString& value) const;
   PropertyStatus* checkColorHS(int start, const QString& value) const;
+
+  QString findNext(const QString& text,
+                   int& pos,
+                   bool showLineMarkers = false) const;
+  void skipBlanks(const QString& text,
+                  int& pos,
+                  bool showLineMarkers = false) const;
+  void stepBack(int& pos, const QString& block) const;
 
 private:
   WidgetItem* m_root;
@@ -428,8 +410,9 @@ private:
   void initAttributeMap();
 
   PropertyStatus* checkPropertyValue(AttributeType propertyAttribute,
-                                     int start,
-                                     const QString& valuename);
+                                     int& start,
+                                     const QString& valuename,
+                                     const QString& text);
   PropertyStatus* checkAlignment(const QString& value, int start = -1) const;
   PropertyStatus* checkAttachment(const QString& value, int start = -1) const;
   PropertyStatus* checkBackground(const QString& value, int start = -1) const;
@@ -438,8 +421,12 @@ private:
   PropertyStatus* checkBorder(const QString& value, int start = -1) const;
   PropertyStatus* checkBorderImage(const QString& value, int start = -1) const;
   PropertyStatus* checkBorderStyle(const QString& value, int start = -1) const;
-  PropertyStatus* checkBoxColors(const QString& value, int start = -1) const;
-  PropertyStatus* checkBoxLengths(const QString& value, int start = -1) const;
+  PropertyStatus* checkBoxColors(const QString& value,
+                                 int& pos,
+                                 const QString& text = QString()) const;
+  PropertyStatus* checkBoxLengths(const QString& value,
+                                  int& start,
+                                  const QString& text = QString()) const;
   PropertyStatus* checkBrush(const QString& value, int start = -1) const;
   PropertyStatus* checkColor(const QString& value, int start = -1) const;
   PropertyStatus* checkFontStyle(const QString& value, int start = -1) const;
@@ -474,21 +461,18 @@ private:
   QPair<PropertyStatus*, int> calculateNumericalStatus(
     const QString& section,
     const QString& cleanValue,
-    const QString& name,
     const QString& number,
+    int start,
     int offset,
     QStringList parts) const;
   QPair<PropertyStatus*, int> calculateStopStatus(const QString& section,
                                                   const QString& cleanValue,
-                                                  const QString& name,
                                                   const QString& number,
                                                   const QString& color,
+                                                  int start,
                                                   int offset,
                                                   QStringList parts) const;
-  GradientCheck* getCorrectCheck(PropertyValueState state,
-                                 const QString& name,
-                                 int offset,
-                                 int length) const;
+  GradientCheck* getCorrectCheck(const QString& name) const;
 };
 
 class DataStore : public QObject
@@ -509,7 +493,7 @@ public:
   bool containsWidget(const QString& name);
   bool containsProperty(const QString& name);
 
-  bool containsStylesheetProperty(const QString& name);
+  //  bool containsStylesheetProperty(const QString& name);
   bool containsPseudoState(const QString& name);
   bool containsSubControl(const QString& name);
   bool isValidSubControlForWidget(const QString& widget,
@@ -519,9 +503,11 @@ public:
   //  bool ifValidStylesheetValue(const QString& propertyname,
   //                              const QString& valuename,
   //                              StylesheetData* data);
-  PropertyStatus* isValidPropertyValueForProperty(const QString& propertyname,
-                                                  int start,
-                                                  const QString& value);
+  PropertyStatus* isValidPropertyValueForProperty(
+    const QString& propertyname,
+    int& start,
+    const QString& valuename,
+    const QString& text = QString());
   AttributeType propertyValueAttribute(const QString& value);
 
   //! Returns the names of all
@@ -601,6 +587,7 @@ public:
   static const QFont NORMALFONT;
   static const QFont LIGHTFONT;
   static const QFont BOLDFONT;
+  static const QString URL_REGEX;
 
   QList<QString> customThemeNames() const;
   QMap<QString, Theme*> customThemes() const;
@@ -619,6 +606,14 @@ public:
   QString currentTheme() const;
   QString currentThemeName() const;
 
+  QString findNext(const QString& text,
+                   int& pos,
+                   bool showLineMarkers = false) const;
+  void skipBlanks(const QString& text,
+                  int& pos,
+                  bool showLineMarkers = false) const;
+  void stepBack(int& pos, const QString& block);
+
 signals:
   void finished();
 
@@ -631,7 +626,7 @@ private:
   QMutex m_mutex;
   QStringList m_attributeNames;
   QStringList m_possibleWidgets;
-  QStringList m_StylesheetProperties;
+  //  QStringList m_StylesheetProperties;
   QMap<QString, Theme*> m_customThemes;
   QString m_configDir;
   QString m_configFile;

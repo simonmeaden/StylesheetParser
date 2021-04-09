@@ -291,6 +291,9 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
             if (!property->hasPropertyMarker()) {
               formatVisiblePart(
                 blockStart, blockEnd, position, length, m_badPropertyFormat);
+            } else if (!property->hasPropertyEndMarker()) {
+              formatVisiblePart(
+                blockStart, blockEnd, position, length, m_badPropertyFormat);
             } else if (property->isValidPropertyName()) {
               formatVisiblePart(
                 blockStart, blockEnd, position, length, m_propertyFormat);
@@ -319,32 +322,40 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   QString value;
 
   for (int i = 0; i < property->count(); i++) {
-    position = property->valuePosition(i);
     status = property->valueStatus(i);
     value = property->value(i);
     check = property->check(i);
     length = value.length();
+    auto breakLoop = false;
 
     while (status) {
+      position = status->offset;
       if (isInBlock(position, length, blockStart, blockEnd)) {
         //        auto end = position + status->length;
         if (position >= blockEnd) {
           return;
         }
-        if (position + status->length < blockStart) {
+        if (position + status->length() < blockStart) {
           status = status->next;
           continue;
         }
 
+        auto startOffset = status->offset;
+        auto endOffset = status->lastEnd();
         switch (status->state) {
           case GoodName:
           case GoodValueName:
           case GoodValue: {
-            auto start = position - blockStart + status->offset;
-            //            qDebug() << "o = " << status->offset - blockStart
-            //                     << " ,l = " << status->length;
-            setFormat(
-              status->offset - blockStart, status->length, m_valueFormat);
+            setFormat(status->offset - blockStart,
+                      endOffset - startOffset,
+                      m_valueFormat);
+            break;
+          }
+          case BadValueCount: {
+            setFormat(status->offset - blockStart,
+                      endOffset - startOffset,
+                      m_badValueFormat);
+            breakLoop = true;
             break;
           }
           case BadName:
@@ -352,20 +363,20 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
           case BadValueName:
           case FuzzyValueName:
           case BadValue:
-          case BadValueCount:
           case BadNumericalValue:
           case BadColorValue:
           case BadUrlValue:
           case RepeatValueName:
           case FuzzyColorValue: {
-            auto start = status->offset - blockStart;
-            //            qDebug() << "o = " << status->offset - blockStart
-            //                     << " ,l = " << status->length;
-            setFormat(
-              status->offset - blockStart, status->length, m_badValueFormat);
+            setFormat(status->offset - blockStart,
+                      endOffset - startOffset,
+                      m_badValueFormat);
             break;
           }
         }
+      }
+      if (breakLoop) {
+        break;
       }
       status = status->next;
     }

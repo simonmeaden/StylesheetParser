@@ -72,11 +72,11 @@ Parser::operator=(const Parser& /*other*/)
   return *this;
 }
 
-void
-Parser::stepBack(int& pos, const QString& block)
-{
-  pos -= block.length();
-}
+// void
+// Parser::stepBack(int& pos, const QString& block)
+//{
+//  pos -= block.length();
+//}
 
 QPair<enum NodeType, enum NodeState>
 Parser::checkType(int start,
@@ -182,7 +182,8 @@ Parser::parseText(const QString& text)
   QMap<QTextCursor, Node*> nodes;
 
   while (true) {
-    if ((block = findNext(text, pos)).isEmpty()) {
+    if ((block = m_datastore->findNext(text, pos, m_showLineMarkers))
+          .isEmpty()) {
       break;
     }
 
@@ -207,7 +208,8 @@ Parser::parseText(const QString& text)
         PseudoState* pseudostate = nullptr;
         IDSelector* idselector = nullptr;
 
-        while (!(block = findNext(text, pos)).isEmpty()) {
+        while (!(block = m_datastore->findNext(text, pos, m_showLineMarkers))
+                  .isEmpty()) {
           start = pos - block.length();
           cursor = m_datastore->getCursorForPosition(start);
           //          auto leaveWidget = false;
@@ -418,11 +420,11 @@ Parser::parseText(const QString& text)
 
         if (nodes.isEmpty()) {
           auto oldPos = pos;
-          nextBlock = findNext(text, pos);
+          nextBlock = m_datastore->findNext(text, pos, m_showLineMarkers);
 
           if (nextBlock == ":") {
             auto colonPos = pos;
-            nextBlock = findNext(text, pos);
+            nextBlock = m_datastore->findNext(text, pos, m_showLineMarkers);
 
             if (m_datastore->containsPseudoState(nextBlock)) {
               cursor = m_datastore->getCursorForPosition(start);
@@ -447,7 +449,7 @@ Parser::parseText(const QString& text)
             }
 
           } else if (nextBlock == "::") {
-            nextBlock = findNext(text, pos);
+            nextBlock = m_datastore->findNext(text, pos, m_showLineMarkers);
 
             if (m_datastore->containsSubControl(nextBlock)) {
               cursor = m_datastore->getCursorForPosition(start);
@@ -471,10 +473,10 @@ Parser::parseText(const QString& text)
           widgetnodes->addWidget(widget);
         } else { // anomalous type - see what comes next.
           int oldPos = pos;
-          nextBlock = findNext(text, pos);
+          nextBlock = m_datastore->findNext(text, pos, m_showLineMarkers);
 
           if (nextBlock == ":") {
-            nextBlock = findNext(text, pos);
+            nextBlock = m_datastore->findNext(text, pos, m_showLineMarkers);
 
             if (m_datastore->containsPseudoState(nextBlock)) {
               cursor = m_datastore->getCursorForPosition(start);
@@ -499,7 +501,7 @@ Parser::parseText(const QString& text)
             }
 
           } else if (nextBlock == "::") {
-            nextBlock = findNext(text, pos);
+            nextBlock = m_datastore->findNext(text, pos, m_showLineMarkers);
 
             if (m_datastore->containsSubControl(nextBlock)) {
               cursor = m_datastore->getCursorForPosition(start);
@@ -509,9 +511,6 @@ Parser::parseText(const QString& text)
               continue;
             }
           }
-
-          //          stashBadNode(&nodes, start, block,
-          //          ParserState::AnomalousType);
         }
         break;
     }
@@ -541,7 +540,9 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
 {
   if (property->isValidPropertyName()) {
     QString propertyName = property->name();
-    while (!(block = findNext(text, pos)).isEmpty()) {
+    while (!(block = m_datastore->findNext(text, pos, m_showLineMarkers))
+              .isEmpty()) {
+      PropertyStatus* valueStatus = nullptr;
       if (block == ":") {
         if (!property->hasPropertyMarker()) {
           property->setPropertyMarker(true);
@@ -560,17 +561,24 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
           m_datastore->getCursorForPosition(pos - 1));
         break;
       } else if (block == "}") {
-        stepBack(pos, block);
+        m_datastore->stepBack(pos, block);
         break;
-      } else {
-        auto valueStatus = m_datastore->isValidPropertyValueForProperty(
-          propertyName, pos - block.length(), block);
-        property->addValue(
-          block,
-          ValidPropertyNameState,
-          m_datastore->getCursorForPosition((pos - block.length())),
-          valueStatus);
-      }
+      } else if ((valueStatus = m_datastore->isValidPropertyValueForProperty(
+                    propertyName, pos, block, text))) {
+        // some properties (ie bottom) can be BOTH a property and a value
+        // so check if it is a possible value FIRST before assuming
+        // that it is a following property.
+        property->addValue(ValidPropertyNameState, valueStatus);
+      } else if (m_datastore->containsProperty(block)) {
+        // This is a different property, we are probably
+        // missing a property end marker.
+        m_datastore->stepBack(pos, block);
+        break;
+      } /* else {
+         auto valueStatus = m_datastore->isValidPropertyValueForProperty(
+           propertyName, pos, block, text);
+         property->addValue(ValidPropertyNameState, valueStatus);
+       }*/
     }
   }
 }
@@ -623,109 +631,109 @@ Parser::parseComment(QMap<QTextCursor, Node*>* nodes,
   }
 }
 
-QString
-Parser::findNext(const QString& text, int& pos)
-{
-  QString block;
-  QChar c;
-  bool insideBrackets = false;
-  skipBlanks(text, pos);
+// QString
+// Parser::findNext(const QString& text, int& pos)
+//{
+//  QString block;
+//  QChar c;
+//  bool insideBrackets = false;
+//  skipBlanks(text, pos);
 
-  if (pos < text.length()) {
-    c = text.at(pos);
-    while (pos < text.length()) {
-      if (c.isNull()) {
-        return block;
-      }
+//  if (pos < text.length()) {
+//    c = text.at(pos);
+//    while (pos < text.length()) {
+//      if (c.isNull()) {
+//        return block;
+//      }
 
-      if (insideBrackets) {
-        if (c == ')') {
-          insideBrackets = false;
-          block += c;
-        } else { // end of url or gradient.
-          block += c;
-        }
-        pos++;
-      } else if (c.isLetterOrNumber() || c == '-') {
-        if (!block.isEmpty()) {
-          QChar b = block.back();
-          if (b == '{' || b == '}' || b == ';' || b == ':' /* || b == '#'*/) {
-            return block;
-          }
-        }
-        block += c;
-        pos++;
-      } else if (c == '(') {
-        insideBrackets = true;
-        block += c;
-        pos++;
-      } else if (m_showLineMarkers && c == '\n') {
-        if (block.isEmpty()) {
-          block += c;
-        }
-        return block;
-      } else if (c.isSpace() && !block.isEmpty()) {
-        return block;
-      } else if (c == '{' || c == '}' || c == ';' || c == ':' || c == ',' ||
-                 c == '#') {
-        if (!block.isEmpty()) {
-          if (block.back().isLetterOrNumber()) {
-            // a possibly correct name/number string
-            return block;
-          }
-        }
+//      if (insideBrackets) {
+//        if (c == ')') {
+//          insideBrackets = false;
+//          block += c;
+//        } else { // end of url or gradient.
+//          block += c;
+//        }
+//        pos++;
+//      } else if (c.isLetterOrNumber() || c == '-') {
+//        if (!block.isEmpty()) {
+//          QChar b = block.back();
+//          if (b == '{' || b == '}' || b == ';' || b == ':' /* || b == '#'*/) {
+//            return block;
+//          }
+//        }
+//        block += c;
+//        pos++;
+//      } else if (c == '(') {
+//        insideBrackets = true;
+//        block += c;
+//        pos++;
+//      } else if (m_showLineMarkers && c == '\n') {
+//        if (block.isEmpty()) {
+//          block += c;
+//        }
+//        return block;
+//      } else if (c.isSpace() && !block.isEmpty()) {
+//        return block;
+//      } else if (c == '{' || c == '}' || c == ';' || c == ':' || c == ',' ||
+//                 c == '#') {
+//        if (!block.isEmpty()) {
+//          if (block.back().isLetterOrNumber()) {
+//            // a possibly correct name/number string
+//            return block;
+//          }
+//        }
 
-        if (block.length() == 0 || block.back() == c) {
-          block += c;
-          pos++;
+//        if (block.length() == 0 || block.back() == c) {
+//          block += c;
+//          pos++;
 
-        } else {
-          return block;
-        }
+//        } else {
+//          return block;
+//        }
 
-      } else if (c == '/') {
-        if (pos < text.length() - 1) {
-          if (text.at(pos + 1) == '*') {
-            // a comment
-            if (!block.isEmpty()) {
-              pos--; // step back.
-              return block;
+//      } else if (c == '/') {
+//        if (pos < text.length() - 1) {
+//          if (text.at(pos + 1) == '*') {
+//            // a comment
+//            if (!block.isEmpty()) {
+//              pos--; // step back.
+//              return block;
 
-            } else {
-              pos += 2;
-              return "/*";
-            }
-          }
-        }
-      }
+//            } else {
+//              pos += 2;
+//              return "/*";
+//            }
+//          }
+//        }
+//      }
 
-      if (pos < text.length()) {
-        c = text.at(pos);
-      }
-    }
-  }
+//      if (pos < text.length()) {
+//        c = text.at(pos);
+//      }
+//    }
+//  }
 
-  return block;
-}
+//  return block;
+//}
 
-void
-Parser::skipBlanks(const QString& text, int& pos)
-{
-  QChar c;
+// void
+// Parser::skipBlanks(const QString& text, int& pos)
+//{
+//  QChar c;
 
-  for (; pos < text.length(); pos++) {
-    c = text.at(pos);
+//  for (; pos < text.length(); pos++) {
+//    c = text.at(pos);
 
-    if (m_showLineMarkers && c == '\n') {
-      break;
-    } else if (c.isSpace() /* || c == '\n' || c == '\r' || c == '\t'*/) {
-      continue;
+//    if (m_showLineMarkers && c == '\n') {
+//      break;
+//    } else if (c.isSpace() /* || c == '\n' || c == '\r' || c == '\t'*/) {
+//      continue;
 
-    } else {
-      break;
-    }
-  }
-}
+//    } else {
+//      break;
+//    }
+//  }
+//}
 
 // QTextCursor
 // Parser::getCursorForPosition(int position)
@@ -1304,42 +1312,42 @@ Parser::sortLastNValues(QMultiMap<int, QPair<QString, QString>> matches)
   return sorted;
 }
 
-StylesheetData*
-Parser::getStylesheetProperty(const QString& sheet, int& pos)
-{
-  QString property, sep, value;
-  StylesheetData* data = nullptr;
+// StylesheetData*
+// Parser::getStylesheetProperty(const QString& sheet, int& pos)
+//{
+//  QString property, sep, value;
+//  StylesheetData* data = nullptr;
 
-  property = findNext(sheet, pos);
+//  property = m_datastore->findNext(sheet, pos, m_showLineMarkers);
 
-  if (m_datastore->containsStylesheetProperty(property)) {
-    data = new StylesheetData();
-    data->name = property;
+//  if (m_datastore->containsStylesheetProperty(property)) {
+//    data = new StylesheetData();
+//    data->name = property;
 
-    if (pos < sheet.length()) {
-      sep = findNext(sheet, pos);
+//    if (pos < sheet.length()) {
+//      sep = m_datastore->findNext(sheet, pos, m_showLineMarkers);
 
-      if (sep == ":") {
-        while (true) {
-          value = findNext(sheet, pos);
+//      if (sep == ":") {
+//        while (true) {
+//          value = findNext(sheet, pos);
 
-          if (value == ";" || value == "}") {
-            break;
-          }
+//          if (value == ";" || value == "}") {
+//            break;
+//          }
 
-          // TODO reimplement this seperately
-          //          m_datastore->ifValidStylesheetValue(property, value,
-          //          data);
-        }
+//          // TODO reimplement this seperately
+//          //          m_datastore->ifValidStylesheetValue(property, value,
+//          //          data);
+//        }
 
-      } else {
-        // TODO show stylesheet error - no property seperator.
-      }
-    }
-  }
+//      } else {
+//        // TODO show stylesheet error - no property seperator.
+//      }
+//    }
+//  }
 
-  return data;
-}
+//  return data;
+//}
 
 void
 Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
@@ -1813,14 +1821,15 @@ Parser::actionPropertyValueChange(PropertyNode* property,
                                   const QString& oldName,
                                   const QString& newName)
 {
-  auto index = property->values().indexOf(oldName);
-  auto cursor = property->valueCursors().at(index);
+  auto index = property->indexOf(oldName);
+  auto position = property->valuePosition(index);
+  auto cursor = m_datastore->getCursorForPosition(position);
 
   updateTextChange(cursor, oldName, newName);
 
   property->setValue(index, newName);
   property->setStateFlag(index, ValidPropertyValueState);
-  property->setValueCursor(index, cursor);
+  property->setValueOffset(index, position);
   emit rehighlightBlock(property->cursor().block());
 }
 

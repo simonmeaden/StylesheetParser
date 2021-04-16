@@ -358,8 +358,12 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
           case FuzzyName:
           case BadValueName:
           case FuzzyValueName:
-          case BadValue:
           case BadNumericalValue:
+          case BadNumericalValue_31:
+          case BadNumericalValue_100:
+          case BadNumericalValue_255:
+          case BadNumericalValue_359:
+          case BadButtonLayoutValue:
           case BadColorValue:
           case BadUrlValue:
           case RepeatValueName:
@@ -368,6 +372,37 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
           case FuzzyColorValue: {
             setFormat(startOffset, status->length(), m_badValueFormat);
             break;
+          }
+        }
+        // handle bad internal values
+        for (int i = 0; i < status->sectionCount(); i++) {
+          switch (status->sectionState(i)) {
+            case BadValueName:
+            case FuzzyValueName:
+            case FuzzyColorValue:
+            case BadColorValue:
+            case BadUrlValue:
+            case RepeatValueName:
+            case BadNumericalValue:
+            case BadNumericalValue_31:
+            case BadNumericalValue_100:
+            case BadNumericalValue_255:
+            case BadNumericalValue_359:
+            case BadLengthUnit:
+            case BadFontUnit:
+            case BadButtonLayoutValue:
+              setFormat(status->sectionOffset(i),
+                        status->sectionLength(i),
+                        m_badValueFormat);
+              break;
+            case BadValueCount:
+
+              break;
+            default:
+              setFormat(status->sectionOffset(i),
+                        status->sectionLength(i),
+                        m_valueFormat);
+              break;
           }
         }
       }

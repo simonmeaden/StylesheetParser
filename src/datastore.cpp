@@ -727,8 +727,8 @@ WidgetModel::checkBrush(const QString& value, int start) const
 PropertyStatus*
 WidgetModel::checkColorName(int start, const QString& value) const
 {
+  int pos = start - value.length();
   if (m_colors.contains(value.toLower())) {
-    int pos = start - value.length();
     auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
@@ -736,6 +736,18 @@ WidgetModel::checkColorName(int start, const QString& value) const
     }
     return status;
   }
+
+  auto fuzzylist = fuzzySearch(value.toLower(), m_colors);
+  if (!fuzzylist.isEmpty()) {
+    auto status =
+      new PropertyStatus(PropertyValueState::FuzzyColorValue, value, pos);
+    if (start != -1) {
+      auto rect = m_datastore->getRectForText(start, value);
+      status->setRect(rect);
+    }
+    return status;
+  }
+
   return nullptr;
 }
 
@@ -810,10 +822,11 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
     auto ok = false;
     auto val = 0;
     QRect rect;
+    offset = 0; // reset to start of truncated string
 
     for (auto part : parts) {
       part = part.trimmed();
-      offset = value.indexOf(part);
+      offset = value.indexOf(part, offset);
 
       if (part.endsWith('%')) {
         auto nPart = part.left(part.length() - 1);
@@ -822,8 +835,10 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
         }
         val = nPart.toInt(&ok);
         if (!ok || val < 0 || val > 100) {
-          status->addSectionValue(
-            PropertyValueState::BadNumericalValue, part, pos + offset, rect);
+          status->addSectionValue(PropertyValueState::BadNumericalValue_100,
+                                  part,
+                                  pos + offset,
+                                  rect);
         } else {
           status->addSectionValue(
             PropertyValueState::GoodValue, part, pos + offset, rect);
@@ -841,8 +856,10 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
           val = part.toUInt(&ok);
         }
         if (!ok || val < 0 || val > 255) {
-          status->addSectionValue(
-            PropertyValueState::BadNumericalValue, part, pos + offset, rect);
+          status->addSectionValue(PropertyValueState::BadNumericalValue_255,
+                                  part,
+                                  pos + offset,
+                                  rect);
         } else {
           status->addSectionValue(
             PropertyValueState::GoodValue, part, pos + offset, rect);
@@ -859,7 +876,7 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
   //  }
 
   // set overall status->state and rect;
-  status->setState(status->sectionsState());
+  //  status->setState(status->sectionsState());
   status->setRect(m_datastore->getRectForText(start, value));
 
   return status;
@@ -923,14 +940,16 @@ WidgetModel::checkColorHS(int start, const QString& value) const
       offset = value.indexOf(part, offset + 1);
 
       if (i > 0 && part.endsWith('%')) {
-        part = part.left(part.length() - 1);
+        auto nPart = part.left(part.length() - 1);
         if (offset != -1) {
           rect = m_datastore->getRectForText(offset, part);
         }
-        val = part.toInt(&ok);
+        val = nPart.toInt(&ok);
         if (!ok || val < 0 || val > 100) {
-          status->addSectionValue(
-            PropertyValueState::BadNumericalValue, part, pos + offset, rect);
+          status->addSectionValue(PropertyValueState::BadNumericalValue_100,
+                                  part,
+                                  pos + offset,
+                                  rect);
         } else {
           status->addSectionValue(
             PropertyValueState::GoodValue, part, pos + offset, rect);
@@ -949,16 +968,20 @@ WidgetModel::checkColorHS(int start, const QString& value) const
         }
         if (i == 0) {
           if (!ok || val < 0 || val > 359) {
-            status->addSectionValue(
-              PropertyValueState::BadNumericalValue, part, pos + offset, rect);
+            status->addSectionValue(PropertyValueState::BadNumericalValue_359,
+                                    part,
+                                    pos + offset,
+                                    rect);
           } else {
             status->addSectionValue(
               PropertyValueState::GoodValue, part, pos + offset, rect);
           }
         } else {
           if (!ok || val < 0 || val > 255) {
-            status->addSectionValue(
-              PropertyValueState::BadNumericalValue, part, pos + offset, rect);
+            status->addSectionValue(PropertyValueState::BadNumericalValue_255,
+                                    part,
+                                    pos + offset,
+                                    rect);
           } else {
             status->addSectionValue(
               PropertyValueState::GoodValue, part, pos + offset, rect);
@@ -976,7 +999,7 @@ WidgetModel::checkColorHS(int start, const QString& value) const
   //  }
 
   // set overall status->state and rect;
-  status->setState(status->sectionsState());
+  //  status->setState(status->sectionsState());
   status->setRect(m_datastore->getRectForText(start, value));
 
   return status;
@@ -1151,17 +1174,6 @@ WidgetModel::checkColor(const QString& value, int start) const
 
   if ((status = checkColorHS(start, value)))
     return status;
-
-  auto fuzzylist = fuzzySearch(value.toLower(), m_colors);
-  if (!fuzzylist.isEmpty()) {
-    status =
-      new PropertyStatus(PropertyValueState::FuzzyColorValue, value, start);
-    if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
-      status->setRect(rect);
-    }
-    return status;
-  }
 
   return nullptr;
 }
@@ -1387,7 +1399,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
       if (/*score < 100.0 &&*/ score > 90.0) { // TODO Increase minimum ??
         // score can be greater than 100
         gCheck = getCorrectCheck(g);
-        head = new PropertyStatus(PropertyValueState::FuzzyName, fuzzy, pos);
+        head =
+          new PropertyStatus(PropertyValueState::FuzzyValueName, fuzzy, pos);
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, value);
           head->setRect(rect);
@@ -1655,8 +1668,7 @@ WidgetModel::checkLength(const QString& value, int start) const
 
   if (lvalue.endsWith("px") || lvalue.endsWith("pt") || lvalue.endsWith("em") ||
       lvalue.endsWith("ex")) {
-    status =
-      new PropertyStatus(PropertyValueState::BadNumericalValue, value, pos);
+    status = new PropertyStatus(PropertyValueState::BadLengthUnit, value, pos);
     auto numValue = value.left(value.length() - 2);
     numValue.toDouble(&ok);
     if (ok) {
@@ -1953,12 +1965,15 @@ WidgetModel::checkUIntNumber(const QString& value, int start, quint16 max = -1)
   if (ok) {
     if (max >= 0) {
       if (v > max) {
-        status->setState(PropertyValueState::BadNumericalValue);
+        if (max == 31)
+          status->setState(PropertyValueState::BadNumericalValue_31);
+        else if (max == 255)
+          status->setState(PropertyValueState::BadNumericalValue_255);
       }
     }
-  } else {
-    status->setState(PropertyValueState::BadNumericalValue);
-  }
+  } /* else {
+     status->setState(PropertyValueState::BadNumericalValue);
+   }*/
   return status;
 }
 
@@ -2049,8 +2064,7 @@ WidgetModel::checkPropertyValue(const QString& propertyname,
     case Number: // TODO not supported.
       if (propertyname == "button-layout") {
         int pos = start - value.length();
-        status =
-          new PropertyStatus(PropertyValueState::BadNumericalValue, value, pos);
+        status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, value);
           status->setRect(rect);
@@ -2059,8 +2073,9 @@ WidgetModel::checkPropertyValue(const QString& propertyname,
         bool ok = false;
         auto v = value.toUInt(&ok);
         if (ok) {
+          // only valid values for button-layout
           if (!(v == 0 || v == 1 || v == 2 || v == 3 || v == 5)) {
-            status->setState(PropertyValueState::BadNumericalValue);
+            status->setState(PropertyValueState::BadButtonLayoutValue);
           }
         } else {
           status->setState(PropertyValueState::BadNumericalValue);

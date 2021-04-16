@@ -58,6 +58,7 @@ private:
   void gotoLine();
 
   QString goodValues();
+  QString badValues();
 };
 
 #endif // MAINWINDOW_H

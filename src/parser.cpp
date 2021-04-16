@@ -1603,110 +1603,137 @@ Parser::handleMouseClicked(const QPoint& pos)
         auto property = qobject_cast<PropertyNode*>(section->node);
         switch (section->type) {
           case SectionType::PropertyName: {
-            if (property->isValidPropertyName()) {
-              updatePropertyContextMenu(property, pos, &suggestionsMenu);
+            if (!property->hasPropertyEndMarker() &&
+                !property->isFinalProperty()) {
+              suggestionsMenu->clear();
+              auto widgetact =
+                getWidgetAction(m_datastore->badDColonIcon(),
+                                tr("Property has no end marker (;)"),
+                                suggestionsMenu);
+              suggestionsMenu->addAction(widgetact);
+              suggestionsMenu->addSeparator();
+              auto act =
+                new QAction(m_datastore->addColonIcon(), tr("Add end marker"));
+              suggestionsMenu->addAction(act);
+              setMenuData(act, property, SectionType::PropertyEndMarker);
+              m_editor->connect(act,
+                                &QAction::triggered,
+                                m_editor,
+                                &StylesheetEditor::suggestionMade);
             } else {
-              auto matches = m_datastore->fuzzySearchProperty(property->name());
-              updatePropertyContextMenu(
-                property, pos, &suggestionsMenu, matches);
+              if (property->isValidPropertyName()) {
+                updatePropertyContextMenu(property, pos, &suggestionsMenu);
+              } else {
+                auto matches =
+                  m_datastore->fuzzySearchProperty(property->name());
+                updatePropertyContextMenu(
+                  property, pos, &suggestionsMenu, matches);
+              }
             }
             break;
           }
           case SectionType::PropertyValue: {
-            auto x = pos.x();
-            auto y = pos.y();
             auto valName = property->value(section->position);
             auto status = property->valueStatus(section->position);
             while (status) {
-              if (x >= status->rect().left() && x < status->rect().right() &&
-                  y >= status->rect().top() && y < status->rect().bottom()) {
-                //                switch (status->state) {
-                //                  case BadPropertyValue: {
-                //                    suggestionsMenu->clear();
-                //                    auto widgetact = getWidgetAction(
-                //                      m_datastore->invalidIcon(),
-                //                      tr("Property value is invalid
-                //                      %1").arg(status->name),
-                //                      suggestionsMenu);
-                //                    suggestionsMenu->addAction(widgetact);
-                //                    break;
-                //                  }
-                //                  case FuzzyColorValue: {
-                //                    suggestionsMenu->clear();
-                //                    auto matches =
-                //                      m_datastore->fuzzySearchColorNames(status->name);
-                //                    matches.insert(1000, tr("Color choice"));
-                //                    suggestionsMenu->clear();
-                //                    auto colorsAct =
-                //                      getWidgetAction(m_datastore->fuzzyIcon(),
-                //                                      tr("Fuzzy color
-                //                                      %1.<br>Possible "
-                //                                         "values showing
-                //                                         below.")
-                //                                        .arg(status->name),
-                //                                      suggestionsMenu);
-                //                    suggestionsMenu->addAction(colorsAct);
-                //                    suggestionsMenu->addSeparator();
-                //                    updateMenu(matches,
-                //                               nullptr,
-                //                               pos,
-                //                               &suggestionsMenu,
-                //                               SectionType::FuzzyWidgetName);
-                //                    break;
-                //                  }
-                //                  case BadColorValue:
-                //                    break;
-                //                    //                  case
-                //                    EmptyGradientValueName: {
-                //                    // suggestionsMenu->clear();
-                //                    //                    auto widgetact =
-                //                    getWidgetAction(
-                //                    // m_datastore->invalidIcon(),
-                //                    //                      tr("No gradient
-                //                    value
-                //                    // %1").arg(status->name),
-                //                    //                      suggestionsMenu);
-                //                    // suggestionsMenu->addAction(widgetact);
-                //                    //                    break;
-                //                    //                  }
-                //                  case FuzzyGradientName:
-                //                    break;
-                //                    //                  case BadGradientName:
-                //                    //                    break;
-                //                  case BadGradientValue:
-                //                    break;
-                //                  case BadGradientColorValue:
-                //                    break;
-                //                  case BadGradientNumericalValue:
-                //                    break;
-                //                  case BadGradientNumericalAndColorValue:
-                //                    break;
-                //                  case BadGradientValueCount:
-                //                    break;
-                //                  case BadGradientValueName:
-                //                    break;
-                //                  case RepeatedGradientValue:
-                //                    break;
-                //                }
-
+              if (status->state() == BadValue) {
+                if (status->isInRect(pos)) {
+                  for (auto i = 0; i < status->sectionCount(); i++) {
+                    if (status->isInSectionRect(i, pos)) {
+                      auto state = status->sectionState(i);
+                      QString message;
+                      switch (state) {
+                        case BadValueName:
+                          message =
+                            tr("Bad value name %1").arg(status->sectionName(i));
+                          break;
+                        case FuzzyValueName:
+                          message = tr("Value name is fuzzy %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case FuzzyColorValue:
+                          message = tr("Color name is fuzzy %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case BadColorValue:
+                          message = tr("Color name is bad %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case BadUrlValue:
+                          message = tr("URL value is bad %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case BadValueCount:
+                          message = tr("Wrong number of parameters %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case RepeatValueName:
+                          message = tr("Value name was repeated %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case BadNumericalValue:
+                          message = tr("Numerical parameter is bad %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                        case BadNumericalValue_31:
+                          message =
+                            tr("Numerical parameter should be 0-31 : %1")
+                              .arg(status->sectionName(i));
+                          break;
+                        case BadNumericalValue_100:
+                          message =
+                            tr("Numerical parameter should be 0-100 : %1")
+                              .arg(status->sectionName(i));
+                          break;
+                        case BadNumericalValue_255:
+                          message =
+                            tr("Numerical parameter should be 0-255 : %1")
+                              .arg(status->sectionName(i));
+                          break;
+                        case BadNumericalValue_359:
+                          message =
+                            tr("Numerical parameter should be 0-359 : %1")
+                              .arg(status->sectionName(i));
+                          break;
+                        case BadLengthUnit:
+                          message =
+                            tr("Should have a unit (px, pt, em, ex) : %1")
+                              .arg(status->sectionName(i));
+                          break;
+                        case BadFontUnit:
+                          message = tr("Should have a unit (px, pt) : %1")
+                                      .arg(status->sectionName(i));
+                          break;
+                      }
+                      suggestionsMenu->clear();
+                      auto widgetact = getWidgetAction(
+                        m_datastore->invalidIcon(), message, suggestionsMenu);
+                      suggestionsMenu->addAction(widgetact);
+                    }
+                  }
+                }
                 break;
               }
               status = status->next();
             }
+            //          }
             //            if (property->isValidPropertyName()) {
-            //              if (property->isValueValid(section->position)) {
+            //              if (property->isValueValid(section->position))
+            //              {
             //                if (!property->hasPropertyEndMarker() &&
             //                    !property->isFinalProperty()) {
             //                  suggestionsMenu->clear();
             //                  auto widgetact =
             //                    getWidgetAction(m_datastore->badDColonIcon(),
-            //                                    tr("Property has no end marker
+            //                                    tr("Property has no end
+            //                                    marker
             //                                    (;)"), suggestionsMenu);
             //                  suggestionsMenu->addAction(widgetact);
             //                  suggestionsMenu->addSeparator();
             //                  auto act = new
             //                  QAction(m_datastore->addColonIcon(),
-            //                                         tr("Add end marker"));
+            //                                         tr("Add end
+            //                                         marker"));
             //                  suggestionsMenu->addAction(act);
             //                  setMenuData(act, property,
             //                  SectionType::PropertyEndMarker);
@@ -1715,8 +1742,9 @@ Parser::handleMouseClicked(const QPoint& pos)
             //                                    m_editor,
             //                                    &StylesheetEditor::suggestionMade);
             //                } else {
-            //                  // must have a valid property to check value
-            //                  types. if (!property->isValidPropertyName()) {
+            //                  // must have a valid property to check
+            //                  value types. if
+            //                  (!property->isValidPropertyName()) {
             //                    auto matches =
             //                    m_datastore->fuzzySearchPropertyValue(
             //                      property->name(), valName);
@@ -1754,7 +1782,31 @@ Parser::handleMouseClicked(const QPoint& pos)
             //                propValMatches, property, valName, pos,
             //                &suggestionsMenu);
             //            }
-            break;
+            //          break;
+            //        }
+            //        case SectionType::Comment: {
+            //          qWarning();
+            //          break;
+            //        }
+            //        case SectionType::PropertyMarker: {
+            //          qWarning();
+            //          // TODO marker errors? maybe :: or ;
+            //          break;
+            //        }
+            //      } // end switch type
+            //      break;
+            //    } // end PropertyType
+
+            //    case NodeType::BadNodeType: {
+            //      // TODO probably remove this.
+            //      break;
+            //    } // end case Node::BadNodeType
+
+            //                default: {
+            //                  break;
+            //                }
+            //              }
+            //            }
           }
           case SectionType::Comment: {
             qWarning();
@@ -1765,20 +1817,11 @@ Parser::handleMouseClicked(const QPoint& pos)
             // TODO marker errors? maybe :: or ;
             break;
           }
-        } // end switch type
-        break;
-      } // end PropertyType
-
-      case NodeType::BadNodeType: {
-        // TODO probably remove this.
-        break;
-      } // end case Node::BadNodeType
-
-      default: {
-        break;
+        }
       }
     }
   }
+
   return suggestionsMenu;
 }
 

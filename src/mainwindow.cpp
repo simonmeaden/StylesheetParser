@@ -28,8 +28,8 @@
 #include <QXmlStreamReader>
 #include <QtDebug>
 
-#define GOODSTYLE
-//#define BADPROPERTY
+//#define GOODSTYLE
+#define BADPROPERTY
 
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
@@ -162,121 +162,8 @@ MainWindow::initGui()
 #if defined(GOODSTYLE)
   text = goodValues();
 #elif defined(BADPROPERTY)
-
-  "border-width: 4px 2px 4px 2px 3px;\n" // too many values
-  "border-color: red "
-  "  #fafafa rgba(255, 0, 0, 75 %) "
-  "  hsva(240, 255, 255, 75%) "
-  "  pink;\n" // too many values
-  "button-layout: 8;\n"
-  "button-layout: 2.6;\n"
-  "margin: 2px 2px 2px 2px 2px;\n"
-  "messagebox-text-interaction-flags: -1;\n"
-  "messagebox-text-interaction-flags: 32;\n"
-  "opacity: -1;\n"
-  "opacity: 256;\n"
-
-  "file-icon: url();\n" // no url value
-                        //    "background: \n" // bad gradient
-                        //    name
-                        //    "    qlinargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                        //    stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n"
-                        //    "background: \n"               // bad color no #,
-                        //    wrong no of numerals "    qlineargradient(x1: ,\n"
-                        //    // missing numerical value " y1: 0,\n" // good
-                        //    value "                    x: 0,\n"  // wrong name
-                        //    (x2) "                    y2: 1, \n" " y2: 1, \n"
-                        //    // repeated name "                    stop: 0
-                        //    6ea1f1,\n" // bad color no " stop: 1 #7dbc);\n" //
-                        //    wrong no of numerals (3 or 6) "background: \n" //
-                        //    Bad x1 - no value "    qlineargradient(x1: , y1:
-                        //    0, x2: 0, y2: 1, stop: 0\n" "    #6ea1f1, stop: 1
-                        //    #567dbc);\n" "background: \n" // Bad x1 no comma
-                        //    "    qlineargradient(x1: 0 y1: 0, x2: 0, y2: 1,
-                        //    stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n"
-                        //    "background: \n" // Bad x1 no comma and no y2
-                        //    value "    qlineargradient(x1: 0 y1: , x2: 0, y2:
-                        //    1, stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n"
-                        //    "background: \n" // Good
-                        //    "    qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                        //    stop: 0\n" "    #6ea1f1, stop: 1 #567dbc);\n"
-                        //    "border: green solid 1px\n"  // no end marker on
-                        //    non-final property "bckground-color: green; \n" //
-                        //    bad property name
-    ;
-
-#else
-
+  text = badValues();
 #endif
-
-  // No Errors
-  // Errors
-  // Widget GOOD
-  //         "QTabWidget::branch {color: red}\n"
-  //         "QTabWidget::branch {color: red; background: green}\n"
-  //         "QTabWidget::branch {color: red; background: green;}\n"
-  //         "QTabWidget:active {color: red}\n"
-  //         "QTabWidget:active {color: red; background: green}\n"
-  //         "QTabWidget:active {color: red; background: green;}\n"
-  //         "QTabWidget {color: red}\n"
-  //         "QTabWidget {color: red; background: green}\n"
-  //         "QTabWidget {color: red; background: green;}\n"
-  // Widget Errors.
-  //         "QTabWidget:branch {color: red}\n"                      // Bad
-  //         marker "QTabWidget:branch {color: red; background: green}\n"   //
-  //         Bad marker "QTabWidget:branch {color: red; background: green;}\n"
-  //         // Bad marker "QTabWidget::active {color: red}\n" // Bad marker
-  //         "QTabWidget::active {color: red; background: green}\n"  // Bad
-  //         marker "QTabWidget::active {color: red; background: green;}\n" //
-  //         Bad marker "QTabWidget::branh {}\n" // GOOD widget and BAD
-  //         subcontrol
-  //    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
-  //    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
-  //    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
-  //    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
-  //    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
-  //    "QTabWidget:branch {\n" // Bad pseudostate - is subcontrol
-  //    "  color: green\n"              // No end marker
-  //    "  color: rd;\n"                // bad color value
-  //    "  border: gren slid 1py\n"     // bad property values
-  //    "  bckground-color: green; \n"  // bar property name
-  //    "}\n"
-  //    "QTabWidget::active {\n" // Bad subcontrol - is pseudostate
-  //    "  color: green\n"              // No end marker
-  //    "  color: rd;\n"                // bad color value
-  //    "  border: gren slid 1py\n"     // bad property values
-  //    "  bckground-color: green; \n"  // bar property name
-  //    "}\n"
-  // End of errors
-  //    "QTabBar::close-button {\n"
-  //    "    image: url(close.png);\n"
-  //    "    subcontrol-position: left;\n"
-  //    "}\n"
-  //    "QTabBar::close-button:hover {\n"
-  //    "    image: url(close-hover.png)\n"
-  //    "}\n"
-  //    "QTreeView::item:selected:active{\n"
-  //    "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0
-  //    #6ea1f1, stop: 1 #567dbc);\n"
-  //    "}"
-  //  ;
-  //    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
-  //    MISSING END
-  //                                                                 // BRACE
-  //    "  /* comment1 \n"
-  //    "*/ /*   \n"
-  //    "comment2  */"
-  //    "QTableWidget::branch {\n"
-  //    "color: red;\n"
-  //    "border: green solid 1px;\n"
-  //    " background-color: blue; \n"
-  //    "}\n"
-  //    "\n";
-
-  //         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
-  //         color: red; /* comment3 */ /*" " A multiline comment \n"
-  //         "*/ }"
-  //         "\n"
 
   m_editor->setPlainText(text);
   QMap<int, BookmarkData*>* bookmarks = new QMap<int, BookmarkData*>();
@@ -287,102 +174,6 @@ MainWindow::initGui()
   bookmarks->insert(14, new BookmarkData());
   m_editor->setBookmarks(bookmarks);
   m_editor->setShowNewlineMarkers(true);
-
-  //    "color: red;\n"
-  //    "color: red; background: green\n"
-  //    "color: red; background: green;\n"
-  //    "color: red; border: green solid 1px\n"
-  //    "color: red\n"
-  //    "border: green solid 1px;\n"
-  //    "\n"
-  //    "{}\n"
-
-  //    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
-  ////    pseudostate    -    WORKING
-  //    "QTabWidget::branh {}\n\n"            // BAD subcontrol -
-  //    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD
-  //    subcontrol "QTbWidget::branh {}\n\n"             // BAD  widget and
-  //    GOOD subcontrol "QTabWidget::branch {color: red; border: green solid
-  //    1px; background-color: blue;" // BAD missing end brace, property end
-  //    marker
-  //    "QTabWidget::branch { color: red;
-  //    border: green solid 1px; background-color: blue; }" // GOOD
-  //    widget/subcontrol "QTabWidget";
-  //  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
-  //  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
-  //  text = "QTabWidget::branh {}"; // BAD subcontrol
-  //  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
-  //  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
-
-  //    "\n\n"
-  //    "color blu;" // BAD missing property marker        - WORKING
-  //    "\n"
-  //    "bordr: green slid 1px;"
-  //    " \n\n"          // BAD property name, missing property end char -
-  //    WORKING " shitwidget:active {}\n\n"             // BAD widget name -
-  //    WORKING "background-color: blue;\n\n"        // GOOD property. -
-  //    WORKING "color red; \n" "border: green solid 1px;\n" // missing first
-  //    end property marker. text =  "color red; border: green solid 1px;"; //
-  //    missing first end property marker.
-  //  text =  "color: red border: green solid 1px;\n background-color: blue;";
-  //  // missing first end property char. text =   "color: rd"; text = "color:
-  //  red;"; text =  "color: red; background: green"; text =  "color: red;
-  //  background: green;";
-  //    text =  "  color rd; border: gren solid 1x;";
-  //  text =  "color: red border: green solid 1px;\n background-color: blue;";
-  //  // missing first end property char.
-
-  //  text = "QTabWidget::branch {color: red; border: green solid 1px;
-  //  background-color: blue;"; // missing end brace text = ; // BAD
-  //  pseudostate
-
-  //    text = "StylesheetEdit {\n"
-  //           "  widget: blue liht yellow;\n"
-  //           "subcntrol: yelow blue normal;\n"
-  //           " subcntrolmarker: blue blck yellow;\n"
-  //           "}";
-
-  // Correct stuff
-  //  text =   "color: red";
-  //  text =   "color: red;";
-  //  text =  "color: red; background: green";
-  //  text =  "color: red; background: green;";
-  //  text =  "color: red; border: green solid 1px;";
-
-  //  text = "QTabWidget::branch {color: red}";
-  //  text = "QTabWidget::branch {color: red; background: green}";
-  //  text = "QTabWidget::branch {color: red; border: green solid 1px;
-  //  background-color: blue;}"; text = "QTabWidget::branch {\ncolor: red;\n}\n"
-  //         "QWidget:active {\nborder: blue;}";
-  //  text = "QTabWidget:active {\ncolor: red;\n"
-  //         "/* An inline comment */\n}\n"
-  //         "/* This is another\n comment */"
-  //         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
-
-  // Test StylesheetEdit properties.
-  //  text = "StylesheetEdit {\n"
-  //         "widget: blue light yellow;\n"
-  //         "subcontrol: yellow blue normal;\n"
-  //         "subcontrolmarker: blue black yellow;\n"
-  //         "pseudostate: red lightgrey light;\n"
-  //         "pseudostatemarker: lightgrey red extrabold;\n"
-  //         "property: darkgrey lightblue bold;\n"
-  //         "propertymarker: lightblue medium;\n"
-  //         "value: darkgrey pink demibold;\n"
-  //         "startbrace: red;\n"
-  //         "endbrace: yellow normal;\n"
-  //         "bracematch: blue lightgreen bold;\n"
-  //         "comment: blue yellow thin;\n"
-  //         "bad: red blue extralight;\n"
-  //         "}";
-  //  QString stylesheet =
-  //    "StylesheetEdit {"
-  //    "widget: green light white;"
-  //    "}";
-
-  //  m_editor->setStyleSheet(stylesheet);
-
-  //  layout->addWidget(m_editor, 0, 0);
 
   return f1;
 }
@@ -431,63 +222,63 @@ MainWindow::goodValues()
 {
   // clang-format off
   auto text = QStringLiteral(
-//    "QPushButton#evilButton:pressed {\n"
-//    "  background-color : rgb(224, 0, 0);\n"
-//    "  border-style: inset;\n"
-//    "}\n"
-//    "\n"
+    "QPushButton#evilButton:pressed {\n"
+    "  background-color : rgb(224, 0, 0);\n"
+    "  border-style: inset;\n"
+    "}\n"
+    "\n"
 
-//    "QMenu::icon:checked {\n"
-//    "  background: gray;\n"
-//    "  border: 1px inset gray;\n"
-//    "  position: absolute;\n"
-//    "  top: 1px;\n"
-//    "  right: 1px;\n"
-//    "  bottom: 1px;\n"
-//    "  left: 1px;\n"
-//    "}\n"
-//    "\n"
+    "QMenu::icon:checked {\n"
+    "  background: gray;\n"
+    "  border: 1px inset gray;\n"
+    "  position: absolute;\n"
+    "  top: 1px;\n"
+    "  right: 1px;\n"
+    "  bottom: 1px;\n"
+    "  left: 1px;\n"
+    "}\n"
+    "\n"
 
-//    "QTabBar::tab:selected, QTabBar::tab:hover {\n"
-//    "  background: qlineargradient( x1: 0, y1: 0, x2: 0, y2: 1,\n"
-//    "    stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
-//    "    stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
-//    "}\n"
-//    "\n"
+    "QTabBar::tab:selected, QTabBar::tab:hover {\n"
+    "  background: qlineargradient( x1: 0, y1: 0, x2: 0, y2: 1,\n"
+    "    stop: 0 #fafafa, stop: 0.4 #f4f4f4,\n"
+    "    stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);\n"
+    "}\n"
+    "\n"
 
-//    "alternate-background-color: red;\n"
-//    "alternate-background-color: #fafafa ;\n"
-//    "alternate-background-color: rgba(255, 0, 0, 75%);\n"
-//    "alternate-background-color: rgb(255, 0, 0); "
-//    "background-position : bottom center;\n" // Good Alignment
-//    "background-position: top left;\n"       // Good Alignment
-//    "background-position: top right;\n"      // Good Alignment
-//    "background-attachment: scroll;\n"
-//    "background-attachment: fixed;\n"
-//    "background: white url(:/images/ring.png);\n"
-//    "background-repeat: repeat-x;\n"
-//    "background-repeat: repeat-y;\n"
-//    "background-repeat: repeat;\n"
-//    "background-repeat: no-repeat;\n"
-//    "background-position: top left;\n"
-//    "background-position: bottom center;\n"
-//    "background-position: left;\n"
-//    "background-position: right;\n"
-//    "background-position: center;\n"
-//    "background-clip: margin;\n"
-//    "background-clip: border;\n"
-//    "background-clip: padding;\n"
-//    "background-clip: content;\n"
-//    "background-origin: margin;\n"
-//    "background-origin: border;\n"
-//    "background-origin: padding;\n"
-//    "background-origin: content;\n"
-//    "border: 1px solid white;\n"
-//    "border-color: red;\n"
-//    "border-color: red blue;\n"
-//    "border-color: red blue green;\n"
-//    "border-color: red blue green yellow;\n"
-    "border-color: red #fafaf"
+    "alternate-background-color: red;\n"
+    "alternate-background-color: #fafafa ;\n"
+    "alternate-background-color: rgba(255, 0, 0, 75%);\n"
+    "alternate-background-color: rgb(255, 0, 0); "
+    "background-position : bottom center;\n" // Good Alignment
+    "background-position: top left;\n"       // Good Alignment
+    "background-position: top right;\n"      // Good Alignment
+    "background-attachment: scroll;\n"
+    "background-attachment: fixed;\n"
+    "background: white url(:/images/ring.png);\n"
+    "background-repeat: repeat-x;\n"
+    "background-repeat: repeat-y;\n"
+    "background-repeat: repeat;\n"
+    "background-repeat: no-repeat;\n"
+    "background-position: top left;\n"
+    "background-position: bottom center;\n"
+    "background-position: left;\n"
+    "background-position: right;\n"
+    "background-position: center;\n"
+    "background-clip: margin;\n"
+    "background-clip: border;\n"
+    "background-clip: padding;\n"
+    "background-clip: content;\n"
+    "background-origin: margin;\n"
+    "background-origin: border;\n"
+    "background-origin: padding;\n"
+    "background-origin: content;\n"
+    "border: 1px solid white;\n"
+    "border-color: red;\n"
+    "border-color: red blue;\n"
+    "border-color: red blue green;\n"
+    "border-color: red blue green yellow;\n"
+    "border-color: red #fafafa"
     "  rgba(255, 0, 0, 75%)"
     "  hsva(240, 255, 255, 75%);\n "
     "border-top-color: red;\n"
@@ -659,16 +450,199 @@ MainWindow::goodValues()
     "color: palette(window-text);\n")
     // clang-format on
 
-    //        "QPushButton#evilButton {\n"
-    //        "background-color: red;\n"
-    //        "border-style: outset;\n"
-    //        "border-width: 2px;\n"
-    //        "border-radius: 10px;\n"
-    //        "border-color: beige;\n"
-    //        "font: bold 14px;\n"
-    //        "min-width: 10em;\n"
-    //        "padding: 6px;\n"
-    //        "}\n"
     ;
   return text;
 }
+
+QString
+MainWindow::badValues()
+{
+  // clang-format off
+  QString text = ""
+//                 "border-color: blu #fafaf"
+//                 "  rgba(256, -1, 256, 175%)"
+//                 "  hsva(240, 255, 255, 75%);\n"
+//                 "border-width: 4px 2px 4px 2px 3px;\n" // too many values
+                 "button-layout: 8;\n"
+                 "button-layout: 2.6;\n"
+                 "margin: 2px 2px 2px 2px 2px;\n";
+  // clang-format on
+
+  return text;
+}
+
+//"border-width: 4px 2px 4px 2px 3px;\n" // too many values
+//"border-color: red "
+//"  #fafafa rgba(255, 0, 0, 75 %) "
+//"  hsva(240, 255, 255, 75%) "
+//"  pink;\n" // too many values
+//
+//"messagebox-text-interaction-flags: -1;\n"
+//"messagebox-text-interaction-flags: 32;\n"
+//"opacity: -1;\n"
+//"opacity: 256;\n"
+
+//"file-icon: url();\n"
+// No Errors
+// Errors
+// Widget GOOD
+//         "QTabWidget::branch {color: red}\n"
+//         "QTabWidget::branch {color: red; background: green}\n"
+//         "QTabWidget::branch {color: red; background: green;}\n"
+//         "QTabWidget:active {color: red}\n"
+//         "QTabWidget:active {color: red; background: green}\n"
+//         "QTabWidget:active {color: red; background: green;}\n"
+//         "QTabWidget {color: red}\n"
+//         "QTabWidget {color: red; background: green}\n"
+//         "QTabWidget {color: red; background: green;}\n"
+// Widget Errors.
+//         "QTabWidget:branch {color: red}\n"                      // Bad
+//         marker "QTabWidget:branch {color: red; background: green}\n"   //
+//         Bad marker "QTabWidget:branch {color: red; background: green;}\n"
+//         // Bad marker "QTabWidget::active {color: red}\n" // Bad marker
+//         "QTabWidget::active {color: red; background: green}\n"  // Bad
+//         marker "QTabWidget::active {color: red; background: green;}\n" //
+//         Bad marker "QTabWidget::branh {}\n" // GOOD widget and BAD
+//         subcontrol
+//    "QTbWidget::branch {}\n" // BAD widget and GOOD subcontrol
+//    "QTbWidget::branh {}\n"  // BAD widget and BAD subcontrol
+//    "QTaWidget:actve {}\n"   // BAD widget and BAD pseudostate
+//    "QTabWidget:actve {}\n"  // BAD widget and BAD pseudostate
+//    "QTaWidget:active {}\n"  // BAD widget and GOOD pseudostate
+//    "QTabWidget:branch {\n" // Bad pseudostate - is subcontrol
+//    "  color: green\n"              // No end marker
+//    "  color: rd;\n"                // bad color value
+//    "  border: gren slid 1py\n"     // bad property values
+//    "  bckground-color: green; \n"  // bar property name
+//    "}\n"
+//    "QTabWidget::active {\n" // Bad subcontrol - is pseudostate
+//    "  color: green\n"              // No end marker
+//    "  color: rd;\n"                // bad color value
+//    "  border: gren slid 1py\n"     // bad property values
+//    "  bckground-color: green; \n"  // bar property name
+//    "}\n"
+// End of errors
+//    "QTabBar::close-button {\n"
+//    "    image: url(close.png);\n"
+//    "    subcontrol-position: left;\n"
+//    "}\n"
+//    "QTabBar::close-button:hover {\n"
+//    "    image: url(close-hover.png)\n"
+//    "}\n"
+//    "QTreeView::item:selected:active{\n"
+//    "background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0
+//    #6ea1f1, stop: 1 #567dbc);\n"
+//    "}"
+//  ;
+//    "QTabWidget::branch {color: red; border: green solid 1px;\n" //
+//    MISSING END
+//                                                                 // BRACE
+//    "  /* comment1 \n"
+//    "*/ /*   \n"
+//    "comment2  */"
+//    "QTableWidget::branch {\n"
+//    "color: red;\n"
+//    "border: green solid 1px;\n"
+//    " background-color: blue; \n"
+//    "}\n"
+//    "\n";
+
+//         "/* comment1 */ /*   comment2  */ QTableWidget ::   branch {
+//         color: red; /* comment3 */ /*" " A multiline comment \n"
+//         "*/ }"
+//         "\n"
+//    "color: red;\n"
+//    "color: red; background: green\n"
+//    "color: red; background: green;\n"
+//    "color: red; border: green solid 1px\n"
+//    "color: red\n"
+//    "border: green solid 1px;\n"
+//    "\n"
+//    "{}\n"
+
+//    "QTaWidget:active {}\n\n"             // BAD widget and GOOD
+////    pseudostate    -    WORKING
+//    "QTabWidget::branh {}\n\n"            // BAD subcontrol -
+//    "QTbWidget::branch {}\n\n"            // BAD widget and GOOD
+//    subcontrol "QTbWidget::branh {}\n\n"             // BAD  widget and
+//    GOOD subcontrol "QTabWidget::branch {color: red; border: green solid
+//    1px; background-color: blue;" // BAD missing end brace, property end
+//    marker
+//    "QTabWidget::branch { color: red;
+//    border: green solid 1px; background-color: blue; }" // GOOD
+//    widget/subcontrol "QTabWidget";
+//  text = "QTaWidget:actve {}"; // BAD widget and pseudostate
+//  text = "QTaWidget:active {}"; // BAD widget and GOOD pseudostate
+//  text = "QTabWidget::branh {}"; // BAD subcontrol
+//  text = "QTbWidget::branch {}"; // BAD widget and GOOD subcontrol
+//  text = "QTbWidget::branh {}"; // BAD widget and GOOD subcontrol
+
+//    "\n\n"
+//    "color blu;" // BAD missing property marker        - WORKING
+//    "\n"
+//    "bordr: green slid 1px;"
+//    " \n\n"          // BAD property name, missing property end char -
+//    WORKING " shitwidget:active {}\n\n"             // BAD widget name -
+//    WORKING "background-color: blue;\n\n"        // GOOD property. -
+//    WORKING "color red; \n" "border: green solid 1px;\n" // missing first
+//    end property marker. text =  "color red; border: green solid 1px;"; //
+//    missing first end property marker.
+//  text =  "color: red border: green solid 1px;\n background-color: blue;";
+//  // missing first end property char. text =   "color: rd"; text = "color:
+//  red;"; text =  "color: red; background: green"; text =  "color: red;
+//  background: green;";
+//    text =  "  color rd; border: gren solid 1x;";
+//  text =  "color: red border: green solid 1px;\n background-color: blue;";
+//  // missing first end property char.
+
+//  text = "QTabWidget::branch {color: red; border: green solid 1px;
+//  background-color: blue;"; // missing end brace text = ; // BAD
+//  pseudostate
+
+//    text = "StylesheetEdit {\n"
+//           "  widget: blue liht yellow;\n"
+//           "subcntrol: yelow blue normal;\n"
+//           " subcntrolmarker: blue blck yellow;\n"
+//           "}";
+
+// Correct stuff
+//  text =   "color: red";
+//  text =   "color: red;";
+//  text =  "color: red; background: green";
+//  text =  "color: red; background: green;";
+//  text =  "color: red; border: green solid 1px;";
+
+//  text = "QTabWidget::branch {color: red}";
+//  text = "QTabWidget::branch {color: red; background: green}";
+//  text = "QTabWidget::branch {color: red; border: green solid 1px;
+//  background-color: blue;}"; text = "QTabWidget::branch {\ncolor: red;\n}\n"
+//         "QWidget:active {\nborder: blue;}";
+//  text = "QTabWidget:active {\ncolor: red;\n"
+//         "/* An inline comment */\n}\n"
+//         "/* This is another\n comment */"
+//         "QWidget::branch {\ncolor; blue;\n background-color: red;\n}";
+
+// Test StylesheetEdit properties.
+//  text = "StylesheetEdit {\n"
+//         "widget: blue light yellow;\n"
+//         "subcontrol: yellow blue normal;\n"
+//         "subcontrolmarker: blue black yellow;\n"
+//         "pseudostate: red lightgrey light;\n"
+//         "pseudostatemarker: lightgrey red extrabold;\n"
+//         "property: darkgrey lightblue bold;\n"
+//         "propertymarker: lightblue medium;\n"
+//         "value: darkgrey pink demibold;\n"
+//         "startbrace: red;\n"
+//         "endbrace: yellow normal;\n"
+//         "bracematch: blue lightgreen bold;\n"
+//         "comment: blue yellow thin;\n"
+//         "bad: red blue extralight;\n"
+//         "}";
+//  QString stylesheet =
+//    "StylesheetEdit {"
+//    "widget: green light white;"
+//    "}";
+
+//  m_editor->setStyleSheet(stylesheet);
+
+//  layout->addWidget(m_editor, 0, 0);

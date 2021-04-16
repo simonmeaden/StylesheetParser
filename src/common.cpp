@@ -34,81 +34,36 @@ operator!=(NodeSection& left, NodeSection& right)
   return !(left == right);
 }
 
-const QStringList PropertyStatus::names = QStringList() << "GoodName"
-                                                        << "BadName"
-                                                        << "FuzzyName"
-                                                        << "FuzzyColorValue"
-                                                        << "GoodValueName"
-                                                        << "BadValueName"
-                                                        << "FuzzyValueName"
-                                                        << "GoodValue"
-                                                        << "BadValue"
-                                                        << "BadValueCount"
-                                                        << "BadNumericalValue"
-                                                        << "BadColorValue"
-                                                        << "BadUrlValue"
-                                                        << "RepeatValueName"
-                                                        << "FuzzyColorValue"
-                                                        << "OpenParentheses"
-                                                        << "CloseParentheses";
+// const QStringList PropertyStatus::names = QStringList() << "GoodName"
+//                                                        << "BadName"
+//                                                        << "FuzzyName"
+//                                                        << "FuzzyColorValue"
+//                                                        << "GoodValueName"
+//                                                        << "BadValueName"
+//                                                        << "FuzzyValueName"
+//                                                        << "GoodValue"
+//                                                        << "BadValue"
+//                                                        << "BadValueCount"
+//                                                        << "BadNumericalValue"
+//                                                        << "BadLengthUnit"
+//                                                        << "BadFontUnit"
+//                                                        << "BadColorValue"
+//                                                        << "BadUrlValue"
+//                                                        << "RepeatValueName"
+//                                                        << "FuzzyColorValue"
+//                                                        << "OpenParentheses"
+//                                                        << "CloseParentheses";
 
-PropertyStatus::PropertyStatus(PropertyValueState s, const QString& n, int o)
-  : state(s)
-  , offset(o)
-  , name(n)
-{
-  qDebug();
-}
-
-int
-PropertyStatus::length() const
-{
-  return name.length();
-}
-
-PropertyStatus*
-PropertyStatus::lastStatus()
-{
-  auto status = next;
-  while (status) {
-    if (status->next)
-      status = status->next;
-    else
-      return status;
-  }
-  return nullptr;
-}
-
-int
-PropertyStatus::lastOffset()
-{
-  auto next = lastStatus();
-  if (next)
-    return next->offset;
-  else
-    return offset;
-}
-
-int
-PropertyStatus::lastEnd()
-{
-  auto next = lastStatus();
-  if (next)
-    return next->offset + next->length();
-  else
-    return offset + length();
-}
-
-QDebug
-operator<<(QDebug debug, const PropertyStatus& status)
-{
-  QDebugStateSaver saver(debug);
-  debug.nospace() << "State : " << status.toString()
-                  << " name : " << status.name;
-  debug.nospace() << "  offset : " << status.offset
-                  << " length : " << status.length();
-  return debug;
-}
+// QDebug
+// operator<<(QDebug debug, const PropertyStatus& status)
+//{
+//  QDebugStateSaver saver(debug);
+//  debug.nospace() << "State : " << status.toString()
+//                  << " name : " << status.m_name;
+//  debug.nospace() << "  offset : " << status.m_offset
+//                  << " length : " << status.length();
+//  return debug;
+//}
 
 static const QStringList NodeTypeNames = QStringList()
                                          << "NoType" <<

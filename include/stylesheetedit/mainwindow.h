@@ -56,6 +56,8 @@ private:
   void setLabels();
 
   void gotoLine();
+
+  QString goodValues();
 };
 
 #endif // MAINWINDOW_H

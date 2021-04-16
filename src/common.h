@@ -318,11 +318,8 @@ enum AttributeType
   Position,
   TextDecoration,
   List,
-  UnderlineColor,
-  UnderlineStyle,
-  // below here are specific to StylesheetEdit
-  //  StylesheetEditGood,
-  //  StylesheetEditBad,
+  //  UnderlineColor,
+  //  UnderlineStyle,
   //  Custom,
 };
 Q_DECLARE_FLAGS(AttributeTypes, AttributeType);
@@ -405,44 +402,187 @@ enum PropertyValueState
   BadValue,
   BadValueCount,
   BadNumericalValue,
+  BadLengthUnit,
+  BadFontUnit,
   BadColorValue,
   BadUrlValue,
   RepeatValueName,
   FuzzyColorValue,
-  OpenParentheses,
-  CloseParentheses,
+  //  OpenParentheses,
+  //  CloseParentheses,
 };
 // Q_DECLARE_FLAGS(PropertyValueStates, PropertyValueState);
 // Q_DECLARE_OPERATORS_FOR_FLAGS(PropertyValueStates)
 
-struct PropertyStatus
+class PropertyStatus
 {
-  static const QStringList names;
-
-  PropertyStatus(PropertyValueState s = PropertyValueState::GoodValue,
-                 const QString& n = QString(),
-                 int o = -1);
-  ~PropertyStatus()
+  //  static const QStringList names;
+  struct Internal
   {
-    // delete any linked nodes.
-    auto n = next;
-    while (n) {
-      delete n;
+    QString name;
+    int offset;
+    PropertyValueState state;
+    QRect rect;
+  };
+
+public:
+  PropertyStatus(PropertyValueState state = PropertyValueState::GoodValue,
+                 const QString& name = QString(),
+                 int offset = -1)
+    : m_name(name)
+    , m_state(state)
+    , m_offset(offset)
+  {}
+
+  ~PropertyStatus() { qDeleteAll(m_internals); }
+
+  int length() const { return name().length(); }
+  PropertyStatus* lastStatus()
+  {
+    auto status = m_next;
+    while (status) {
+      if (status->m_next)
+        status = status->m_next;
+      else
+        return status;
     }
+    return nullptr;
+  }
+  int lastOffset()
+  {
+    auto next = lastStatus();
+    if (next)
+      return next->m_offset;
+    else
+      return m_offset;
+  }
+  int lastEnd()
+  {
+    auto next = lastStatus();
+    if (next)
+      return next->m_offset + next->length();
+    else
+      return m_offset + length();
   }
 
-  int length() const;
-  PropertyStatus* lastStatus();
-  int lastOffset();
-  int lastEnd();
+  QString name() const
+  {
+    //    if (m_internals.size() == 1)
+    return m_name;
+    //    else {
+    //      QString name;
+    //      for (int i = 0; i < m_internals.size(); i++) {
+    //        auto internal = m_internals.at(i);
+    //        if (i == 0)
+    //          name = internal->name;
+    //        else {
+    //          while (name.length() < internal->offset) {
+    //            name.append(" ");
+    //          }
+    //          name.append(internal->name);
+    //        }
+    //      }
+    //      return name;
+    //    }
+  }
+  QString sectionName(int index)
+  {
+    if (index > 0 && index < m_internals.length())
+      return m_internals.at(index)->name;
+    return QString();
+  }
+  void setName(const QString name) { m_name = name; }
+  void setSectionName(int index, const QString name)
+  {
+    if (index > 0 && index < m_internals.length())
+      m_internals.at(index)->name = name;
+  }
 
-  PropertyValueState state;
-  int offset;
-  QString name;
-  PropertyStatus* next = nullptr;
-  QRect rect;
+  PropertyValueState state() const { return m_state; }
+  PropertyValueState sectionState(int index) const
+  {
+    return m_internals.at(index)->state;
+  }
+  bool isGoodValue() { return (m_state == GoodValue); }
+  void setState(const PropertyValueState& state) { m_state = state; }
+  void setSectionState(int index, const PropertyValueState& state)
+  {
+    if (index > 0 && index < m_internals.length())
+      m_internals.at(index)->state = state;
+  }
 
-  QString toString() const { return names.at(int(state)); }
+  int offset() const { return m_offset; }
+  int sectionOffset(int index) const
+  {
+    if (index > 0 && index < m_internals.length())
+      return m_internals.at(index)->offset;
+    return -1;
+  }
+  void setOffset(int offset) { m_offset = offset; }
+  void setSectionOffset(int index, int offset)
+  {
+    if (index > 0 && index < m_internals.length())
+      m_internals.at(index)->offset = offset;
+  }
+
+  QRect rect() const { return m_rect; }
+  QRect sectionRect(int index) const
+  {
+    return m_internals.at(index)->rect;
+    return QRect();
+  }
+  void setRect(const QRect& rect) { m_rect = rect; }
+  void setSectionRect(int index, const QRect& rect)
+  {
+    if (index > 0 && index < m_internals.length())
+      m_internals.at(0)->rect = rect;
+  }
+
+  PropertyStatus* next() { return m_next; }
+  PropertyStatus* sectionNext(int index)
+  {
+    if (index > 0 && index < m_internals.length())
+      return m_next;
+    return nullptr;
+  }
+  void setNext(PropertyStatus* status) { m_next = status; }
+  void setSectionNext(int index, PropertyStatus* status)
+  {
+    if (index > 0 && index < m_internals.length())
+      m_next = status;
+  }
+
+  void addSectionValue(const PropertyValueState& state,
+                       const QString& name,
+                       int offset,
+                       const QRect& rect)
+  {
+    auto internal = new Internal();
+    internal->offset = offset;
+    internal->name = name;
+    internal->state = state;
+    internal->rect = rect;
+    m_internals.append(internal);
+  }
+
+  PropertyValueState sectionsState()
+  {
+    // if ANY internal state is not good return bad.
+    for (auto internal : m_internals) {
+      if (!(internal->state == GoodValue || internal->state == GoodName)) {
+        return BadValue;
+      }
+    }
+    return GoodValue;
+  }
+
+private:
+  PropertyValueState m_state;
+  QString m_name;
+  int m_offset;
+  PropertyStatus* m_next = nullptr;
+  QRect m_rect;
+  QList<Internal*> m_internals;
 };
 
 QDebug

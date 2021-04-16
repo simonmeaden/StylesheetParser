@@ -121,8 +121,7 @@ private:
                                PropertyNode* property,
                                const QString& text,
                                int start,
-                               int& pos,
-                               QString& block);
+                               int& pos);
   void parseComment(QMap<QTextCursor, Node*>* nodes,
                     const QString& text,
                     int start,

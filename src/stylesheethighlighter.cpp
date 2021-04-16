@@ -329,32 +329,28 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
     auto breakLoop = false;
 
     while (status) {
-      position = status->offset;
+      position = status->offset();
       if (isInBlock(position, length, blockStart, blockEnd)) {
         //        auto end = position + status->length;
         if (position >= blockEnd) {
           return;
         }
         if (position + status->length() < blockStart) {
-          status = status->next;
+          status = status->next();
           continue;
         }
 
-        auto startOffset = status->offset;
+        auto startOffset = status->offset() - blockStart;
         auto endOffset = status->lastEnd();
-        switch (status->state) {
+        switch (status->state()) {
           case GoodName:
           case GoodValueName:
           case GoodValue: {
-            setFormat(status->offset - blockStart,
-                      endOffset - startOffset,
-                      m_valueFormat);
+            setFormat(startOffset, status->length(), m_valueFormat);
             break;
           }
           case BadValueCount: {
-            setFormat(status->offset - blockStart,
-                      endOffset - startOffset,
-                      m_badValueFormat);
+            setFormat(startOffset, endOffset - startOffset, m_badValueFormat);
             breakLoop = true;
             break;
           }
@@ -367,10 +363,10 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
           case BadColorValue:
           case BadUrlValue:
           case RepeatValueName:
+          case BadFontUnit:
+          case BadLengthUnit:
           case FuzzyColorValue: {
-            setFormat(status->offset - blockStart,
-                      endOffset - startOffset,
-                      m_badValueFormat);
+            setFormat(startOffset, status->length(), m_badValueFormat);
             break;
           }
         }
@@ -378,7 +374,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
       if (breakLoop) {
         break;
       }
-      status = status->next;
+      status = status->next();
     }
 
     if (property->hasPropertyEndMarker()) {
@@ -530,7 +526,7 @@ StylesheetHighlighter::highlightBlock(const QString& text)
       }
 
       case NodeType::PropertyType: {
-        qDebug() << type << " text : " << text;
+        //        qDebug() << type << " text : " << text;
         PropertyNode* property = qobject_cast<PropertyNode*>(node);
         auto t = m_editor->toPlainText();
         bool finalBlock = checkForEmpty(t.mid(property->end()));

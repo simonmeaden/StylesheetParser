@@ -932,7 +932,7 @@ PropertyNode::setValueOffset(int index, int offset)
 {
   if (index >= 0 && index < m_valueStatus.length()) {
     auto status = m_valueStatus.at(index);
-    status->offset = offset;
+    status->setOffset(offset);
     m_valueStatus.replace(index, status);
   }
 }
@@ -997,7 +997,7 @@ int
 PropertyNode::valuePosition(int index)
 {
   if (index >= 0 && index < m_valueStatus.size())
-    return m_valueStatus.at(index)->offset;
+    return m_valueStatus.at(index)->offset();
   return -1;
 }
 
@@ -1012,7 +1012,7 @@ QString
 PropertyNode::value(int index)
 {
   if (index >= 0 && index < m_valueStatus.size())
-    return m_valueStatus.at(index)->name;
+    return m_valueStatus.at(index)->name();
   return QString();
 }
 
@@ -1051,12 +1051,12 @@ PropertyNode::length() const
       return propertyMarkerCursor().anchor() + 1;
     }
   } else {
-    auto value = m_valueStatus.last()->name;
+    auto value = m_valueStatus.last()->name();
     auto status = m_valueStatus.last();
-    while (status->next) {
-      status = status->next;
+    while (status->next()) {
+      status = status->next();
     }
-    return status->offset + status->length();
+    return status->offset() + status->length();
   }
 
   return 0;
@@ -1197,11 +1197,11 @@ PropertyNode::sectionIfIn(QPoint pos)
   }
 
   for (int i = 0; i < m_valueStatus.count(); i++) {
-    rect = m_valueStatus.at(i)->rect;
+    rect = m_valueStatus.at(i)->rect();
     top = rect.y();
     bottom = top + rect.height();
     left = rect.x();
-    right = left + fm.horizontalAdvance(m_valueStatus.at(i)->name);
+    right = left + fm.horizontalAdvance(m_valueStatus.at(i)->name());
 
     if (x >= left && x <= right && y >= top && y < bottom) {
       isin->type = SectionType::PropertyValue;
@@ -1257,10 +1257,10 @@ PropertyNode::sectionIfIn(int start, int end)
 
   for (int i = 0; i < m_valueStatus.count(); i++) {
     auto status = m_valueStatus.at(i);
-    auto offset = status->offset;
+    auto offset = status->offset();
     if (end < offset)
       break;
-    auto value = status->name;
+    auto value = status->name();
     valueEnd = offset + value.length();
     PartialType pt;
     if (start <= offset) {
@@ -1302,7 +1302,7 @@ PropertyNode::indexOf(const QString& name) const
 {
   for (auto i = 0; i < m_valueStatus.length(); i++) {
     auto status = m_valueStatus.at(i);
-    if (status->name == name) {
+    if (status->name() == name) {
       return i;
     }
   }
@@ -1314,7 +1314,7 @@ PropertyNode::setValue(int index, const QString& value)
 {
   if (index >= 0 && index < m_valueStatus.length()) {
     auto status = m_valueStatus.at(index);
-    status->name = value;
+    status->name() = value;
     m_valueStatus.replace(index, status);
   }
 }

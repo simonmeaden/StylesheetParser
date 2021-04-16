@@ -302,9 +302,9 @@ public:
         index < m_valueStatus.size()) {
       auto status = m_valueStatus.at(index);
       int count = 1;
-      while (status->next) {
+      while (status->next()) {
         count++;
-        status = status->next;
+        status = status->next();
       }
       return count;
     }
@@ -312,9 +312,7 @@ public:
   }
 
 protected:
-  //  QStringList m_values;
   QList<NodeState> m_checks;
-  //  QList<QTextCursor> m_cursors;
   QList<PropertyStatus*> m_valueStatus;
 
   NodeStates m_propertyState = NodeState::BadNodeState;

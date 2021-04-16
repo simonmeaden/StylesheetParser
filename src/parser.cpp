@@ -87,11 +87,19 @@ Parser::checkType(int start,
   if (lastState == IdSelectorMarkerState) {
     return qMakePair<NodeType, NodeState>(NodeType::IdSelectorType,
                                           NodeState::IdSelectorState);
+  } else if (lastState == SubControlState) {
+    if (m_datastore->containsProperty(block) &&
+        m_datastore->containsSubControl(block)) {
+      // this is a special case, the only case I know is icon which can be
+      // both a property value AND a SubControl.
+      return qMakePair<NodeType, NodeState>(NodeType::SubControlType,
+                                            NodeState::SubControlState);
+    }
   }
   if (property) {
     auto propertyState = m_datastore->isValidPropertyValueForProperty(
       property->name(), start, block);
-    if (property && propertyState->state == PropertyValueState::GoodValue) {
+    if (property && propertyState->isGoodValue()) {
       return qMakePair<NodeType, NodeState>(NodeType::PropertyValueType,
                                             NodeState::GoodPropertyState);
     } else {
@@ -187,6 +195,8 @@ Parser::parseText(const QString& text)
       break;
     }
 
+    //    qDebug() << block;
+
     start = pos - block.length();
     QTextCursor cursor;
 
@@ -212,7 +222,6 @@ Parser::parseText(const QString& text)
                   .isEmpty()) {
           start = pos - block.length();
           cursor = m_datastore->getCursorForPosition(start);
-          //          auto leaveWidget = false;
 
           auto [type, state] = checkType(start, block, lastState);
           if (type == NodeType::ColonType) {
@@ -240,7 +249,7 @@ Parser::parseText(const QString& text)
               property->setWidgetNodes(widgetnodes);
               widgetnodes->addProperty(property);
               parsePropertyWithValues(
-                &nodes, property, text, start, pos, block);
+                &nodes, property, text, start, pos /*, block*/);
               lastState = state;
               continue;
             }
@@ -400,7 +409,7 @@ Parser::parseText(const QString& text)
         PropertyNode* property =
           new PropertyNode(block, cursor, m_editor, state, this);
         nodes.insert(cursor, property);
-        parsePropertyWithValues(&nodes, property, text, start, pos, block);
+        parsePropertyWithValues(&nodes, property, text, start, pos /*, block*/);
         continue;
       }
       case NodeType::CommentType:
@@ -444,7 +453,7 @@ Parser::parseText(const QString& text)
               nodes.insert(cursor, property);
               pos -= block.length(); // step back
               parsePropertyWithValues(
-                &nodes, property, text, start, pos, block);
+                &nodes, property, text, start, pos /*, block*/);
               continue;
             }
 
@@ -496,7 +505,7 @@ Parser::parseText(const QString& text)
               nodes.insert(cursor, property);
               pos -= block.length(); // step back
               parsePropertyWithValues(
-                &nodes, property, text, start, pos, block);
+                &nodes, property, text, start, pos /*, block*/);
               continue;
             }
 
@@ -535,13 +544,18 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
                                 PropertyNode* property,
                                 const QString& text,
                                 int start,
-                                int& pos,
-                                QString& block)
+                                int& pos)
 {
+  QString block;
+  bool hash = false;
   if (property->isValidPropertyName()) {
     QString propertyName = property->name();
     while (!(block = m_datastore->findNext(text, pos, m_showLineMarkers))
               .isEmpty()) {
+      if (hash) {
+        block.prepend("#");
+        hash = false;
+      }
       PropertyStatus* valueStatus = nullptr;
       if (block == ":") {
         if (!property->hasPropertyMarker()) {
@@ -551,6 +565,9 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
         } else {
           /*TODO error too many :*/
         }
+      } else if (block == "#") {
+        // if in valid property this is probably a color #
+        hash = true;
       } else if (block == "/*") {
         parseComment(nodes, text, start, pos);
       } else if (block == "\n") {
@@ -564,7 +581,7 @@ Parser::parsePropertyWithValues(QMap<QTextCursor, Node*>* nodes,
         m_datastore->stepBack(pos, block);
         break;
       } else if ((valueStatus = m_datastore->isValidPropertyValueForProperty(
-                    propertyName, pos, block, text))) {
+                    propertyName, pos, block))) {
         // some properties (ie bottom) can be BOTH a property and a value
         // so check if it is a possible value FIRST before assuming
         // that it is a following property.
@@ -1601,8 +1618,8 @@ Parser::handleMouseClicked(const QPoint& pos)
             auto valName = property->value(section->position);
             auto status = property->valueStatus(section->position);
             while (status) {
-              if (x >= status->rect.left() && x < status->rect.right() &&
-                  y >= status->rect.top() && y < status->rect.bottom()) {
+              if (x >= status->rect().left() && x < status->rect().right() &&
+                  y >= status->rect().top() && y < status->rect().bottom()) {
                 //                switch (status->state) {
                 //                  case BadPropertyValue: {
                 //                    suggestionsMenu->clear();
@@ -1674,7 +1691,7 @@ Parser::handleMouseClicked(const QPoint& pos)
 
                 break;
               }
-              status = status->next;
+              status = status->next();
             }
             //            if (property->isValidPropertyName()) {
             //              if (property->isValueValid(section->position)) {

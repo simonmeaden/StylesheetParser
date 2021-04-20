@@ -408,6 +408,11 @@ Parser::parseText(const QString& text)
         cursor = m_datastore->getCursorForPosition(start);
         PropertyNode* property =
           new PropertyNode(block, cursor, m_editor, state, this);
+        auto counts = m_datastore->attributeCounts(block);
+        if (counts.first != -1) {
+          property->setMinCount(counts.first);
+          property->setMaxCount(counts.second);
+        }
         nodes.insert(cursor, property);
         parsePropertyWithValues(&nodes, property, text, start, pos /*, block*/);
         continue;
@@ -415,12 +420,6 @@ Parser::parseText(const QString& text)
       case NodeType::CommentType:
         parseComment(&nodes, text, start, pos);
         continue;
-        //      case NodeType::StartBraceType:
-        //        stashStartBrace(&nodes, pos - block.length());
-        //        break;
-        //      case NodeType::EndBraceType:
-        //        stashEndBrace(&nodes, pos - block.length());
-        //        break;
       case NodeType::NewlineType:
         stashNewline(&nodes, pos++);
         break;
@@ -647,118 +646,6 @@ Parser::parseComment(QMap<QTextCursor, Node*>* nodes,
     c = text.at(pos++);
   }
 }
-
-// QString
-// Parser::findNext(const QString& text, int& pos)
-//{
-//  QString block;
-//  QChar c;
-//  bool insideBrackets = false;
-//  skipBlanks(text, pos);
-
-//  if (pos < text.length()) {
-//    c = text.at(pos);
-//    while (pos < text.length()) {
-//      if (c.isNull()) {
-//        return block;
-//      }
-
-//      if (insideBrackets) {
-//        if (c == ')') {
-//          insideBrackets = false;
-//          block += c;
-//        } else { // end of url or gradient.
-//          block += c;
-//        }
-//        pos++;
-//      } else if (c.isLetterOrNumber() || c == '-') {
-//        if (!block.isEmpty()) {
-//          QChar b = block.back();
-//          if (b == '{' || b == '}' || b == ';' || b == ':' /* || b == '#'*/) {
-//            return block;
-//          }
-//        }
-//        block += c;
-//        pos++;
-//      } else if (c == '(') {
-//        insideBrackets = true;
-//        block += c;
-//        pos++;
-//      } else if (m_showLineMarkers && c == '\n') {
-//        if (block.isEmpty()) {
-//          block += c;
-//        }
-//        return block;
-//      } else if (c.isSpace() && !block.isEmpty()) {
-//        return block;
-//      } else if (c == '{' || c == '}' || c == ';' || c == ':' || c == ',' ||
-//                 c == '#') {
-//        if (!block.isEmpty()) {
-//          if (block.back().isLetterOrNumber()) {
-//            // a possibly correct name/number string
-//            return block;
-//          }
-//        }
-
-//        if (block.length() == 0 || block.back() == c) {
-//          block += c;
-//          pos++;
-
-//        } else {
-//          return block;
-//        }
-
-//      } else if (c == '/') {
-//        if (pos < text.length() - 1) {
-//          if (text.at(pos + 1) == '*') {
-//            // a comment
-//            if (!block.isEmpty()) {
-//              pos--; // step back.
-//              return block;
-
-//            } else {
-//              pos += 2;
-//              return "/*";
-//            }
-//          }
-//        }
-//      }
-
-//      if (pos < text.length()) {
-//        c = text.at(pos);
-//      }
-//    }
-//  }
-
-//  return block;
-//}
-
-// void
-// Parser::skipBlanks(const QString& text, int& pos)
-//{
-//  QChar c;
-
-//  for (; pos < text.length(); pos++) {
-//    c = text.at(pos);
-
-//    if (m_showLineMarkers && c == '\n') {
-//      break;
-//    } else if (c.isSpace() /* || c == '\n' || c == '\r' || c == '\t'*/) {
-//      continue;
-
-//    } else {
-//      break;
-//    }
-//  }
-//}
-
-// QTextCursor
-// Parser::getCursorForPosition(int position)
-//{
-//  QTextCursor c(m_editor->document());
-//  c.setPosition(position);
-//  return c;
-//}
 
 void
 Parser::nodeForPoint(const QPoint& pos, NodeSection** nodeSection)
@@ -1129,12 +1016,16 @@ void
 Parser::setMenuData(QAction* act,
                     Node* node,
                     SectionType type,
-                    const QString& oldName)
+                    const QString& oldName,
+                    int offset,
+                    int index)
 {
   MenuData data;
   data.node = node;
   data.type = type;
   data.oldName = oldName;
+  data.offset = offset;
+  data.index = index;
   QVariant v;
   v.setValue<MenuData>(data);
   act->setData(v);
@@ -1246,7 +1137,9 @@ Parser::updateMenu(QMap<int, QString> matches,
                    QPoint pos,
                    QMenu** suggestionsMenu,
                    SectionType type,
-                   const QString& oldName)
+                   const QString& oldName,
+                   int offset,
+                   int index)
 {
   QAction* act;
 
@@ -1260,9 +1153,8 @@ Parser::updateMenu(QMap<int, QString> matches,
 
   for (auto& key : reversed) {
     act = new QAction(matches.value(key));
-    act->setData(pos);
     (*suggestionsMenu)->addAction(act);
-    setMenuData(act, nNode, type, oldName);
+    setMenuData(act, nNode, type, oldName, offset, index);
     m_editor->connect(
       act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
   }
@@ -1381,7 +1273,7 @@ Parser::handleDocumentChanged(int offset, int charsRemoved, int charsAdded)
      that no stylesheet would be large enough to be worth the cost of
      keeping the code clean. I might revisit this later.
   */
-  parseInitialText(m_editor->toPlainText());
+  //  parseInitialText(m_editor->toPlainText());
   return;
 
   //  // If the text is changed due to a suggestion then ignore
@@ -1527,6 +1419,28 @@ Parser::handleCursorPositionChanged(QTextCursor textCursor)
   emit rehighlight();
 }
 
+void
+Parser::updateColorDialogMenu(QAction* act,
+                              PropertyNode* property,
+                              const QString& name,
+                              int offset,
+                              int index,
+                              QMenu** suggestionsMenu)
+{
+  MenuData data;
+  data.node = property;
+  data.type = SectionType::ColorDialog;
+  data.oldName = name;
+  data.offset = offset;
+  data.index = index;
+  QVariant v;
+  v.setValue<MenuData>(data);
+  act->setData(v);
+  (*suggestionsMenu)->addAction(act);
+  m_editor->connect(
+    act, &QAction::triggered, m_editor, &StylesheetEditor::suggestionMade);
+}
+
 QMenu*
 Parser::handleMouseClicked(const QPoint& pos)
 {
@@ -1603,8 +1517,28 @@ Parser::handleMouseClicked(const QPoint& pos)
         auto property = qobject_cast<PropertyNode*>(section->node);
         switch (section->type) {
           case SectionType::PropertyName: {
-            if (!property->hasPropertyEndMarker() &&
-                !property->isFinalProperty()) {
+            auto minCount = property->minCount();
+            auto maxCount = property->maxCount();
+            auto count = property->valueCount();
+
+            if (count > maxCount) {
+              suggestionsMenu->clear();
+              auto widgetact =
+                getWidgetAction(m_datastore->badIcon(),
+                                tr("Too many values %1, maximum is %2")
+                                  .arg(count)
+                                  .arg(maxCount),
+                                suggestionsMenu);
+              suggestionsMenu->addAction(widgetact);
+            } else if (count < minCount) {
+              suggestionsMenu->clear();
+              auto widgetact = getWidgetAction(
+                m_datastore->badIcon(),
+                tr("Not enough values, should be %1").arg(minCount),
+                suggestionsMenu);
+              suggestionsMenu->addAction(widgetact);
+            } else if (!property->hasPropertyEndMarker() &&
+                       !property->isFinalProperty()) {
               suggestionsMenu->clear();
               auto widgetact =
                 getWidgetAction(m_datastore->badDColonIcon(),
@@ -1635,178 +1569,146 @@ Parser::handleMouseClicked(const QPoint& pos)
           case SectionType::PropertyValue: {
             auto valName = property->value(section->position);
             auto status = property->valueStatus(section->position);
+            QString message;
             while (status) {
-              if (status->state() == BadValue) {
-                if (status->isInRect(pos)) {
-                  for (auto i = 0; i < status->sectionCount(); i++) {
-                    if (status->isInSectionRect(i, pos)) {
-                      auto state = status->sectionState(i);
-                      QString message;
-                      switch (state) {
-                        case BadValueName:
-                          message =
-                            tr("Bad value name %1").arg(status->sectionName(i));
-                          break;
-                        case FuzzyValueName:
-                          message = tr("Value name is fuzzy %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case FuzzyColorValue:
-                          message = tr("Color name is fuzzy %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case BadColorValue:
-                          message = tr("Color name is bad %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case BadUrlValue:
-                          message = tr("URL value is bad %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case BadValueCount:
-                          message = tr("Wrong number of parameters %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case RepeatValueName:
-                          message = tr("Value name was repeated %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case BadNumericalValue:
-                          message = tr("Numerical parameter is bad %1")
-                                      .arg(status->sectionName(i));
-                          break;
-                        case BadNumericalValue_31:
-                          message =
-                            tr("Numerical parameter should be 0-31 : %1")
-                              .arg(status->sectionName(i));
-                          break;
-                        case BadNumericalValue_100:
-                          message =
-                            tr("Numerical parameter should be 0-100 : %1")
-                              .arg(status->sectionName(i));
-                          break;
-                        case BadNumericalValue_255:
-                          message =
-                            tr("Numerical parameter should be 0-255 : %1")
-                              .arg(status->sectionName(i));
-                          break;
-                        case BadNumericalValue_359:
-                          message =
-                            tr("Numerical parameter should be 0-359 : %1")
-                              .arg(status->sectionName(i));
-                          break;
-                        case BadLengthUnit:
-                          message =
-                            tr("Should have a unit (px, pt, em, ex) : %1")
-                              .arg(status->sectionName(i));
-                          break;
-                        case BadFontUnit:
-                          message = tr("Should have a unit (px, pt) : %1")
-                                      .arg(status->sectionName(i));
-                          break;
+              switch (status->state()) {
+                case BadValue: {
+                  if (status->isInRect(pos)) {
+                    for (auto i = 0; i < status->sectionCount(); i++) {
+                      if (status->isInSectionRect(i, pos)) {
+                        auto state = status->sectionState(i);
+                        switch (state) {
+                          case BadValueName:
+                            message = tr("Bad value name %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case FuzzyValueName:
+                            message = tr("Value name is fuzzy %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case FuzzyColorValue:
+                            message = tr("Color name is fuzzy %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case BadColorValue:
+                            message = tr("Color name is bad %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case BadUrlValue:
+                            message = tr("URL value is bad %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case BadValueCount:
+                            message = tr("Wrong number of parameters %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case RepeatValueName:
+                            message = tr("Value name was repeated %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case BadNumericalValue:
+                            message = tr("Numerical parameter is bad %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                          case BadNumericalValue_31:
+                            message =
+                              tr("Numerical parameter should be 0-31 : %1")
+                                .arg(status->sectionName(i));
+                            break;
+                          case BadNumericalValue_100:
+                            message =
+                              tr("Numerical parameter should be 0-100 : %1")
+                                .arg(status->sectionName(i));
+                            break;
+                          case BadNumericalValue_255:
+                            message =
+                              tr("Numerical parameter should be 0-255 : %1")
+                                .arg(status->sectionName(i));
+                            break;
+                          case BadNumericalValue_359:
+                            message =
+                              tr("Numerical parameter should be 0-359 : %1")
+                                .arg(status->sectionName(i));
+                            break;
+                          case BadLengthUnit:
+                            message =
+                              tr("Should have a unit (px, pt, em, ex) : %1")
+                                .arg(status->sectionName(i));
+                            break;
+                          case BadFontUnit:
+                            message = tr("Should have a unit (px, pt) : %1")
+                                        .arg(status->sectionName(i));
+                            break;
+                        }
+                        suggestionsMenu->clear();
+                        auto widgetact = getWidgetAction(
+                          m_datastore->invalidIcon(), message, suggestionsMenu);
+                        suggestionsMenu->addAction(widgetact);
                       }
-                      suggestionsMenu->clear();
-                      auto widgetact = getWidgetAction(
-                        m_datastore->invalidIcon(), message, suggestionsMenu);
-                      suggestionsMenu->addAction(widgetact);
                     }
                   }
+                  break;
                 }
-                break;
+                case BadHashColorValue: {
+                  message = tr("Color value is bad: %1").arg(status->name());
+                  suggestionsMenu->clear();
+                  auto widgetact = getWidgetAction(
+                    m_datastore->invalidIcon(), message, suggestionsMenu);
+                  suggestionsMenu->addAction(widgetact);
+                  suggestionsMenu->addSeparator();
+                  auto act = new QAction(m_datastore->addColonIcon(),
+                                         tr("Call ColorDialog."));
+                  updateColorDialogMenu(act,
+                                        property,
+                                        status->name(),
+                                        status->offset(),
+                                        section->position,
+                                        &suggestionsMenu);
+                  break;
+                }
+                case BadColorValue: {
+                  message = tr("Color value is bad: %1").arg(status->name());
+                  suggestionsMenu->clear();
+                  auto widgetact = getWidgetAction(
+                    m_datastore->invalidIcon(), message, suggestionsMenu);
+                  suggestionsMenu->addAction(widgetact);
+                  suggestionsMenu->addSeparator();
+                  auto act = new QAction(m_datastore->addColonIcon(),
+                                         tr("Call ColorDialog."));
+                  updateColorDialogMenu(act,
+                                        property,
+                                        status->name(),
+                                        status->offset(),
+                                        section->position,
+                                        &suggestionsMenu);
+                  break;
+                }
+                case FuzzyColorValue: {
+                  auto matches =
+                    m_datastore->fuzzySearchColorNames(status->name());
+                  message = tr("Color name is fuzzy: %1").arg(status->name());
+                  suggestionsMenu->clear();
+                  auto widgetact = getWidgetAction(
+                    m_datastore->invalidIcon(), message, suggestionsMenu);
+                  suggestionsMenu->addAction(widgetact);
+                  suggestionsMenu->addSeparator();
+                  auto act = new QAction(
+                    m_datastore->addColonIcon(),
+                    tr("Fuzzy color %1.<br>Possible values showing below."));
+                  act->setData(pos);
+                  updateMenu(matches,
+                             property,
+                             pos,
+                             &suggestionsMenu,
+                             SectionType::FuzzyPropertyValue,
+                             status->name(),
+                             status->offset());
+                  break;
+                }
               }
               status = status->next();
             }
-            //          }
-            //            if (property->isValidPropertyName()) {
-            //              if (property->isValueValid(section->position))
-            //              {
-            //                if (!property->hasPropertyEndMarker() &&
-            //                    !property->isFinalProperty()) {
-            //                  suggestionsMenu->clear();
-            //                  auto widgetact =
-            //                    getWidgetAction(m_datastore->badDColonIcon(),
-            //                                    tr("Property has no end
-            //                                    marker
-            //                                    (;)"), suggestionsMenu);
-            //                  suggestionsMenu->addAction(widgetact);
-            //                  suggestionsMenu->addSeparator();
-            //                  auto act = new
-            //                  QAction(m_datastore->addColonIcon(),
-            //                                         tr("Add end
-            //                                         marker"));
-            //                  suggestionsMenu->addAction(act);
-            //                  setMenuData(act, property,
-            //                  SectionType::PropertyEndMarker);
-            //                  m_editor->connect(act,
-            //                                    &QAction::triggered,
-            //                                    m_editor,
-            //                                    &StylesheetEditor::suggestionMade);
-            //                } else {
-            //                  // must have a valid property to check
-            //                  value types. if
-            //                  (!property->isValidPropertyName()) {
-            //                    auto matches =
-            //                    m_datastore->fuzzySearchPropertyValue(
-            //                      property->name(), valName);
-            //                    updateValidPropertyValueContextMenu(
-            //                      matches, pos, property, valName,
-            //                      &suggestionsMenu);
-            //                  } else {
-            //                  }
-            //                }
-            //              } else {
-            //                auto matches =
-            //                m_datastore->fuzzySearchPropertyValue(
-            //                  property->name(), valName);
-            //                updateInvalidPropertyValueContextMenu(
-            //                  matches, pos, property, valName,
-            //                  &suggestionsMenu);
-            //              }
-            //            } else {
-            //              auto matches =
-            //              m_datastore->fuzzySearchProperty(property->name());
-            //              QMultiMap<int, QPair<QString, QString>>
-            //              propValMatches; for (auto& name : matches) {
-            //                QMultiMap<int, QString> vMatches =
-            //                  m_datastore->fuzzySearchPropertyValue(name,
-            //                  valName);
-            //                for (auto [key, value] :
-            //                asKeyValueRange(vMatches)) {
-            //                  propValMatches.insert(
-            //                    key,
-            //                    qMakePair<QString, QString>(name,
-            //                    vMatches.value(key)));
-            //                }
-            //              }
-            //              updateInvalidNameAndPropertyValueContextMenu(
-            //                propValMatches, property, valName, pos,
-            //                &suggestionsMenu);
-            //            }
-            //          break;
-            //        }
-            //        case SectionType::Comment: {
-            //          qWarning();
-            //          break;
-            //        }
-            //        case SectionType::PropertyMarker: {
-            //          qWarning();
-            //          // TODO marker errors? maybe :: or ;
-            //          break;
-            //        }
-            //      } // end switch type
-            //      break;
-            //    } // end PropertyType
-
-            //    case NodeType::BadNodeType: {
-            //      // TODO probably remove this.
-            //      break;
-            //    } // end case Node::BadNodeType
-
-            //                default: {
-            //                  break;
-            //                }
-            //              }
-            //            }
+            break;
           }
           case SectionType::Comment: {
             qWarning();
@@ -1889,7 +1791,7 @@ Parser::actionPropertyValueChange(PropertyNode* property,
 
   property->setValue(index, newName);
   property->setStateFlag(index, ValidPropertyValueState);
-  property->setValueOffset(index, position);
+  property->setValueOffset(index, m_datastore->getCursorForPosition(position));
   emit rehighlightBlock(property->cursor().block());
 }
 
@@ -1927,12 +1829,43 @@ Parser::handleSuggestions(QAction* act)
   auto node = menuData.node;
   auto type = menuData.type;
   auto oldName = menuData.oldName;
+  auto offset = menuData.offset;
+  auto index = menuData.index;
   QPoint pos = act->data().toPoint();
 
   if (node) {
     auto newName = act->text();
 
     switch (type) {
+      case ColorDialog: {
+        auto property = qobject_cast<PropertyNode*>(node);
+        const QColorDialog::ColorDialogOptions options =
+          QColorDialog::ShowAlphaChannel | QColorDialog::DontUseNativeDialog;
+        auto color =
+          QColorDialog::getColor(Qt::black, m_editor, "Choose Color", options);
+        if (color.isValid()) {
+          auto value = color.name(QColor::HexArgb);
+          // copy start offset
+          auto cursor = m_datastore->getCursorForPosition(offset);
+          // this moves offset to end on new text.
+          updateTextChange(cursor, oldName, value);
+          cursor.setPosition(offset, QTextCursor::MoveAnchor);
+          property->setValueName(index, value);
+          property->setValueState(index, PropertyValueState::GoodValue);
+          // reset offset.
+          property->setValueOffset(index, cursor);
+        }
+        break;
+      }
+      case FuzzyPropertyValue: {
+        auto property = qobject_cast<PropertyNode*>(node);
+        auto cursor = m_datastore->getCursorForPosition(offset);
+        updateTextChange(cursor, oldName, newName);
+        property->setValueName(index, newName);
+        property->setValueState(index, PropertyValueState::GoodValue);
+        property->setValueOffset(index, cursor);
+        break;
+      }
       case FuzzyWidgetName: {
         auto widget = qobject_cast<WidgetNode*>(node);
         auto cursor = widget->cursor();

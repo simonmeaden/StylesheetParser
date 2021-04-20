@@ -21,6 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <QColorDialog>
 #include <QMenu>
 #include <QObject>
 #include <QPoint>
@@ -189,7 +190,15 @@ private:
                   QPoint pos,
                   QMenu** suggestionsMenu,
                   SectionType type,
-                  const QString& oldName = QString());
+                  const QString& oldName = QString(),
+                  int offset = -1,
+                  int index = -1);
+  void updateColorDialogMenu(QAction* act,
+                             PropertyNode* property,
+                             const QString& name,
+                             int offset,
+                             int index,
+                             QMenu** suggestionsMenu);
   QList<int> reverseLastNValues(QMultiMap<int, QString> matches);
   QStringList reverseList(QStringList list, int count);
   QList<QPair<QString, QString>> sortLastNValues(
@@ -215,7 +224,9 @@ private:
   void setMenuData(QAction* act,
                    Node* property,
                    SectionType type,
-                   const QString& oldName = QString());
+                   const QString& oldName = QString(),
+                   int offset = -1,
+                   int index = -1);
   QMap<QTextCursor, Node*> parseText(const QString& text);
 };
 

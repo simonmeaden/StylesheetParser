@@ -314,6 +314,8 @@ public:
 
   QStringList borderValues();
 
+  QPair<int, int> attributeCounts(const QString& name);
+
   QMultiMap<int, QString> fuzzySearch(const QString& name,
                                       QStringList list) const;
   QMultiMap<int, QString> fuzzySearchWidgets(const QString& name);
@@ -359,6 +361,7 @@ private:
   QMap<QString, WidgetItem*> m_widgets;
   QMap<QString, QList<WidgetItem*>> m_subControls;
   QMap<QString, AttributeType> m_attributes;
+  QMap<QString, QPair<int, int>> m_attributesCounts;
   QStringList m_pseudoStates;
   QList<bool> m_pseudoStatesExtra;
   QStringList m_properties;
@@ -490,6 +493,8 @@ public:
   QTextCursor getCursorForPosition(int position);
   QRect getRectForText(int start, const QString& text);
 
+  QPair<int, int> attributeCounts(const QString& name);
+
   void addWidget(const QString& widget, const QString& parent);
   QStringList widgets() { return m_widgetModel->widgets(); }
   void removeWidget(const QString& name);
@@ -555,6 +560,7 @@ public:
   QIcon addDColonIcon() const;
   QIcon addSemiColonIcon() const;
   QIcon addColonIcon() const;
+  QIcon badIcon() const;
   QIcon badSemiColonIcon() const;
   QIcon badColonIcon() const;
   QIcon badDColonIcon() const;
@@ -622,8 +628,8 @@ private:
   QWidget* m_parent;
   StylesheetEditor* m_editor;
   const QIcon m_invalidIcon, m_validIcon, m_addSemiColonIcon, m_addDColonIcon,
-    m_addColonIcon, m_badSColonIcon, m_badColonIcon, m_badDColonIcon, m_noIcon,
-    m_fuzzyIcon;
+    m_addColonIcon, m_badIcon, m_badSColonIcon, m_badColonIcon, m_badDColonIcon,
+    m_noIcon, m_fuzzyIcon;
   QMutex m_mutex;
   QStringList m_attributeNames;
   QStringList m_possibleWidgets;

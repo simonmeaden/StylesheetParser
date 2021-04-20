@@ -99,3 +99,27 @@ operator<<(QDebug debug, const NodeType& type)
   debug.nospace() << "Type : " << NodeTypeNames.at(int(type));
   return debug;
 }
+
+int
+PropertyStatus::maxCount() const
+{
+  return m_maxCount;
+}
+
+void
+PropertyStatus::setMaxCount(int maxCount)
+{
+  m_maxCount = maxCount;
+}
+
+int
+PropertyStatus::minCount() const
+{
+  return m_minCount;
+}
+
+void
+PropertyStatus::setMinCount(int minCount)
+{
+  m_minCount = minCount;
+}

@@ -909,39 +909,41 @@ PropertyNode::hasWidgetNodes()
   return (m_widgetnodes);
 }
 
-// QStringList
-// PropertyNode::values() const
-//{
-//  return m_values;
-//}
-
 QList<NodeState>
 PropertyNode::state() const
 {
   return m_checks;
 }
 
-// QList<QTextCursor>
-// PropertyNode::valueCursors() const
-//{
-//  return m_cursors;
-//}
-
 void
-PropertyNode::setValueOffset(int index, int offset)
+PropertyNode::setValueOffset(int index, QTextCursor offset)
 {
   if (index >= 0 && index < m_valueStatus.length()) {
     auto status = m_valueStatus.at(index);
     status->setOffset(offset);
-    m_valueStatus.replace(index, status);
+    //    m_valueStatus.replace(index, status);
   }
 }
 
-// QList<PropertyValueState>
-// PropertyNode::valueStatus() const
-//{
-//  return m_valueStatus;
-//}
+void
+PropertyNode::setValueState(int index, PropertyValueState state)
+{
+  if (index >= 0 && index < m_valueStatus.length()) {
+    auto status = m_valueStatus.at(index);
+    status->setState(state);
+    //    m_valueStatus.replace(index, status);
+  }
+}
+
+void
+PropertyNode::setValueName(int index, const QString& name)
+{
+  if (index >= 0 && index < m_valueStatus.length()) {
+    auto status = m_valueStatus.at(index);
+    status->setName(name);
+    m_valueStatus.replace(index, status);
+  }
+}
 
 PropertyStatus*
 PropertyNode::valueStatus(int index) const
@@ -950,20 +952,6 @@ PropertyNode::valueStatus(int index) const
     return m_valueStatus.at(index);
   return nullptr;
 }
-
-// void
-// PropertyNode::setValues(const QStringList& values)
-//{
-//  m_values = values;
-//}
-
-// void
-// PropertyNode::setValue(int index, const QString& value)
-//{
-//  if (index >= 0 && index < m_values.length()) {
-//    m_values.replace(index, value);
-//  }
-//}
 
 void
 PropertyNode::setChecks(const QList<NodeState>& checks)
@@ -987,18 +975,18 @@ PropertyNode::check(int index)
   return BadNodeState;
 }
 
-// void
-// PropertyNode::setValueCursors(const QList<QTextCursor>& positions)
-//{
-//  m_cursors = positions;
-//}
-
 int
 PropertyNode::valuePosition(int index)
 {
   if (index >= 0 && index < m_valueStatus.size())
     return m_valueStatus.at(index)->offset();
   return -1;
+}
+
+int
+PropertyNode::valueCount()
+{
+  return m_valueStatus.size();
 }
 
 void
@@ -1307,6 +1295,45 @@ PropertyNode::indexOf(const QString& name) const
     }
   }
   return -1;
+}
+
+int
+PropertyNode::statusLinkCount(int index)
+{
+  if (!m_valueStatus.isEmpty() && index >= 0 && index < m_valueStatus.size()) {
+    auto status = m_valueStatus.at(index);
+    int count = 1;
+    while (status->next()) {
+      count++;
+      status = status->next();
+    }
+    return count;
+  }
+  return 0;
+}
+
+int
+PropertyNode::minCount() const
+{
+  return m_minCount;
+}
+
+void
+PropertyNode::setMinCount(int minCount)
+{
+  m_minCount = minCount;
+}
+
+int
+PropertyNode::maxCount() const
+{
+  return m_maxCount;
+}
+
+void
+PropertyNode::setMaxCount(int maxCount)
+{
+  m_maxCount = maxCount;
 }
 
 void

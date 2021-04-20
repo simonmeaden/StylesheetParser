@@ -151,6 +151,7 @@ enum SectionType
   WidgetStartBrace,
   WidgetEndBrace,
   Comment,
+  ColorDialog,
 };
 
 struct PartialType
@@ -386,6 +387,8 @@ struct MenuData
   //  QPoint pos;
   SectionType type;
   QString oldName = QString();
+  int offset;
+  int index = -1;
 };
 Q_DECLARE_METATYPE(MenuData);
 
@@ -402,7 +405,6 @@ enum PropertyValueState
   BadValue,
   BadValueCount,
   BadNumericalValue,
-  //  BadNumericalValue_Max,
   BadNumericalValue_31,
   BadNumericalValue_100,
   BadNumericalValue_255,
@@ -411,10 +413,11 @@ enum PropertyValueState
   BadLengthUnit,
   BadFontUnit,
   BadColorValue,
+  BadHashColorValue,
   BadUrlValue,
   RepeatValueName,
   FuzzyColorValue,
-  //  CloseParentheses,
+  WrongType,
 };
 
 class PropertyStatus
@@ -423,7 +426,7 @@ class PropertyStatus
   struct Internal
   {
     QString name;
-    int offset;
+    QTextCursor offset;
     PropertyValueState state;
     QRect rect;
   };
@@ -431,7 +434,7 @@ class PropertyStatus
 public:
   PropertyStatus(PropertyValueState state = PropertyValueState::GoodValue,
                  const QString& name = QString(),
-                 int offset = -1)
+                 QTextCursor offset = QTextCursor())
     : m_name(name)
     , m_state(state)
     , m_offset(offset)
@@ -451,7 +454,7 @@ public:
     }
     return nullptr;
   }
-  int lastOffset()
+  QTextCursor lastOffset()
   {
     auto next = lastStatus();
     if (next)
@@ -459,13 +462,13 @@ public:
     else
       return m_offset;
   }
-  int lastEnd()
+  int lastEndPosition()
   {
     auto next = lastStatus();
     if (next)
-      return next->m_offset + next->length();
+      return next->m_offset.anchor() + next->length();
     else
-      return m_offset + length();
+      return m_offset.anchor() + length();
   }
 
   int sectionCount() { return m_internals.size(); }
@@ -496,15 +499,15 @@ public:
       m_internals.at(index)->state = state;
   }
 
-  int offset() const { return m_offset; }
+  int offset() const { return m_offset.anchor(); }
   int sectionOffset(int index) const
   {
     if (index >= 0 && index < m_internals.length())
-      return m_internals.at(index)->offset;
+      return m_internals.at(index)->offset.anchor();
     return -1;
   }
-  void setOffset(int offset) { m_offset = offset; }
-  void setSectionOffset(int index, int offset)
+  void setOffset(QTextCursor offset) { m_offset = offset; }
+  void setSectionOffset(int index, QTextCursor offset)
   {
     if (index >= 0 && index < m_internals.length())
       m_internals.at(index)->offset = offset;
@@ -553,7 +556,7 @@ public:
 
   void addSectionValue(const PropertyValueState& state,
                        const QString& name,
-                       int offset,
+                       QTextCursor offset,
                        const QRect& rect)
   {
     auto internal = new Internal();
@@ -575,10 +578,17 @@ public:
     return GoodValue;
   }
 
+  int minCount() const;
+  void setMinCount(int minCount);
+  int maxCount() const;
+  void setMaxCount(int maxCount);
+
 private:
   PropertyValueState m_state;
   QString m_name;
-  int m_offset;
+  QTextCursor m_offset;
+  int m_minCount;
+  int m_maxCount;
   PropertyStatus* m_next = nullptr;
   QRect m_rect;
   QList<Internal*> m_internals;

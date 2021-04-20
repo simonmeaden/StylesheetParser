@@ -287,8 +287,15 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
       auto partialTypes = property->sectionIfIn(blockStart, blockEnd);
       for (auto pt : partialTypes) {
         switch (pt.type) {
-          case PartialType::Name:
-            if (!property->hasPropertyMarker()) {
+          case PartialType::Name: {
+            auto minCount = property->minCount();
+            auto maxCount = property->maxCount();
+            auto count = property->valueCount();
+
+            if (count > maxCount || count < minCount) {
+              formatVisiblePart(
+                blockStart, blockEnd, position, length, m_badPropertyFormat);
+            } else if (!property->hasPropertyMarker()) {
               formatVisiblePart(
                 blockStart, blockEnd, position, length, m_badPropertyFormat);
             } else if (!property->hasPropertyEndMarker()) {
@@ -302,6 +309,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
                 blockStart, blockEnd, position, length, m_badPropertyFormat);
             }
             break;
+          }
           case PartialType::Marker:
             formatVisiblePart(blockStart,
                               blockEnd,
@@ -320,13 +328,14 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
   NodeState check;
   PropertyStatus* status;
   QString value;
+  bool breakLoop = false;
 
   for (int i = 0; i < property->count(); i++) {
     status = property->valueStatus(i);
     value = property->value(i);
     check = property->check(i);
     length = value.length();
-    auto breakLoop = false;
+    breakLoop = false;
 
     while (status) {
       position = status->offset();
@@ -341,7 +350,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
         }
 
         auto startOffset = status->offset() - blockStart;
-        auto endOffset = status->lastEnd();
+        auto endOffset = status->lastEndPosition();
         switch (status->state()) {
           case GoodName:
           case GoodValueName:
@@ -365,6 +374,7 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
           case BadNumericalValue_359:
           case BadButtonLayoutValue:
           case BadColorValue:
+          case BadHashColorValue:
           case BadUrlValue:
           case RepeatValueName:
           case BadFontUnit:
@@ -396,7 +406,9 @@ StylesheetHighlighter::formatProperty(PropertyNode* property,
                         m_badValueFormat);
               break;
             case BadValueCount:
-
+              setFormat(status->sectionOffset(i),
+                        status->sectionLength(i),
+                        m_badValueFormat);
               break;
             default:
               setFormat(status->sectionOffset(i),

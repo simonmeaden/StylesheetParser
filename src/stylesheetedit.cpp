@@ -1254,6 +1254,12 @@ StylesheetEditor::handleRehighlightBlock(const QTextBlock& block)
   m_highlighter->rehighlightBlock(block);
 }
 
+DataStore*
+StylesheetEditor::datastore()
+{
+  return m_datastore;
+}
+
 void
 StylesheetEditor::handleParseComplete()
 {
@@ -1263,16 +1269,6 @@ StylesheetEditor::handleParseComplete()
   emit lineNumber(currentLineNumber());
   emit lineCount(m_lineNumberArea->lineCount());
 }
-
-// void
-// StylesheetEditorPrivate::handleParseComplete()
-//{
-//  m_highlighter->rehighlight();
-//  setLineNumber(1);
-//  m_parseComplete = true;
-//  emit lineNumber(currentLineNumber());
-//  emit lineCount(m_lineNumberArea->lineCount());
-//}
 
 void
 StylesheetEditor::setShowNewlineMarkers(bool show)

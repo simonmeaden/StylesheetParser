@@ -21,5 +21,6 @@
         <file alias="no">no.png</file>
         <file alias="ok">ok.png</file>
         <file alias="fuzzy">fuzzy.png</file>
+        <file alias="bad">bad.png</file>
     </qresource>
 </RCC>

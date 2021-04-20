@@ -60,16 +60,18 @@ class StylesheetEditor : public QPlainTextEdit
 {
   Q_OBJECT
 public:
-  explicit StylesheetEditor(DataStore*datastore, QWidget* parent = nullptr);
+  explicit StylesheetEditor(DataStore* datastore, QWidget* parent = nullptr);
 
   StylesheetHighlighter* highlighter();
   void setup(BookmarkArea* bookmarkArea, LineNumberArea* linenumberArea);
   void saveYamlConfig(const QString& filename = QString());
   void loadYamlConfig(const QString& filename = QString());
-  bool saveXmlConfig(const QString& filename = QString()) {
+  bool saveXmlConfig(const QString& filename = QString())
+  {
     return m_datastore->saveXmlScheme(filename);
   }
-  bool loadXmlConfig(const QString& filename = QString()) {
+  bool loadXmlConfig(const QString& filename = QString())
+  {
     return m_datastore->loadXmlTheme(filename);
   }
 
@@ -369,6 +371,8 @@ public:
   void handleRehighlight();
   void handleRehighlightBlock(const QTextBlock& block);
 
+  DataStore* datastore();
+
 signals:
   void lineNumber(int);
   void lineCount(int);
@@ -385,13 +389,13 @@ private:
   QString m_stylesheet;
   bool m_parseComplete;
   int m_bookmarkLineNumber;
-//  QString m_configDir;
-//  QString m_configFile;
+  //  QString m_configDir;
+  //  QString m_configFile;
 
   QMenu *m_contextMenu, *m_suggestionsMenu;
   NodeSection* m_oldSection;
 
-//  void setupConfiguration();
+  //  void setupConfiguration();
 
   void setLineNumber(int lineNumber);
   void suggestionMade(bool);

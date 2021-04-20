@@ -459,15 +459,15 @@ MainWindow::badValues()
 {
   // clang-format off
   QString text = ""
-//                 "border-color: blu #fafaf"
-//                 "  rgba(256, -1, 256, 175%)"
-//                 "  hsva(240, 255, 255, 75%);\n"
+                 "border-color: blu #fafaf"
+                 "  rgba(256, -1, 256, 175%)"
+                 "  hsva(240, 255, 255, 75%);\n"
 //                 "border-width: 4px 2px 4px 2px 3px;\n" // too many values
-                 "button-layout: 8;\n"
-                 "button-layout: 2.6;\n"
-                 "margin: 2px 2px 2px 2px 2px;\n";
-  // clang-format on
-
+//                 "button-layout: 8;\n"
+//                 "button-layout: 2.6;\n"
+//                 "margin: 2px 2px 2px 2px 2px;\n"
+    // clang-format on
+    ;
   return text;
 }
 

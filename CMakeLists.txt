@@ -53,6 +53,7 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledtextfield.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledspinbox.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledcombobox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/svgcolornamedialog.h>
 
       $<INSTALL_INTERFACE:include/stylesheetedit/StylesheetParser_global.h>
       $<INSTALL_INTERFACE:include/stylesheetedit/stylesheetedit.h>
@@ -65,6 +66,7 @@ target_sources(tst_parser
       $<INSTALL_INTERFACE:include/sm_widgets/labelledtextfield.h>
       $<INSTALL_INTERFACE:include/sm_widgets/labelledspinbox.h>
       $<INSTALL_INTERFACE:include/sm_widgets/labelledcombobox.h>
+      $<INSTALL_INTERFACE:include/sm_widgets/svgcolornamedialog.h>
 
    PRIVATE
       include/qyamlcpp/qyamlcpp.h
@@ -95,6 +97,7 @@ target_sources(tst_parser
       src/labelledlineedit.cpp
       src/labelledspinbox.cpp
       src/labelledcombobox.cpp
+      src/svgcolornamedialog.cpp
       src/fts_fuzzy_match.h
 
    )

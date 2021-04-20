@@ -244,19 +244,16 @@ public:
   void setStateFlag(int index, NodeState check);
   NodeState check(int index);
 
-  //  //! Returns the positions as a list.
-  //  QList<QTextCursor> valueCursors() const;
-  //! Sets the position at index if index is valid.
-  void setValueOffset(int index, int offset);
-  //  //! Sets the positions to the supplied QTextCursor positions.
-  //  void setValueCursors(const QList<QTextCursor>& positions);
   int valuePosition(int index);
+  //! Sets the position at index if index is valid.
+  void setValueOffset(int index, QTextCursor offset);
+  void setValueState(int index, PropertyValueState state);
+  void setValueName(int index, const QString& name);
+
+  int valueCount();
 
   //! Returns the attribute types as a list.
-  //  QList<PropertyValueState> valueStatus() const;
   PropertyStatus* valueStatus(int index) const;
-  //  //! Sets the attribute types as a list.
-  //  void setAttributeTypes(const QList<AttributeType>& attributeTypes);
 
   //! Sets the check at index as bad.
   //!
@@ -296,20 +293,12 @@ public:
 
   int indexOf(const QString& name) const;
 
-  int statusCount(int index)
-  {
-    if (!m_valueStatus.isEmpty() && index >= 0 &&
-        index < m_valueStatus.size()) {
-      auto status = m_valueStatus.at(index);
-      int count = 1;
-      while (status->next()) {
-        count++;
-        status = status->next();
-      }
-      return count;
-    }
-    return 0;
-  }
+  int statusLinkCount(int index);
+
+  int minCount() const;
+  void setMinCount(int minCount);
+  int maxCount() const;
+  void setMaxCount(int maxCount);
 
 protected:
   QList<NodeState> m_checks;
@@ -320,6 +309,8 @@ protected:
   QTextCursor m_endMarkerCursor;
   WidgetNodes* m_widgetnodes = nullptr;
   bool m_isFinalProperty = false;
+  int m_minCount = 1;
+  int m_maxCount = 1;
 };
 
 class NewlineNode : public NamedNode

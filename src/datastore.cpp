@@ -52,6 +52,7 @@ DataStore::DataStore(QWidget* parent)
   , m_addSemiColonIcon(":/icons/add-scolon")
   , m_addDColonIcon(":/icons/add-dcolon")
   , m_addColonIcon(":/icons/add-colon")
+  , m_badIcon(":/icons/bad")
   , m_badSColonIcon(":/icons/bad-scolon")
   , m_badColonIcon(":/icons/bad-colon")
   , m_badDColonIcon(":/icons/bad-dcolon")
@@ -102,6 +103,12 @@ DataStore::getRectForText(int start, const QString& text)
   auto rect = m_editor->cursorRect(cursor);
   rect.setWidth(m_editor->fontMetrics().horizontalAdvance(text));
   return rect;
+}
+
+QPair<int, int>
+DataStore::attributeCounts(const QString& name)
+{
+  return m_widgetModel->attributeCounts(name);
 }
 
 void
@@ -558,7 +565,9 @@ WidgetModel::checkAlignment(const QString& value, int start) const
 {
   if (m_alignmentValues.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -573,7 +582,9 @@ WidgetModel::checkAttachment(const QString& value, int start) const
 {
   if (m_attachment.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -626,7 +637,9 @@ WidgetModel::checkBoolean(const QString& value, int start) const
   QString lValue = value.toLower();
   if (value == "0" || value == "1" || lValue == "true" || lValue == "false") {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -666,7 +679,9 @@ WidgetModel::checkBorderImage(const QString& value, int start) const
 
   if (m_borderImage.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -682,7 +697,9 @@ WidgetModel::checkBorderStyle(const QString& value, int start) const
 {
   if (m_borderStyle.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -729,7 +746,9 @@ WidgetModel::checkColorName(int start, const QString& value) const
 {
   int pos = start - value.length();
   if (m_colors.contains(value.toLower())) {
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -739,10 +758,11 @@ WidgetModel::checkColorName(int start, const QString& value) const
 
   auto fuzzylist = fuzzySearch(value.toLower(), m_colors);
   if (!fuzzylist.isEmpty()) {
-    auto status =
-      new PropertyStatus(PropertyValueState::FuzzyColorValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::FuzzyColorValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
-      auto rect = m_datastore->getRectForText(start, value);
+      auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
     }
     return status;
@@ -756,8 +776,9 @@ WidgetModel::checkColorHashValue(int start, const QString& value) const
 {
   if (value.startsWith("#")) {
     int pos = start - value.length();
-    auto status =
-      new PropertyStatus(PropertyValueState::BadColorValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::BadHashColorValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (value.length() == 4 || value.length() == 7) {
       bool ok = false;
       QString val = value.right(value.length() - 1);
@@ -794,19 +815,17 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
     return nullptr;
   }
 
-  auto status = new PropertyStatus(PropertyValueState::GoodName, value, pos);
+  auto status = new PropertyStatus(PropertyValueState::GoodName,
+                                   value,
+                                   m_datastore->getCursorForPosition(pos));
+  status->setMinCount(1);
+  status->setMaxCount(count);
   if (start != -1) {
     auto rect = m_datastore->getRectForText(pos, value);
     status->setRect(rect);
   }
 
   auto offset = value.indexOf('(');
-  //  if (offset) {
-  //    auto rect = m_datastore->getRectForText(pos + offset, "(");
-  //    status->addInternalValue(
-  //      PropertyValueState::OpenParentheses, "(", pos + offset, rect);
-  //  }
-
   auto rgb = value.mid(offset + 1);
   auto endOffset = rgb.indexOf(")");
   if (endOffset) {
@@ -835,13 +854,17 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
         }
         val = nPart.toInt(&ok);
         if (!ok || val < 0 || val > 100) {
-          status->addSectionValue(PropertyValueState::BadNumericalValue_100,
-                                  part,
-                                  pos + offset,
-                                  rect);
+          status->addSectionValue(
+            PropertyValueState::BadNumericalValue_100,
+            part,
+            m_datastore->getCursorForPosition(pos + offset),
+            rect);
         } else {
           status->addSectionValue(
-            PropertyValueState::GoodValue, part, pos + offset, rect);
+            PropertyValueState::GoodValue,
+            part,
+            m_datastore->getCursorForPosition(pos + offset),
+            rect);
         }
         offset += part.length();
       } else {
@@ -856,29 +879,23 @@ WidgetModel::checkColorRGB(int start, const QString& value) const
           val = part.toUInt(&ok);
         }
         if (!ok || val < 0 || val > 255) {
-          status->addSectionValue(PropertyValueState::BadNumericalValue_255,
-                                  part,
-                                  pos + offset,
-                                  rect);
+          status->addSectionValue(
+            PropertyValueState::BadNumericalValue_255,
+            part,
+            m_datastore->getCursorForPosition(pos + offset),
+            rect);
         } else {
           status->addSectionValue(
-            PropertyValueState::GoodValue, part, pos + offset, rect);
+            PropertyValueState::GoodValue,
+            part,
+            m_datastore->getCursorForPosition(pos + offset),
+            rect);
         }
         offset += part.length();
       }
     }
   }
-
-  //  if (endOffset) {
-  //    auto rect = m_datastore->getRectForText(endOffset, ")");
-  //    status->addInternalValue(
-  //      PropertyValueState::OpenParentheses, ")", endOffset, rect);
-  //  }
-
-  // set overall status->state and rect;
-  //  status->setState(status->sectionsState());
   status->setRect(m_datastore->getRectForText(start, value));
-
   return status;
 }
 
@@ -906,19 +923,17 @@ WidgetModel::checkColorHS(int start, const QString& value) const
   if (count < 3 || count > 4)
     return nullptr;
 
-  auto status = new PropertyStatus(PropertyValueState::GoodName, value, pos);
+  auto status = new PropertyStatus(PropertyValueState::GoodName,
+                                   value,
+                                   m_datastore->getCursorForPosition(pos));
+  status->setMinCount(1);
+  status->setMaxCount(count);
   if (start != -1) {
     auto rect = m_datastore->getRectForText(pos, value);
     status->setRect(rect);
   }
 
   auto offset = value.indexOf('(');
-  //  if (offset) {
-  //    auto rect = m_datastore->getRectForText(pos + offset, "(");
-  //    status->addInternalValue(
-  //      PropertyValueState::OpenParentheses, "(", pos + offset, rect);
-  //  }
-
   auto hs = value.mid(offset + 1);
   auto endOffset = hs.indexOf(")");
   if (endOffset) {
@@ -946,13 +961,17 @@ WidgetModel::checkColorHS(int start, const QString& value) const
         }
         val = nPart.toInt(&ok);
         if (!ok || val < 0 || val > 100) {
-          status->addSectionValue(PropertyValueState::BadNumericalValue_100,
-                                  part,
-                                  pos + offset,
-                                  rect);
+          status->addSectionValue(
+            PropertyValueState::BadNumericalValue_100,
+            part,
+            m_datastore->getCursorForPosition(pos + offset),
+            rect);
         } else {
           status->addSectionValue(
-            PropertyValueState::GoodValue, part, pos + offset, rect);
+            PropertyValueState::GoodValue,
+            part,
+            m_datastore->getCursorForPosition(pos + offset),
+            rect);
         }
         offset += part.length();
       } else {
@@ -968,40 +987,38 @@ WidgetModel::checkColorHS(int start, const QString& value) const
         }
         if (i == 0) {
           if (!ok || val < 0 || val > 359) {
-            status->addSectionValue(PropertyValueState::BadNumericalValue_359,
-                                    part,
-                                    pos + offset,
-                                    rect);
+            status->addSectionValue(
+              PropertyValueState::BadNumericalValue_359,
+              part,
+              m_datastore->getCursorForPosition(pos + offset),
+              rect);
           } else {
             status->addSectionValue(
-              PropertyValueState::GoodValue, part, pos + offset, rect);
+              PropertyValueState::GoodValue,
+              part,
+              m_datastore->getCursorForPosition(pos + offset),
+              rect);
           }
         } else {
           if (!ok || val < 0 || val > 255) {
-            status->addSectionValue(PropertyValueState::BadNumericalValue_255,
-                                    part,
-                                    pos + offset,
-                                    rect);
+            status->addSectionValue(
+              PropertyValueState::BadNumericalValue_255,
+              part,
+              m_datastore->getCursorForPosition(pos + offset),
+              rect);
           } else {
             status->addSectionValue(
-              PropertyValueState::GoodValue, part, pos + offset, rect);
+              PropertyValueState::GoodValue,
+              part,
+              m_datastore->getCursorForPosition(pos + offset),
+              rect);
           }
         }
         offset += part.length();
       }
     }
   }
-
-  //  if (endOffset) {
-  //    auto rect = m_datastore->getRectForText(endOffset, ")");
-  //    status->addInternalValue(
-  //      PropertyValueState::OpenParentheses, ")", endOffset, rect);
-  //  }
-
-  // set overall status->state and rect;
-  //  status->setState(status->sectionsState());
   status->setRect(m_datastore->getRectForText(start, value));
-
   return status;
 }
 
@@ -1183,7 +1200,9 @@ WidgetModel::checkFontStyle(const QString& value, int start) const
 {
   if (m_fontStyle.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1202,7 +1221,9 @@ WidgetModel::checkString(const QString& value, int start) const
     // enclosed within " characters so a string
     // The actual value is NOT tested.
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1236,7 +1257,9 @@ WidgetModel::checkFontSize(const QString& value, int start) const
 {
   if (m_fontSizes.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1259,7 +1282,9 @@ WidgetModel::checkFontWeight(const QString& value, int start) const
 {
   if (m_fontWeight.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1271,7 +1296,9 @@ WidgetModel::checkFontWeight(const QString& value, int start) const
   value.toInt(&ok);
   if (ok) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1292,16 +1319,21 @@ WidgetModel::calculateNumericalStatus(const QString& section,
 {
   auto nextOffset = offset;
   auto status =
-    new PropertyStatus(PropertyValueState::GoodValue, section, start + offset);
+    new PropertyStatus(PropertyValueState::GoodValue,
+                       section,
+                       m_datastore->getCursorForPosition(start + offset));
 
   if (parts.size() == 3) {
     status->setState(PropertyValueState::BadValueCount);
+    status->setMaxCount(2);
   }
 
   if (!checkGradientNumber(number.trimmed())) {
     nextOffset = cleanValue.indexOf(number, offset);
-    auto next = new PropertyStatus(
-      PropertyValueState::BadNumericalValue, number, nextOffset);
+    auto next =
+      new PropertyStatus(PropertyValueState::BadNumericalValue,
+                         number,
+                         m_datastore->getCursorForPosition(nextOffset));
     status->setNext(next);
     nextOffset += next->length();
   }
@@ -1319,7 +1351,9 @@ WidgetModel::calculateStopStatus(const QString& section,
 {
   auto nextOffset = offset;
   auto status =
-    new PropertyStatus(PropertyValueState::GoodValue, section, start + offset);
+    new PropertyStatus(PropertyValueState::GoodValue,
+                       section,
+                       m_datastore->getCursorForPosition(start + offset));
 
   if (parts.size() == 2) { // should be 3
     status->setState(PropertyValueState::BadValueCount);
@@ -1327,8 +1361,10 @@ WidgetModel::calculateStopStatus(const QString& section,
 
   if (!checkGradientNumber(number.trimmed())) {
     nextOffset = cleanValue.indexOf(number, nextOffset);
-    auto next = new PropertyStatus(
-      PropertyValueState::BadNumericalValue, number, nextOffset);
+    auto next =
+      new PropertyStatus(PropertyValueState::BadNumericalValue,
+                         number,
+                         m_datastore->getCursorForPosition(nextOffset));
     status->setNext(next);
     nextOffset += next->length();
   }
@@ -1336,17 +1372,10 @@ WidgetModel::calculateStopStatus(const QString& section,
   GradientCheck::FuzzyCheck check;
   if ((check = checkGradientColor(color.trimmed())) != GradientCheck::Good) {
     nextOffset = cleanValue.indexOf(color, nextOffset);
-    //    auto next = new PropertyStatus(
-    //      PropertyValueState::BadColorValue, number, nextOffset,
-    //      number.length());
-
-    //    status->next = next;
-
     if (check == GradientCheck::Fuzzy)
       status->setState(PropertyValueState::FuzzyColorValue);
     else
       status->setState(PropertyValueState::BadColorValue);
-    //    nextOffset += next->length;
   }
 
   return qMakePair<PropertyStatus*, int>(status, nextOffset);
@@ -1379,7 +1408,9 @@ WidgetModel::checkGradient(const QString& value, int start) const
   for (auto& g : m_gradient) {
     if (cleanValue.toLower().contains(g)) {
       gCheck = getCorrectCheck(g);
-      head = new PropertyStatus(PropertyValueState::GoodName, g, pos);
+      head = new PropertyStatus(PropertyValueState::GoodName,
+                                g,
+                                m_datastore->getCursorForPosition(pos));
       if (start != -1) {
         auto rect = m_datastore->getRectForText(pos, value);
         head->setRect(rect);
@@ -1399,8 +1430,9 @@ WidgetModel::checkGradient(const QString& value, int start) const
       if (/*score < 100.0 &&*/ score > 90.0) { // TODO Increase minimum ??
         // score can be greater than 100
         gCheck = getCorrectCheck(g);
-        head =
-          new PropertyStatus(PropertyValueState::FuzzyValueName, fuzzy, pos);
+        head = new PropertyStatus(PropertyValueState::FuzzyValueName,
+                                  fuzzy,
+                                  m_datastore->getCursorForPosition(pos));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, value);
           head->setRect(rect);
@@ -1419,16 +1451,6 @@ WidgetModel::checkGradient(const QString& value, int start) const
 
   offset = cleanValue.indexOf("(");
   auto position = pos + offset;
-  //  if (offset) {
-  //    auto status = new PropertyStatus(OpenParentheses, "(", position);
-  //    if (start != -1) {
-  //      auto rect = m_datastore->getRectForText(position, "(");
-  //      status->setRect(rect);
-  //    }
-  //    next->setNext(status);
-  //    next = status;
-  //  }
-
   auto sections =
     cleanValue.split(QRegularExpression("[,()]"), Qt::SkipEmptyParts);
   if (sections.length() > 0 && sections.first() == actualType) {
@@ -1446,7 +1468,9 @@ WidgetModel::checkGradient(const QString& value, int start) const
 
     // only two or three parts is valid.
     if (parts.size() < 2 || parts.size() > 3) {
-      auto status = new PropertyStatus(BadValueCount, section, position);
+      auto status = new PropertyStatus(
+        BadValueCount, section, m_datastore->getCursorForPosition(position));
+      status->setMaxCount(3);
       if (start != -1) {
         auto rect = m_datastore->getRectForText(position, section);
         status->setRect(rect);
@@ -1487,8 +1511,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
         next = status;
         continue;
       } else if (check == GradientCheck::Repeat) {
-        PropertyStatus* status =
-          new PropertyStatus(RepeatValueName, section, offset);
+        PropertyStatus* status = new PropertyStatus(
+          RepeatValueName, section, m_datastore->getCursorForPosition(offset));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(position, section);
           status->setRect(rect);
@@ -1496,8 +1520,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
         next->setNext(status);
         next = status;
       } else {
-        PropertyStatus* status =
-          new PropertyStatus(BadValueName, section, offset);
+        PropertyStatus* status = new PropertyStatus(
+          BadValueName, section, m_datastore->getCursorForPosition(offset));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, section);
           status->setRect(rect);
@@ -1531,8 +1555,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
         next = status;
         continue;
       } else if (check == GradientCheck::Repeat) {
-        PropertyStatus* status =
-          new PropertyStatus(RepeatValueName, section, offset);
+        PropertyStatus* status = new PropertyStatus(
+          RepeatValueName, section, m_datastore->getCursorForPosition(offset));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, section);
           status->setRect(rect);
@@ -1541,8 +1565,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
         next = status;
       } else {
         // an invalid name.
-        PropertyStatus* status =
-          new PropertyStatus(BadValueName, section, offset);
+        PropertyStatus* status = new PropertyStatus(
+          BadValueName, section, m_datastore->getCursorForPosition(offset));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, section);
           status->setRect(rect);
@@ -1575,8 +1599,8 @@ WidgetModel::checkGradient(const QString& value, int start) const
         next = status;
         continue;
       } else if (check == GradientCheck::Repeat) {
-        PropertyStatus* status =
-          new PropertyStatus(RepeatValueName, section, offset);
+        PropertyStatus* status = new PropertyStatus(
+          RepeatValueName, section, m_datastore->getCursorForPosition(offset));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, section);
           status->setRect(rect);
@@ -1584,9 +1608,9 @@ WidgetModel::checkGradient(const QString& value, int start) const
         next->setNext(status);
         next = status;
       } else {
-        PropertyStatus* status =
-          new PropertyStatus(BadValueName, section, offset);
-        next->setOffset(offset);
+        PropertyStatus* status = new PropertyStatus(
+          BadValueName, section, m_datastore->getCursorForPosition(offset));
+        next->setOffset(m_datastore->getCursorForPosition(offset));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, section);
           next->setRect(rect);
@@ -1597,17 +1621,6 @@ WidgetModel::checkGradient(const QString& value, int start) const
       }
     }
   }
-  //  offset = cleanValue.indexOf(")");
-  //  if (offset) {
-  //    auto status = new PropertyStatus(CloseParentheses, ")", pos + offset);
-  //    if (start != -1) {
-  //      auto rect = m_datastore->getRectForText(pos, ")");
-  //      status->setRect(rect);
-  //    }
-  //    next->setNext(status);
-  //    next = status;
-  //  }
-
   delete gCheck;
   return head;
 }
@@ -1647,7 +1660,9 @@ WidgetModel::checkIcon(const QString& value, int start) const
 
   if (m_icon.contains(value)) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1668,7 +1683,9 @@ WidgetModel::checkLength(const QString& value, int start) const
 
   if (lvalue.endsWith("px") || lvalue.endsWith("pt") || lvalue.endsWith("em") ||
       lvalue.endsWith("ex")) {
-    status = new PropertyStatus(PropertyValueState::BadLengthUnit, value, pos);
+    status = new PropertyStatus(PropertyValueState::BadLengthUnit,
+                                value,
+                                m_datastore->getCursorForPosition(pos));
     auto numValue = value.left(value.length() - 2);
     numValue.toDouble(&ok);
     if (ok) {
@@ -1682,8 +1699,9 @@ WidgetModel::checkLength(const QString& value, int start) const
     // in Qt measurement units must be set.
     value.toDouble(&ok);
     if (ok) {
-      status =
-        new PropertyStatus(PropertyValueState::BadLengthUnit, value, pos);
+      status = new PropertyStatus(PropertyValueState::BadLengthUnit,
+                                  value,
+                                  m_datastore->getCursorForPosition(pos));
       auto numValue = value.left(value.length() - 2);
       if (start != -1) {
         auto rect = m_datastore->getRectForText(pos, value);
@@ -1704,7 +1722,9 @@ WidgetModel::checkNumber(const QString& value, int start) const
   auto v = value.toDouble(&ok);
   if (ok) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1746,7 +1766,9 @@ WidgetModel::checkOrigin(const QString& value, int start) const
 {
   if (m_origin.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::BadValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::BadValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1763,7 +1785,9 @@ WidgetModel::checkOutlineStyle(const QString& value, int start) const
 {
   if (m_outlineStyle.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1779,7 +1803,9 @@ WidgetModel::checkOutlineColor(const QString& value, int start) const
 {
   if (value.toLower() == m_outlineColor) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1796,7 +1822,9 @@ WidgetModel::checkOutlineWidth(const QString& value, int start) const
 {
   if (m_outlineWidth.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1824,7 +1852,9 @@ WidgetModel::checkPaletteRole(const QString& value, int start) const
 {
   if (m_paletteRoles.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1847,7 +1877,9 @@ WidgetModel::checkRepeat(const QString& value, int start) const
 {
   if (m_repeat.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1867,17 +1899,13 @@ WidgetModel::checkUrl(const QString& value, int start) const
 
   if (lName == "url") {
     auto name = value.mid(0, startPartOffset).trimmed();
-    auto status = new PropertyStatus(PropertyValueState::GoodName, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodName,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
     }
-
-    //    if (startPartOffset) {
-    //      auto rect = m_datastore->getRectForText(pos + startPartOffset, "(");
-    //      status->addInternalValue(
-    //        PropertyValueState::OpenParentheses, "(", startPartOffset, rect);
-    //    }
 
     auto closePartOffset = value.indexOf(')');
     QString urlStr;
@@ -1899,15 +1927,12 @@ WidgetModel::checkUrl(const QString& value, int start) const
       status->setState(PropertyValueState::BadUrlValue);
     } else {
       auto rect = m_datastore->getRectForText(offset, urlStr);
-      status->addSectionValue(
-        PropertyValueState::GoodValue, urlStr, pos + offset, rect);
+      status->addSectionValue(PropertyValueState::GoodValue,
+                              urlStr,
+                              m_datastore->getCursorForPosition(pos + offset),
+                              rect);
     }
 
-    //    if (closePartOffset) {
-    //      auto rect = m_datastore->getRectForText(pos + closePartOffset, ")");
-    //      status->addInternalValue(
-    //        PropertyValueState::CloseParentheses, ")", closePartOffset, rect);
-    //    }
     return status;
   }
 
@@ -1919,7 +1944,9 @@ WidgetModel::checkPosition(const QString& value, int start) const
 {
   if (m_position.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1934,7 +1961,9 @@ WidgetModel::checkTextDecoration(const QString& value, int start) const
 {
   if (m_textDecoration.contains(value.toLower())) {
     int pos = start - value.length();
-    auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+    auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                     value,
+                                     m_datastore->getCursorForPosition(pos));
     if (start != -1) {
       auto rect = m_datastore->getRectForText(pos, value);
       status->setRect(rect);
@@ -1954,7 +1983,9 @@ PropertyStatus*
 WidgetModel::checkUIntNumber(const QString& value, int start, quint16 max = -1)
 {
   int pos = start - value.length();
-  auto status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+  auto status = new PropertyStatus(PropertyValueState::GoodValue,
+                                   value,
+                                   m_datastore->getCursorForPosition(pos));
   if (start != -1) {
     auto rect = m_datastore->getRectForText(pos, value);
     status->setRect(rect);
@@ -2064,7 +2095,9 @@ WidgetModel::checkPropertyValue(const QString& propertyname,
     case Number: // TODO not supported.
       if (propertyname == "button-layout") {
         int pos = start - value.length();
-        status = new PropertyStatus(PropertyValueState::GoodValue, value, pos);
+        status = new PropertyStatus(PropertyValueState::GoodValue,
+                                    value,
+                                    m_datastore->getCursorForPosition(pos));
         if (start != -1) {
           auto rect = m_datastore->getRectForText(pos, value);
           status->setRect(rect);
@@ -2096,11 +2129,9 @@ WidgetModel::checkPropertyValue(const QString& propertyname,
             s->setState(PropertyValueState::BadNumericalValue);
           }
         }
-        s = nullptr;
       } else {
         auto [s, v] = checkNumber(value, start);
         status = s;
-        s = nullptr;
       }
       break;
 
@@ -2425,6 +2456,12 @@ QIcon
 DataStore::addColonIcon() const
 {
   return m_addColonIcon;
+}
+
+QIcon
+DataStore::badIcon() const
+{
+  return m_badIcon;
 }
 
 QIcon
@@ -3284,6 +3321,7 @@ WidgetModel::initAttributeMap()
   m_attributes.insert("border-right", Border);
   m_attributes.insert("border-bottom", Border);
   m_attributes.insert("border-color", BoxColors);
+  m_attributesCounts.insert("border-color", qMakePair<int, int>(1, 4));
   m_attributes.insert("border-top-color", Brush);
   m_attributes.insert("border-right-color", Brush);
   m_attributes.insert("border-bottom-color", Brush);
@@ -3300,6 +3338,7 @@ WidgetModel::initAttributeMap()
   m_attributes.insert("border-bottom-style", BorderStyle);
   m_attributes.insert("border-left-style", BorderStyle);
   m_attributes.insert("border-width", BoxLengths);
+  m_attributesCounts.insert("border-width", qMakePair<int, int>(1, 4));
   m_attributes.insert("border-top-width", Length);
   m_attributes.insert("border-right-width", Length);
   m_attributes.insert("border-bottom-width", Length);
@@ -3323,6 +3362,7 @@ WidgetModel::initAttributeMap()
   m_attributes.insert("lineedit-password-character", Number);
   m_attributes.insert("lineedit-password-mask-delay", Number);
   m_attributes.insert("margin", BoxLengths);
+  m_attributesCounts.insert("margin", qMakePair<int, int>(1, 4));
   m_attributes.insert("margin-top", Length);
   m_attributes.insert("margin-right", Length);
   m_attributes.insert("margin-bottom", Length);
@@ -3343,6 +3383,7 @@ WidgetModel::initAttributeMap()
   m_attributes.insert("outline-top-left-radius", Radius);
   m_attributes.insert("outline-top-right-radius", Radius);
   m_attributes.insert("padding", BoxLengths);
+  m_attributesCounts.insert("padding", qMakePair<int, int>(1, 4));
   m_attributes.insert("padding-top", Length);
   m_attributes.insert("padding-right", Length);
   m_attributes.insert("padding-bottom", Length);
@@ -3715,6 +3756,14 @@ WidgetModel::borderValues()
   values << m_borderStyle << m_borderImage << m_colors << m_paletteRoles
          << m_gradient;
   return values;
+}
+
+QPair<int, int>
+WidgetModel::attributeCounts(const QString& name)
+{
+  if (m_attributesCounts.contains(name))
+    return m_attributesCounts.value(name);
+  return qMakePair<int, int>(-1, -1);
 }
 
 QMultiMap<int, QString>

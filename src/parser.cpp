@@ -1839,21 +1839,27 @@ Parser::handleSuggestions(QAction* act)
     switch (type) {
       case ColorDialog: {
         auto property = qobject_cast<PropertyNode*>(node);
-        const QColorDialog::ColorDialogOptions options =
-          QColorDialog::ShowAlphaChannel | QColorDialog::DontUseNativeDialog;
-        auto color =
-          QColorDialog::getColor(Qt::black, m_editor, "Choose Color", options);
-        if (color.isValid()) {
-          auto value = color.name(QColor::HexArgb);
-          // copy start offset
-          auto cursor = m_datastore->getCursorForPosition(offset);
-          // this moves offset to end on new text.
-          updateTextChange(cursor, oldName, value);
-          cursor.setPosition(offset, QTextCursor::MoveAnchor);
-          property->setValueName(index, value);
-          property->setValueState(index, PropertyValueState::GoodValue);
-          // reset offset.
-          property->setValueOffset(index, cursor);
+        //        const QColorDialog::ColorDialogOptions options =
+        //          QColorDialog::ShowAlphaChannel |
+        //          QColorDialog::DontUseNativeDialog;
+        //        auto color =
+        //          QColorDialog::getColor(Qt::black, m_editor, "Choose Color",
+        //          options);
+        auto colorDlg = new ExtendedColorDialog(m_editor);
+        if (colorDlg->exec() == QDialog::Accepted) {
+          auto color = colorDlg->color();
+          if (color.isValid()) {
+            auto value = color.name(QColor::HexArgb);
+            // copy start offset
+            auto cursor = m_datastore->getCursorForPosition(offset);
+            // this moves offset to end on new text.
+            updateTextChange(cursor, oldName, value);
+            cursor.setPosition(offset, QTextCursor::MoveAnchor);
+            property->setValueName(index, value);
+            property->setValueState(index, PropertyValueState::GoodValue);
+            // reset offset.
+            property->setValueOffset(index, cursor);
+          }
         }
         break;
       }

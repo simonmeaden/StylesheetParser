@@ -1,1 +1,0 @@
-/home/simonmeaden/workspace/common_lib/sm_libraries/src/svgcolornamedialog.cpp

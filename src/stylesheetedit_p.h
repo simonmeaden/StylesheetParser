@@ -38,8 +38,8 @@
 #include "datastore.h"
 #include "node.h"
 #include "parserstate.h"
-#include "sm_widgets/labelledlineedit.h"
-#include "sm_widgets/labelledspinbox.h"
+#include "stylesheetedit/labelledlineedit.h"
+#include "stylesheetedit/labelledspinbox.h"
 #include "stylesheethighlighter.h"
 
 /// \cond DO_NOT_DOCUMENT

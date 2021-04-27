@@ -19,8 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         */
 #include "stylesheetedit/stylesheeteditdialog.h"
-#include "sm_widgets/abstractlabelledwidget.h"
-#include "sm_widgets/labelledtextfield.h"
+#include "stylesheetedit/abstractlabelledwidget.h"
+#include "stylesheetedit/labelledtextfield.h"
 #include "stylesheetedit/stylesheetedit.h"
 #include "stylesheetedit_p.h"
 #include "stylesheethighlighter.h"

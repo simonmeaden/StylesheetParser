@@ -46,27 +46,27 @@ target_sources(tst_parser
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/stylesheetedit.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/stylesheeteditdialog.h>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/mainwindow.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/x11colors.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledwidget.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/abstractlabelledspinbox.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledlineedit.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledtextfield.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledspinbox.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/labelledcombobox.h>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/sm_widgets/extendedcolordialog.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/x11colors.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/abstractlabelledwidget.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/abstractlabelledspinbox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/labelledlineedit.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/labelledtextfield.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/labelledspinbox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/labelledcombobox.h>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/stylesheetedit/extendedcolordialog.h>
 
       $<INSTALL_INTERFACE:include/stylesheetedit/StylesheetParser_global.h>
       $<INSTALL_INTERFACE:include/stylesheetedit/stylesheetedit.h>
       $<INSTALL_INTERFACE:include/stylesheetedit/stylesheeteditdialog.h>
       $<INSTALL_INTERFACE:include/stylesheetedit/mainwindow.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/x11colors.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledwidget.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/abstractlabelledspinbox.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/labelledlineedit.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/labelledtextfield.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/labelledspinbox.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/labelledcombobox.h>
-      $<INSTALL_INTERFACE:include/sm_widgets/extendedcolordialog.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/x11colors.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/abstractlabelledwidget.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/abstractlabelledspinbox.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/labelledlineedit.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/labelledtextfield.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/labelledspinbox.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/labelledcombobox.h>
+      $<INSTALL_INTERFACE:include/stylesheetedit/extendedcolordialog.h>
 
    PRIVATE
       include/qyamlcpp/qyamlcpp.h

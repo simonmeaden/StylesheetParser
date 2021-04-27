@@ -33,7 +33,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "common.h"
 #include "parserstate.h"
-#include "sm_widgets/extendedcolordialog.h"
+#include "stylesheetedit/extendedcolordialog.h"
 
 class StylesheetEditor;
 class DataStore;

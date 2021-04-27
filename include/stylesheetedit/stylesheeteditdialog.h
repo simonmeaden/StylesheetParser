@@ -40,8 +40,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <QVBoxLayout>
 #include <QXmlStreamReader>
 
-#include <sm_widgets/labelledcombobox.h>
-#include <sm_widgets/labelledspinbox.h>
+#include "labelledcombobox.h"
+#include "labelledspinbox.h"
+
 class StylesheetHighlighter;
 
 class StylesheetEdit;

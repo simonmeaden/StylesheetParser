@@ -3518,11 +3518,11 @@ WidgetModel::WidgetModel(DataStore* datastore)
   initTextDecoration();
   initAttributeMap();
 
-  for (auto control : m_subControls.keys()) {
-    if (m_properties.contains(control)) {
-      qDebug() << "Property & SubControl" << control;
-    }
-  }
+//  for (auto control : m_subControls.keys()) {
+//    if (m_properties.contains(control)) {
+//      qDebug() << "Property & SubControl" << control;
+//    }
+//  }
 }
 
 /*!

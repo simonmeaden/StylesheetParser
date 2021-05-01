@@ -3,6 +3,8 @@
 
 #include <QtDebug>
 
+#include <stylesheetedit/extendedcolordialog.h>
+
 const QString ColorDropDisplay::DISPLAYLABELRIGHT =
   "QLabel {"
   "background-color: %1;"
@@ -41,8 +43,6 @@ ExtendedColorDialog::ExtendedColorDialog(QWidget* parent)
   , m_dropColor(QColor(Qt::white))
 {
   initGui();
-  setColor(QColor(Qt::white));
-  //  setSecondaryColor(QColor(Qt::white));
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
@@ -52,8 +52,32 @@ ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
   , m_dropColor(QColor(Qt::white))
 {
   initGui();
-  setColor(initialColor);
-  //  setSecondaryColor(initialColor);
+  setColor(initialColor, "white");
+}
+
+QColor
+ExtendedColorDialog::getSvgOrX11Color(const QString& initialColor)
+{
+  auto color = QColorConstants::Svg::color(initialColor);
+  if (color.isValid()) {
+    return color;
+  } else {
+    color = QColorConstants::X11::color(initialColor);
+    if (color.isValid()) {
+      return color;
+    } else {
+      return Qt::white;
+    }
+  }
+}
+
+ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
+                                         QWidget* parent)
+  : QDialog(parent)
+{
+  initGui();
+  auto color = getSvgOrX11Color(initialColor);
+  setColor(color, initialColor);
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
@@ -68,39 +92,48 @@ ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
   setSecondaryColor(m_dropColor);
 }
 
+ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
+                                         const QString& secondaryColor,
+                                         QWidget* parent)
+{
+  initGui();
+  auto color = getSvgOrX11Color(initialColor);
+  setColor(color, initialColor);
+  initGui();
+  color = getSvgOrX11Color(secondaryColor);
+  if (color == Qt::white) {
+    setSecondaryColor(color, "white");
+  } else {
+    setSecondaryColor(color, initialColor);
+  }
+}
+
 void
 ExtendedColorDialog::initGui()
 {
   setWindowTitle(tr("Choose Color"));
 
   m_tabs = new QTabWidget(this);
-  auto layout = new QHBoxLayout;
-  layout->addWidget(m_tabs);
+  auto layout = new QGridLayout;
+  layout->addWidget(m_tabs, 0, 0);
+  layout->addWidget(createBtnBox(), 1, 0);
   setLayout(layout);
 
   m_colorDlg = new QColorDialog(m_color, this);
   m_colorDlg->setOptions(QColorDialog::ShowAlphaChannel |
-                         QColorDialog::DontUseNativeDialog);
+                         QColorDialog::DontUseNativeDialog |
+                         QColorDialog::NoButtons);
   m_tabs->addTab(m_colorDlg, "Color Dialog");
-  connect(m_colorDlg,
-          &QColorDialog::accepted,
-          this,
-          &ExtendedColorDialog::acceptColor);
-  connect(
-    m_colorDlg, &QColorDialog::rejected, this, &ExtendedColorDialog::reject);
-  connect(
-    m_colorDlg, &QColorDialog::finished, this, &ExtendedColorDialog::finished);
-  connect(m_colorDlg,
-          &QColorDialog::colorSelected,
-          this,
-          &ExtendedColorDialog::colorSelected);
   connect(m_colorDlg,
           &QColorDialog::currentColorChanged,
           this,
           &ExtendedColorDialog::currentColorChanged);
 
-  auto svgColors = initSvgFrame();
-  m_tabs->addTab(svgColors, "SVG Color Names");
+  auto svgColors1 = initSvgFrame1();
+  m_tabs->addTab(svgColors1, "SVG Color Names 1");
+
+  auto svgColors2 = initSvgFrame2();
+  m_tabs->addTab(svgColors2, "SVG Color Names 2");
 
   auto x11Colors1 = initX11ColorFrame1();
   m_tabs->addTab(x11Colors1, "X11 Colors 1");
@@ -118,37 +151,6 @@ ExtendedColorDialog::initGui()
           &ExtendedColorDialog::tabChanged);
 }
 
-// void
-// ExtendedColorDialog::table->setData(int row,
-//                                int column,
-//                                const QString& back,
-//                                const QString& fore)
-//{
-//  auto background = QColorConstants::Svg::color(back);
-//  if (!fore.isEmpty()) {
-//    auto foreground = QColorConstants::Svg::color(fore);
-//    m_svgTable->setData(row, column, back, background, foreground);
-//  } else {
-//    m_svgTable->setData(row, column, back, background);
-//  }
-//}
-
-// void
-// ExtendedColorDialog::table->setData(ColorDragTable* table,
-//                                int row,
-//                                int column,
-//                                const QString& back,
-//                                const QString& fore)
-//{
-//  auto background = QColorConstants::X11::color(back);
-//  if (!fore.isEmpty()) {
-//    auto foreground = QColorConstants::X11::color(fore);
-//    table->setData(row, column, back, background, foreground);
-//  } else {
-//    table->setData(row, column, back, background);
-//  }
-//}
-
 void
 ExtendedColorDialog::colorClicked(const QModelIndex& index)
 {
@@ -156,65 +158,65 @@ ExtendedColorDialog::colorClicked(const QModelIndex& index)
   if (index.isValid()) {
     m_color = table->background(index);
     m_name = table->name(index);
-    table->label()->setCurrentColor(m_color);
+    table->setStyleSheet(QString("QTableView { gridline-color: white; }"
+                                 "QTableView::item:selected { "
+                                 "gridline-color: red; "
+                                 "qproperty-currentItemBackground: %1;"
+                                 "}")
+                           .arg(m_color.name()));
+    table->display()->setCurrentColor(m_color, m_name);
     emit colorSelected(m_color);
   }
 }
 
-// void
-// ExtendedColorDialog::x11Color1Clicked(const QModelIndex& index)
-//{
-//  if (index.isValid()) {
-//    m_color = m_x11Color1Tbl->background(index);
-//    m_name = m_x11Color1Tbl->name(index);
-//    m_x11Color1Lbl->setCurrentColor(m_color);
-//    emit colorSelected(m_color);
-//  }
-//}
+void
+ExtendedColorDialog::setCurrentColorsFromNamedTab()
+{
+  auto widget = m_tabs->widget(int(m_currentTab));
+  auto frame = qobject_cast<ColorDragFrame*>(widget);
+  auto display = frame->display();
+  if (display) {
+    m_color = display->color();
+    m_name = display->name();
+    m_dropColor = display->dropColor();
+    m_dropName = display->dropName();
+  }
+}
 
-// void
-// ExtendedColorDialog::selectX11_2Color(const QModelIndex& index)
-//{
-//  if (index.isValid()) {
-//    m_color = m_x11Color2Tbl->background(index);
-//    m_name = m_x11Color2Tbl->name(index);
-//    m_x11Color2Lbl->setCurrentColor(m_color);
-//    emit colorSelected(m_color);
-//  }
-//}
-
-// void
-// ExtendedColorDialog::selectX11_Mono(const QModelIndex& index)
-//{
-//  if (index.isValid()) {
-//    m_color = m_x11MonoTbl->background(index);
-//    m_name = m_x11MonoTbl->name(index);
-//    m_x11MonoLbl->setCurrentColor(m_color);
-//    emit colorSelected(m_color);
-//  }
-//}
+void
+ExtendedColorDialog::setCurrentColorsToNamedTab(int index)
+{
+  auto widget = m_tabs->widget(index);
+  if (widget) {
+    auto frame = qobject_cast<ColorDragFrame*>(widget);
+    if (frame) {
+      auto display = frame->display();
+      if (display) {
+        display->setCurrentColor(m_color, m_name);
+        display->setSecondaryColor(m_dropColor, m_dropName);
+      }
+    }
+  }
+}
 
 void
 ExtendedColorDialog::tabChanged(int index)
 {
-  auto widget = m_tabs->widget(int(m_currentTab));
-  auto frame = qobject_cast<ColorDragFrame*>(widget);
-  if (frame) {
-    m_color = frame->getDisplay()->color();
-    m_dropColor = frame->getDisplay()->dropColor();
-  } else {
-    m_color = m_colorDlg->currentColor();
-  }
-
-  auto newWidget = m_tabs->widget(index);
-  auto newFrame = qobject_cast<ColorDragFrame*>(newWidget);
-  if (newFrame) {
-    frame->getDisplay()->setCurrentColor(m_color);
-    frame->getDisplay()->setSecondaryColor(m_dropColor);
-  } else {
+  if (index == ColorDialog) {
+    if (m_currentTab != ColorDialog) {
+      setCurrentColorsFromNamedTab();
+    } else {
+      m_color = m_colorDlg->currentColor();
+    }
     m_colorDlg->setCurrentColor(m_color);
+  } else {
+    if (m_currentTab == ColorDialog) {
+      m_color = m_colorDlg->currentColor();
+    } else {
+      setCurrentColorsFromNamedTab();
+    }
+    setCurrentColorsToNamedTab(index);
   }
-
   m_currentTab = Tabs(index);
 }
 
@@ -243,8 +245,10 @@ ExtendedColorDialog::createColorDisplay()
 ColorDragTable*
 ExtendedColorDialog::createColorTable(ColorDragFrame* frame)
 {
-  auto table = new ColorDragTable(20, 7, this);
+  auto table = new ColorDragTable(17, 7, this);
   auto display = createColorDisplay();
+  frame->setDisplay(display);
+  frame->setTable(table);
   table->setLabel(display);
   table->setSelectionMode(QTableView::SingleSelection);
   table->setSelectionBehavior(QTableView::SelectItems);
@@ -262,175 +266,191 @@ ExtendedColorDialog::createColorTable(ColorDragFrame* frame)
 }
 
 QFrame*
-ExtendedColorDialog::initSvgFrame()
+ExtendedColorDialog::initSvgFrame1()
 {
   auto frame = new ColorDragFrame(this);
   auto layout = new QGridLayout;
   frame->setLayout(layout);
 
   auto table = createColorTable(frame);
-  layout->addWidget(createBtnBox(), 2, 0);
 
   int row = 0, column = 0;
   // blues
-  table->setData(row++, column, "aliceblue");
-  table->setData(row++, column, "azure");
-  table->setData(row++, column, "lightcyan");
-  table->setData(row++, column, "paleturquoise");
-  table->setData(row++, column, "powderblue");
-  table->setData(row++, column, "lightblue");
-  table->setData(row++, column, "lightblue");
-  table->setData(row++, column, "lightskyblue");
-  table->setData(row++, column, "skyblue");
-  table->setData(row++, column, "cornflowerblue");
-  table->setData(row++, column, "steelblue");
-  table->setData(row++, column, "dodgerblue");
-  table->setData(row++, column, "royalblue");
-  table->setData(row++, column, "deepskyblue");
-  table->setData(row++, column, "mediumslateblue");
-  table->setData(row++, column, "slateblue");
-  table->setData(row++, column, "indigo", "white");
-  table->setData(row++, column, "darkslateblue", "white");
-  table->setData(row++, column, "mediumblue", "white");
-  table->setData(row++, column, "darkblue", "white");
+  table->setData(row++, column, false, "aliceblue");
+  table->setData(row++, column, false, "azure");
+  table->setData(row++, column, false, "lightcyan");
+  table->setData(row++, column, false, "paleturquoise");
+  table->setData(row++, column, false, "powderblue");
+  table->setData(row++, column, false, "lightblue");
+  table->setData(row++, column, false, "lightskyblue");
+  table->setData(row++, column, false, "skyblue");
+  table->setData(row++, column, false, "cornflowerblue");
+  table->setData(row++, column, false, "steelblue");
+  table->setData(row++, column, false, "dodgerblue");
+  table->setData(row++, column, false, "royalblue");
+  table->setData(row++, column, false, "deepskyblue");
+  table->setData(row++, column, false, "mediumslateblue");
+  table->setData(row++, column, false, "slateblue");
+  table->setData(row++, column, false, "indigo", "white");
+  table->setData(row++, column, false, "darkslateblue", "white");
 
   row = 0;
   column++;
-  table->setData(row++, column, "navy", "white");
-  table->setData(row++, column, "blue", "white");
-  table->setData(row++, column, "midnightblue", "white");
-  table->setData(row++, column, "honeydew");
-  table->setData(row++, column, "limegreen");
-  table->setData(row++, column, "darkseagreen");
-  table->setData(row++, column, "palegreen");
-  table->setData(row++, column, "lightgreen");
-  table->setData(row++, column, "springgreen");
-  table->setData(row++, column, "lime");
-  table->setData(row++, column, "forestgreen", "white");
-  table->setData(row++, column, "green", "white");
-  table->setData(row++, column, "darkgreen", "white");
-  table->setData(row++, column, "aquamarine");
-  table->setData(row++, column, "mediumaquamarine");
-  table->setData(row++, column, "mediumseagreen");
-  table->setData(row++, column, "mediumspringgreen");
-  table->setData(row++, column, "seagreen");
-  table->setData(row++, column, "greenyellow");
-  table->setData(row++, column, "lawngreen");
+  table->setData(row++, column, false, "mediumblue", "white");
+  table->setData(row++, column, false, "darkblue", "white");
+  table->setData(row++, column, false, "navy", "white");
+  table->setData(row++, column, false, "blue", "white");
+  table->setData(row++, column, false, "midnightblue", "white");
+  table->setData(row++, column, false, "honeydew");
+  table->setData(row++, column, false, "limegreen");
+  table->setData(row++, column, false, "darkseagreen");
+  table->setData(row++, column, false, "palegreen");
+  table->setData(row++, column, false, "lightgreen");
+  table->setData(row++, column, false, "springgreen");
+  table->setData(row++, column, false, "lime");
+  table->setData(row++, column, false, "forestgreen", "white");
+  table->setData(row++, column, false, "green", "white");
+  table->setData(row++, column, false, "darkgreen", "white");
+  table->setData(row++, column, false, "aquamarine");
+  table->setData(row++, column, false, "mediumaquamarine");
 
   row = 0;
   column++;
-  table->setData(row++, column, "chartreuse");
-  table->setData(row++, column, "yellowgreen");
-  table->setData(row++, column, "olivedrab", "white");
-  table->setData(row++, column, "olive", "white");
-  table->setData(row++, column, "darkolivegreen", "white");
-  table->setData(row++, column, "cyan");
-  table->setData(row++, column, "aqua");
-  table->setData(row++, column, "turquoise");
-  table->setData(row++, column, "mediumturquoise");
-  table->setData(row++, column, "darkturquoise");
-  table->setData(row++, column, "lightseagreen");
-  table->setData(row++, column, "cadetblue");
-  table->setData(row++, column, "darkcyan");
-  table->setData(row++, column, "teal");
-  table->setData(row++, column, "seashell");
-  table->setData(row++, column, "lavenderblush");
-  table->setData(row++, column, "mistyrose");
-  table->setData(row++, column, "lightsalmon");
-  table->setData(row++, column, "darksalmon");
-  table->setData(row++, column, "salmon");
+  table->setData(row++, column, false, "mediumseagreen");
+  table->setData(row++, column, false, "mediumspringgreen");
+  table->setData(row++, column, false, "seagreen");
+  table->setData(row++, column, false, "greenyellow");
+  table->setData(row++, column, false, "lawngreen");
+  table->setData(row++, column, false, "chartreuse");
+  table->setData(row++, column, false, "yellowgreen");
+  table->setData(row++, column, false, "olivedrab", "white");
+  table->setData(row++, column, false, "olive", "white");
+  table->setData(row++, column, false, "darkolivegreen", "white");
+  table->setData(row++, column, false, "cyan");
+  table->setData(row++, column, false, "aqua");
+  table->setData(row++, column, false, "turquoise");
+  table->setData(row++, column, false, "mediumturquoise");
+  table->setData(row++, column, false, "darkturquoise");
+  table->setData(row++, column, false, "lightseagreen");
+  table->setData(row++, column, false, "cadetblue");
 
   row = 0;
   column++;
-  table->setData(row++, column, "tomato");
-  table->setData(row++, column, "red", "white");
-  table->setData(row++, column, "pink");
-  table->setData(row++, column, "crimson", "white");
-  table->setData(row++, column, "indianred", "white");
-  table->setData(row++, column, "lavender");
-  table->setData(row++, column, "hotpink");
-  table->setData(row++, column, "lightpink");
-  table->setData(row++, column, "palevioletred");
-  table->setData(row++, column, "fuchsia");
-  table->setData(row++, column, "magenta");
-  table->setData(row++, column, "deeppink");
-  table->setData(row++, column, "mediumvioletred");
-  table->setData(row++, column, "thistle");
-  table->setData(row++, column, "plum");
-  table->setData(row++, column, "violet");
-  table->setData(row++, column, "orchid");
-  table->setData(row++, column, "mediumorchid");
-  table->setData(row++, column, "darkmagenta", "white");
-  table->setData(row++, column, "purple", "white");
+  table->setData(row++, column, false, "darkcyan");
+  table->setData(row++, column, false, "teal");
+  table->setData(row++, column, false, "snow");
+  table->setData(row++, column, false, "white");
+  table->setData(row++, column, false, "whitesmoke");
+  table->setData(row++, column, false, "mintcream");
+  table->setData(row++, column, false, "ghostwhite");
+  table->setData(row++, column, false, "gainsboro");
+  table->setData(row++, column, false, "lightgray");
+  table->setData(row++, column, false, "silver");
+  table->setData(row++, column, false, "darkgray");
+  table->setData(row++, column, false, "lightslategray", "white");
+  table->setData(row++, column, false, "slategray", "white");
+  table->setData(row++, column, false, "darkslategray", "white");
+  table->setData(row++, column, false, "gray", "white");
+  table->setData(row++, column, false, "dimgray", "white");
+  table->setData(row++, column, false, "black", "white");
+
+  return frame;
+}
+
+QFrame*
+ExtendedColorDialog::initSvgFrame2()
+{
+  auto frame = new ColorDragFrame(this);
+  auto layout = new QGridLayout;
+  frame->setLayout(layout);
+
+  auto table = createColorTable(frame);
+
+  int row = 0, column = 0;
+
+  table->setData(row++, column, false, "seashell");
+  table->setData(row++, column, false, "lavenderblush");
+  table->setData(row++, column, false, "mistyrose");
+  table->setData(row++, column, false, "lightsalmon");
+  table->setData(row++, column, false, "darksalmon");
+  table->setData(row++, column, false, "salmon");
+  table->setData(row++, column, false, "tomato");
+  table->setData(row++, column, false, "red", "white");
+  table->setData(row++, column, false, "pink");
+  table->setData(row++, column, false, "crimson", "white");
+  table->setData(row++, column, false, "indianred", "white");
+  table->setData(row++, column, false, "lavender");
+  table->setData(row++, column, false, "hotpink");
+  table->setData(row++, column, false, "lightpink");
+  table->setData(row++, column, false, "palevioletred");
+  table->setData(row++, column, false, "fuchsia");
+  table->setData(row++, column, false, "magenta");
 
   row = 0;
   column++;
-  table->setData(row++, column, "mediumpurple");
-  table->setData(row++, column, "darkorchid", "white");
-  table->setData(row++, column, "darkviolet", "white");
-  table->setData(row++, column, "blueviolet", "white");
-  table->setData(row++, column, "ivory");
-  table->setData(row++, column, "beige");
-  table->setData(row++, column, "lightyellow");
-  table->setData(row++, column, "linen");
-  table->setData(row++, column, "palegoldenrod");
-  table->setData(row++, column, "cornsilk");
-  table->setData(row++, column, "floralwhite");
-  table->setData(row++, column, "lemonchiffon");
-  table->setData(row++, column, "lightgoldenrodyellow");
-  table->setData(row++, column, "moccasin");
-  table->setData(row++, column, "wheat");
-  table->setData(row++, column, "khaki");
-  table->setData(row++, column, "darkkhaki");
-  table->setData(row++, column, "gold");
-  table->setData(row++, column, "goldenrod");
-  table->setData(row++, column, "darkgoldenrod");
+  table->setData(row++, column, false, "deeppink");
+  table->setData(row++, column, false, "mediumvioletred");
+  table->setData(row++, column, false, "thistle");
+  table->setData(row++, column, false, "plum");
+  table->setData(row++, column, false, "violet");
+  table->setData(row++, column, false, "orchid");
+  table->setData(row++, column, false, "mediumorchid");
+  table->setData(row++, column, false, "darkmagenta", "white");
+  table->setData(row++, column, false, "purple", "white");
+  table->setData(row++, column, false, "mediumpurple");
+  table->setData(row++, column, false, "darkorchid", "white");
+  table->setData(row++, column, false, "darkviolet", "white");
+  table->setData(row++, column, false, "blueviolet", "white");
+  table->setData(row++, column, false, "ivory");
+  table->setData(row++, column, false, "beige");
+  table->setData(row++, column, false, "lightyellow");
+  table->setData(row++, column, false, "linen");
 
   row = 0;
   column++;
-  table->setData(row++, column, "yellow");
-  table->setData(row++, column, "orange");
-  table->setData(row++, column, "darkorange");
-  table->setData(row++, column, "orangered", "white");
-  table->setData(row++, column, "oldlace");
-  table->setData(row++, column, "antiquewhite");
-  table->setData(row++, column, "papayawhip");
-  table->setData(row++, column, "peachpuff");
-  table->setData(row++, column, "bisque");
-  table->setData(row++, column, "navajowhite");
-  table->setData(row++, column, "blanchedalmond");
-  table->setData(row++, column, "burlywood");
-  table->setData(row++, column, "tan");
-  table->setData(row++, column, "sandybrown");
-  table->setData(row++, column, "peru", "white");
-  table->setData(row++, column, "sienna", "white");
-  table->setData(row++, column, "chocolate", "white");
-  table->setData(row++, column, "saddlebrown", "white");
-  table->setData(row++, column, "coral");
-  table->setData(row++, column, "lightcoral");
+  table->setData(row++, column, false, "palegoldenrod");
+  table->setData(row++, column, false, "cornsilk");
+  table->setData(row++, column, false, "floralwhite");
+  table->setData(row++, column, false, "lemonchiffon");
+  table->setData(row++, column, false, "lightgoldenrodyellow");
+  table->setData(row++, column, false, "moccasin");
+  table->setData(row++, column, false, "wheat");
+  table->setData(row++, column, false, "khaki");
+  table->setData(row++, column, false, "darkkhaki");
+  table->setData(row++, column, false, "gold");
+  table->setData(row++, column, false, "goldenrod");
+  table->setData(row++, column, false, "darkgoldenrod");
+  table->setData(row++, column, false, "yellow");
+  table->setData(row++, column, false, "orange");
+  table->setData(row++, column, false, "darkorange");
+  table->setData(row++, column, false, "orangered", "white");
+  table->setData(row++, column, false, "oldlace");
 
   row = 0;
   column++;
-  table->setData(row++, column, "rosybrown");
-  table->setData(row++, column, "brown", "white");
-  table->setData(row++, column, "firebrick", "white");
-  table->setData(row++, column, "darkred", "white");
-  table->setData(row++, column, "maroon", "white");
-  table->setData(row++, column, "snow");
-  table->setData(row++, column, "white");
-  table->setData(row++, column, "whitesmoke");
-  table->setData(row++, column, "mintcream");
-  table->setData(row++, column, "ghostwhite");
-  table->setData(row++, column, "gainsboro");
-  table->setData(row++, column, "lightgray");
-  table->setData(row++, column, "silver");
-  table->setData(row++, column, "darkgray");
-  table->setData(row++, column, "lightslategray", "white");
-  table->setData(row++, column, "slategray", "white");
-  table->setData(row++, column, "darkslategray", "white");
-  table->setData(row++, column, "gray", "white");
-  table->setData(row++, column, "dimgray", "white");
-  table->setData(row++, column, "black", "white");
+  table->setData(row++, column, false, "antiquewhite");
+  table->setData(row++, column, false, "papayawhip");
+  table->setData(row++, column, false, "peachpuff");
+  table->setData(row++, column, false, "bisque");
+  table->setData(row++, column, false, "navajowhite");
+  table->setData(row++, column, false, "blanchedalmond");
+  table->setData(row++, column, false, "burlywood");
+  table->setData(row++, column, false, "tan");
+  table->setData(row++, column, false, "sandybrown");
+  table->setData(row++, column, false, "peru", "white");
+  table->setData(row++, column, false, "sienna", "white");
+  table->setData(row++, column, false, "chocolate", "white");
+  table->setData(row++, column, false, "saddlebrown", "white");
+  table->setData(row++, column, false, "coral");
+  table->setData(row++, column, false, "lightcoral");
+  table->setData(row++, column, false, "rosybrown");
+  table->setData(row++, column, false, "brown", "white");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, false, "firebrick", "white");
+  table->setData(row++, column, false, "darkred", "white");
+  table->setData(row++, column, false, "maroon", "white");
 
   return frame;
 }
@@ -443,114 +463,113 @@ ExtendedColorDialog::initX11ColorFrame1()
   frame->setLayout(layout);
 
   auto table = createColorTable(frame);
-  layout->addWidget(createBtnBox(), 2, 0);
 
   int row = 0, column = 0;
-  table->setData(row++, column, "mint cream");
-  table->setData(row++, column, "mint cream");
-  table->setData(row++, column, "alice blue");
-  table->setData(row++, column, "azure");
-  table->setData(row++, column, "azure2");
-  table->setData(row++, column, "azure3");
-  table->setData(row++, column, "azure4");
-  table->setData(row++, column, "light cyan");
-  table->setData(row++, column, "pale turquoise");
-  table->setData(row++, column, "PaleTurquoise1");
-  table->setData(row++, column, "PaleTurquoise2");
-  table->setData(row++, column, "PaleTurquoise3");
-  table->setData(row++, column, "PaleTurquoise4");
-  table->setData(row++, column, "powder blue");
-  table->setData(row++, column, "cornflower blue");
-  table->setData(row++, column, "deep sky blue");
-  table->setData(row++, column, "DeepSkyBlue2");
-  table->setData(row++, column, "DeepSkyBlue3");
-  table->setData(row++, column, "DeepSkyBlue4");
+  table->setData(row++, column, true, "mint cream");
+  table->setData(row++, column, true, "mint cream");
+  table->setData(row++, column, true, "alice blue");
+  table->setData(row++, column, true, "azure");
+  table->setData(row++, column, true, "azure2");
+  table->setData(row++, column, true, "azure3");
+  table->setData(row++, column, true, "azure4");
+  table->setData(row++, column, true, "light cyan");
+  table->setData(row++, column, true, "pale turquoise");
+  table->setData(row++, column, true, "PaleTurquoise1");
+  table->setData(row++, column, true, "PaleTurquoise2");
+  table->setData(row++, column, true, "PaleTurquoise3");
+  table->setData(row++, column, true, "PaleTurquoise4");
+  table->setData(row++, column, true, "powder blue");
+  table->setData(row++, column, true, "cornflower blue");
+  table->setData(row++, column, true, "deep sky blue");
+  table->setData(row++, column, true, "DeepSkyBlue2");
+  table->setData(row++, column, true, "DeepSkyBlue3");
+  table->setData(row++, column, true, "DeepSkyBlue4");
 
   row = 0;
   column++;
-  table->setData(row++, column, "light blue");
-  table->setData(row++, column, "LightBlue1");
-  table->setData(row++, column, "LightBlue2");
-  table->setData(row++, column, "LightBlue3");
-  table->setData(row++, column, "LightBlue4");
-  table->setData(row++, column, "light steel blue");
-  table->setData(row++, column, "LightSteelBlue1");
-  table->setData(row++, column, "LightSteelBlue2");
-  table->setData(row++, column, "LightSteelBlue3");
-  table->setData(row++, column, "LightSteelBlue4");
-  table->setData(row++, column, "dark slate gray", "white");
-  table->setData(row++, column, "DarkSlateGray1", "white");
-  table->setData(row++, column, "DarkSlateGray2", "white");
-  table->setData(row++, column, "DarkSlateGray3", "white");
-  table->setData(row++, column, "DarkSlateGray4", "white");
+  table->setData(row++, column, true, "light blue");
+  table->setData(row++, column, true, "LightBlue1");
+  table->setData(row++, column, true, "LightBlue2");
+  table->setData(row++, column, true, "LightBlue3");
+  table->setData(row++, column, true, "LightBlue4");
+  table->setData(row++, column, true, "light steel blue");
+  table->setData(row++, column, true, "LightSteelBlue1");
+  table->setData(row++, column, true, "LightSteelBlue2");
+  table->setData(row++, column, true, "LightSteelBlue3");
+  table->setData(row++, column, true, "LightSteelBlue4");
+  table->setData(row++, column, true, "dark slate gray", "white");
+  table->setData(row++, column, true, "DarkSlateGray1", "white");
+  table->setData(row++, column, true, "DarkSlateGray2", "white");
+  table->setData(row++, column, true, "DarkSlateGray3", "white");
+  table->setData(row++, column, true, "DarkSlateGray4", "white");
 
   row = 0;
   column++;
-  table->setData(row++, column, "light sky blue");
-  table->setData(row++, column, "LightSkyBlue1");
-  table->setData(row++, column, "LightSkyBlue2");
-  table->setData(row++, column, "LightSkyBlue3");
-  table->setData(row++, column, "LightSkyBlue4");
-  table->setData(row++, column, "sky blue");
-  table->setData(row++, column, "SkyBlue2");
-  table->setData(row++, column, "SkyBlue3");
-  table->setData(row++, column, "SkyBlue4");
-  table->setData(row++, column, "SteelBlue1");
-  table->setData(row++, column, "SteelBlue2");
-  table->setData(row++, column, "SteelBlue3");
-  table->setData(row++, column, "steel blue");
-  table->setData(row++, column, "SteelBlue4");
+  table->setData(row++, column, true, "light sky blue");
+  table->setData(row++, column, true, "LightSkyBlue1");
+  table->setData(row++, column, true, "LightSkyBlue2");
+  table->setData(row++, column, true, "LightSkyBlue3");
+  table->setData(row++, column, true, "LightSkyBlue4");
+  table->setData(row++, column, true, "sky blue");
+  table->setData(row++, column, true, "SkyBlue2");
+  table->setData(row++, column, true, "SkyBlue3");
+  table->setData(row++, column, true, "SkyBlue4");
+  table->setData(row++, column, true, "SteelBlue1");
+  table->setData(row++, column, true, "SteelBlue2");
+  table->setData(row++, column, true, "SteelBlue3");
+  table->setData(row++, column, true, "steel blue");
+  table->setData(row++, column, true, "SteelBlue4");
 
   row = 0;
   column++;
-  table->setData(row++, column, "royal blue");
-  table->setData(row++, column, "RoyalBlue1");
-  table->setData(row++, column, "RoyalBlue2");
-  table->setData(row++, column, "RoyalBlue3");
-  table->setData(row++, column, "RoyalBlue4");
-  table->setData(row++, column, "blue", "white");
-  table->setData(row++, column, "medium blue", "white");
-  table->setData(row++, column, "dark blue", "white");
-  table->setData(row++, column, "navy", "white");
-  table->setData(row++, column, "midnight blue", "white");
-  table->setData(row++, column, "medium slate blue");
-  table->setData(row++, column, "slate blue");
-  table->setData(row++, column, "dark slate blue", "white");
-  table->setData(row++, column, "dodger blue");
-  table->setData(row++, column, "DodgerBlue2");
-  table->setData(row++, column, "DodgerBlue3");
-  table->setData(row++, column, "DodgerBlue4");
+  table->setData(row++, column, true, "royal blue");
+  table->setData(row++, column, true, "RoyalBlue1");
+  table->setData(row++, column, true, "RoyalBlue2");
+  table->setData(row++, column, true, "RoyalBlue3");
+  table->setData(row++, column, true, "RoyalBlue4");
+  table->setData(row++, column, true, "blue", "white");
+  table->setData(row++, column, true, "medium blue", "white");
+  table->setData(row++, column, true, "dark blue", "white");
+  table->setData(row++, column, true, "navy", "white");
+  table->setData(row++, column, true, "midnight blue", "white");
+  table->setData(row++, column, true, "medium slate blue");
+  table->setData(row++, column, true, "slate blue");
+  table->setData(row++, column, true, "dark slate blue", "white");
+  table->setData(row++, column, true, "dodger blue");
+  table->setData(row++, column, true, "DodgerBlue2");
+  table->setData(row++, column, true, "DodgerBlue3");
+  table->setData(row++, column, true, "DodgerBlue4");
 
   row = 0;
   column++;
-  table->setData(row++, column, "lime green");
-  table->setData(row++, column, "dark sea green");
-  table->setData(row++, column, "pale green");
-  table->setData(row++, column, "light green");
-  table->setData(row++, column, "spring green");
-  table->setData(row++, column, "forest green", "white");
-  table->setData(row++, column, "green", "white");
-  table->setData(row++, column, "dark green", "white");
-  table->setData(row++, column, "medium sea green");
-  table->setData(row++, column, "sea green");
-  table->setData(row++, column, "aquamarine");
-  table->setData(row++, column, "aquamarine2");
+  table->setData(row++, column, true, "lime green");
+  table->setData(row++, column, true, "dark sea green");
+  table->setData(row++, column, true, "pale green");
+  table->setData(row++, column, true, "light green");
+  table->setData(row++, column, true, "spring green");
+  table->setData(row++, column, true, "forest green", "white");
+  table->setData(row++, column, true, "green", "white");
+  table->setData(row++, column, true, "dark green", "white");
+  table->setData(row++, column, true, "medium sea green");
+  table->setData(row++, column, true, "sea green");
+  table->setData(row++, column, true, "aquamarine");
+  table->setData(row++, column, true, "aquamarine2");
 
   row = 0;
   column++;
-  table->setData(row++, column, "aquamarine3");
-  table->setData(row++, column, "aquamarine4");
-  table->setData(row++, column, "medium aquamarine");
-  table->setData(row++, column, "medium spring green");
-  table->setData(row++, column, "green yellow");
-  table->setData(row++, column, "lawn green");
-  table->setData(row++, column, "chartreuse");
-  table->setData(row++, column, "chartreuse2");
-  table->setData(row++, column, "chartreuse3");
-  table->setData(row++, column, "chartreuse4");
-  table->setData(row++, column, "yellow green");
-  table->setData(row++, column, "olive drab", "white");
-  table->setData(row++, column, "dark olive green", "white");
+  table->setData(row++, column, true, "aquamarine3");
+  table->setData(row++, column, true, "aquamarine4");
+  table->setData(row++, column, true, "medium aquamarine");
+  table->setData(row++, column, true, "medium spring green");
+  table->setData(row++, column, true, "green yellow");
+  table->setData(row++, column, true, "lawn green");
+  table->setData(row++, column, true, "chartreuse");
+  table->setData(row++, column, true, "chartreuse2");
+  table->setData(row++, column, true, "chartreuse3");
+  table->setData(row++, column, true, "chartreuse4");
+  table->setData(row++, column, true, "yellow green");
+  table->setData(row++, column, true, "olive drab", "white");
+  table->setData(row++, column, true, "dark olive green", "white");
 
   return frame;
 }
@@ -563,243 +582,242 @@ ExtendedColorDialog::initX11ColorFrame2()
   frame->setLayout(layout);
 
   auto table = createColorTable(frame);
-  layout->addWidget(createBtnBox(), 2, 0);
 
   int row = 0, column = 0;
-  table->setData(row++, column, "cyan");
-  table->setData(row++, column, "cyan2");
-  table->setData(row++, column, "cyan3");
-  table->setData(row++, column, "cyan4");
-  table->setData(row++, column, "turquoise");
-  table->setData(row++, column, "turquoise1");
-  table->setData(row++, column, "turquoise2");
-  table->setData(row++, column, "turquoise3");
-  table->setData(row++, column, "turquoise4");
-  table->setData(row++, column, "dark turquoise");
-  table->setData(row++, column, "light sea green");
-  table->setData(row++, column, "dark cyan");
-  table->setData(row++, column, "seashell1");
-  table->setData(row++, column, "seashell2");
-  table->setData(row++, column, "seashell3");
-  table->setData(row++, column, "seashell4");
-  table->setData(row++, column, "lavender");
+  table->setData(row++, column, true, "cyan");
+  table->setData(row++, column, true, "cyan2");
+  table->setData(row++, column, true, "cyan3");
+  table->setData(row++, column, true, "cyan4");
+  table->setData(row++, column, true, "turquoise");
+  table->setData(row++, column, true, "turquoise1");
+  table->setData(row++, column, true, "turquoise2");
+  table->setData(row++, column, true, "turquoise3");
+  table->setData(row++, column, true, "turquoise4");
+  table->setData(row++, column, true, "dark turquoise");
+  table->setData(row++, column, true, "light sea green");
+  table->setData(row++, column, true, "dark cyan");
+  table->setData(row++, column, true, "seashell1");
+  table->setData(row++, column, true, "seashell2");
+  table->setData(row++, column, true, "seashell3");
+  table->setData(row++, column, true, "seashell4");
+  table->setData(row++, column, true, "lavender");
 
   row = 0;
   column++;
-  table->setData(row++, column, "LavenderBlush1");
-  table->setData(row++, column, "LavenderBlush2");
-  table->setData(row++, column, "LavenderBlush3");
-  table->setData(row++, column, "LavenderBlush4");
-  table->setData(row++, column, "misty rose");
-  table->setData(row++, column, "MistyRose2");
-  table->setData(row++, column, "MistyRose3");
-  table->setData(row++, column, "MistyRose4");
-  table->setData(row++, column, "LightSalmon1");
-  table->setData(row++, column, "LightSalmon2");
-  table->setData(row++, column, "LightSalmon3");
-  table->setData(row++, column, "LightSalmon4");
-  table->setData(row++, column, "dark salmon");
-  table->setData(row++, column, "salmon1");
-  table->setData(row++, column, "salmon2");
-  table->setData(row++, column, "salmon3");
-  table->setData(row++, column, "salmon4");
-  table->setData(row++, column, "tomato1");
-  table->setData(row++, column, "tomato2");
-  table->setData(row++, column, "tomato3");
+  table->setData(row++, column, true, "LavenderBlush1");
+  table->setData(row++, column, true, "LavenderBlush2");
+  table->setData(row++, column, true, "LavenderBlush3");
+  table->setData(row++, column, true, "LavenderBlush4");
+  table->setData(row++, column, true, "misty rose");
+  table->setData(row++, column, true, "MistyRose2");
+  table->setData(row++, column, true, "MistyRose3");
+  table->setData(row++, column, true, "MistyRose4");
+  table->setData(row++, column, true, "LightSalmon1");
+  table->setData(row++, column, true, "LightSalmon2");
+  table->setData(row++, column, true, "LightSalmon3");
+  table->setData(row++, column, true, "LightSalmon4");
+  table->setData(row++, column, true, "dark salmon");
+  table->setData(row++, column, true, "salmon1");
+  table->setData(row++, column, true, "salmon2");
+  table->setData(row++, column, true, "salmon3");
+  table->setData(row++, column, true, "salmon4");
+  table->setData(row++, column, true, "tomato1");
+  table->setData(row++, column, true, "tomato2");
+  table->setData(row++, column, true, "tomato3");
 
   row = 0;
   column++;
-  table->setData(row++, column, "tomato4");
-  table->setData(row++, column, "red1", "white");
-  table->setData(row++, column, "red2", "white");
-  table->setData(row++, column, "red3", "white");
-  table->setData(row++, column, "red4", "white");
-  table->setData(row++, column, "pink1");
-  table->setData(row++, column, "pink2");
-  table->setData(row++, column, "pink3");
-  table->setData(row++, column, "pink4");
-  table->setData(row++, column, "indian red", "white");
-  table->setData(row++, column, "IndianRed1", "white");
-  table->setData(row++, column, "IndianRed2", "white");
-  table->setData(row++, column, "IndianRed3", "white");
-  table->setData(row++, column, "IndianRed4", "white");
-  table->setData(row++, column, "hot pink");
-  table->setData(row++, column, "HotPink1");
-  table->setData(row++, column, "HotPink2");
-  table->setData(row++, column, "HotPink3");
-  table->setData(row++, column, "HotPink4");
-  table->setData(row++, column, "deep pink");
+  table->setData(row++, column, true, "tomato4");
+  table->setData(row++, column, true, "red1", "white");
+  table->setData(row++, column, true, "red2", "white");
+  table->setData(row++, column, true, "red3", "white");
+  table->setData(row++, column, true, "red4", "white");
+  table->setData(row++, column, true, "pink1");
+  table->setData(row++, column, true, "pink2");
+  table->setData(row++, column, true, "pink3");
+  table->setData(row++, column, true, "pink4");
+  table->setData(row++, column, true, "indian red", "white");
+  table->setData(row++, column, true, "IndianRed1", "white");
+  table->setData(row++, column, true, "IndianRed2", "white");
+  table->setData(row++, column, true, "IndianRed3", "white");
+  table->setData(row++, column, true, "IndianRed4", "white");
+  table->setData(row++, column, true, "hot pink");
+  table->setData(row++, column, true, "HotPink1");
+  table->setData(row++, column, true, "HotPink2");
+  table->setData(row++, column, true, "HotPink3");
+  table->setData(row++, column, true, "HotPink4");
+  table->setData(row++, column, true, "deep pink");
 
   row = 0;
   column++;
-  table->setData(row++, column, "DeepPink2");
-  table->setData(row++, column, "DeepPink3");
-  table->setData(row++, column, "DeepPink4");
-  table->setData(row++, column, "light pink");
-  table->setData(row++, column, "LightPink1");
-  table->setData(row++, column, "LightPink2");
-  table->setData(row++, column, "LightPink3");
-  table->setData(row++, column, "LightPink4");
-  table->setData(row++, column, "pale violet red");
-  table->setData(row++, column, "PaleVioletRed1");
-  table->setData(row++, column, "PaleVioletRed2");
-  table->setData(row++, column, "PaleVioletRed3");
-  table->setData(row++, column, "PaleVioletRed4");
-  table->setData(row++, column, "magenta");
-  table->setData(row++, column, "magenta2");
-  table->setData(row++, column, "magenta3");
-  table->setData(row++, column, "magenta4");
-  table->setData(row++, column, "medium violet red");
-  table->setData(row++, column, "thistle");
-  table->setData(row++, column, "thistle2");
+  table->setData(row++, column, true, "DeepPink2");
+  table->setData(row++, column, true, "DeepPink3");
+  table->setData(row++, column, true, "DeepPink4");
+  table->setData(row++, column, true, "light pink");
+  table->setData(row++, column, true, "LightPink1");
+  table->setData(row++, column, true, "LightPink2");
+  table->setData(row++, column, true, "LightPink3");
+  table->setData(row++, column, true, "LightPink4");
+  table->setData(row++, column, true, "pale violet red");
+  table->setData(row++, column, true, "PaleVioletRed1");
+  table->setData(row++, column, true, "PaleVioletRed2");
+  table->setData(row++, column, true, "PaleVioletRed3");
+  table->setData(row++, column, true, "PaleVioletRed4");
+  table->setData(row++, column, true, "magenta");
+  table->setData(row++, column, true, "magenta2");
+  table->setData(row++, column, true, "magenta3");
+  table->setData(row++, column, true, "magenta4");
+  table->setData(row++, column, true, "medium violet red");
+  table->setData(row++, column, true, "thistle");
+  table->setData(row++, column, true, "thistle2");
 
   row = 0;
   column++;
-  table->setData(row++, column, "thistle3");
-  table->setData(row++, column, "thistle4");
-  table->setData(row++, column, "plum");
-  table->setData(row++, column, "plum2");
-  table->setData(row++, column, "plum3");
-  table->setData(row++, column, "plum4");
-  table->setData(row++, column, "violet");
-  table->setData(row++, column, "orchid");
-  table->setData(row++, column, "orchid2");
-  table->setData(row++, column, "orchid3");
-  table->setData(row++, column, "orchid4");
-  table->setData(row++, column, "medium orchid");
-  table->setData(row++, column, "MediumOrchid1");
-  table->setData(row++, column, "MediumOrchid2");
-  table->setData(row++, column, "MediumOrchid3");
-  table->setData(row++, column, "MediumOrchid4");
-  table->setData(row++, column, "dark magenta", "white");
-  table->setData(row++, column, "purple", "white");
-  table->setData(row++, column, "purple2", "white");
-  table->setData(row++, column, "purple3", "white");
-  table->setData(row++, column, "purple4", "white");
-  table->setData(row++, column, "medium purple");
-  table->setData(row++, column, "MediumPurple1");
-  table->setData(row++, column, "MediumPurple2");
-  table->setData(row++, column, "MediumPurple3");
-  table->setData(row++, column, "MediumPurple4");
-  table->setData(row++, column, "dark orchid", "white");
-  table->setData(row++, column, "DarkOrchid1", "white");
-  table->setData(row++, column, "DarkOrchid2", "white");
-  table->setData(row++, column, "DarkOrchid3", "white");
-  table->setData(row++, column, "DarkOrchid4", "white");
-  table->setData(row++, column, "dark violet", "white");
-  table->setData(row++, column, "ivory");
-  table->setData(row++, column, "ivory2");
-  table->setData(row++, column, "ivory3");
-  table->setData(row++, column, "ivory4");
-  table->setData(row++, column, "beige");
-  table->setData(row++, column, "lightyellow");
-  table->setData(row++, column, "LightYellow2");
-  table->setData(row++, column, "LightYellow3");
-  table->setData(row++, column, "LightYellow4");
-  table->setData(row++, column, "pale goldenrod");
-  table->setData(row++, column, "cornsilk");
-  table->setData(row++, column, "cornsilk2");
-  table->setData(row++, column, "cornsilk3");
-  table->setData(row++, column, "cornsilk4");
-  table->setData(row++, column, "lemonchiffon");
-  table->setData(row++, column, "LemonChiffon2");
-  table->setData(row++, column, "LemonChiffon3");
-  table->setData(row++, column, "LemonChiffon4");
-  table->setData(row++, column, "light goldenrod yellow");
-  table->setData(row++, column, "moccasin");
-  table->setData(row++, column, "wheat");
-  table->setData(row++, column, "khaki");
-  table->setData(row++, column, "khaki2");
-  table->setData(row++, column, "khaki3");
-  table->setData(row++, column, "khaki4");
-  table->setData(row++, column, "dark khaki");
-  table->setData(row++, column, "gold");
-  table->setData(row++, column, "gold2");
-  table->setData(row++, column, "gold3");
-  table->setData(row++, column, "gold4");
-  table->setData(row++, column, "goldenrod");
-  table->setData(row++, column, "goldenrod");
-  table->setData(row++, column, "goldenrod2");
-  table->setData(row++, column, "goldenrod3");
-  table->setData(row++, column, "goldenrod4");
-  table->setData(row++, column, "dark goldenrod");
-  table->setData(row++, column, "yellow");
-  table->setData(row++, column, "yellow2");
-  table->setData(row++, column, "yellow3");
-  table->setData(row++, column, "yellow4");
-  table->setData(row++, column, "orange");
-  table->setData(row++, column, "orange2");
-  table->setData(row++, column, "orange3");
-  table->setData(row++, column, "orange4");
-  table->setData(row++, column, "dark orange");
-  table->setData(row++, column, "DarkOrange1");
-  table->setData(row++, column, "DarkOrange2");
-  table->setData(row++, column, "DarkOrange3");
-  table->setData(row++, column, "DarkOrange4");
-  table->setData(row++, column, "orange red", "white");
-  table->setData(row++, column, "OrangeRed2", "white");
-  table->setData(row++, column, "OrangeRed3", "white");
-  table->setData(row++, column, "OrangeRed4", "white");
-  table->setData(row++, column, "floral white");
-  table->setData(row++, column, "oldlace");
-  table->setData(row++, column, "antique white");
-  table->setData(row++, column, "AntiqueWhite1");
-  table->setData(row++, column, "AntiqueWhite2");
-  table->setData(row++, column, "AntiqueWhite3");
-  table->setData(row++, column, "AntiqueWhite4");
-  table->setData(row++, column, "peachpuff");
-  table->setData(row++, column, "peachpuff");
-  table->setData(row++, column, "peachpuff");
-  table->setData(row++, column, "peachpuff");
-  table->setData(row++, column, "peachpuff");
-  table->setData(row++, column, "bisque");
-  table->setData(row++, column, "bisque2");
-  table->setData(row++, column, "bisque3");
-  table->setData(row++, column, "bisque4");
-  table->setData(row++, column, "navajowhite");
-  table->setData(row++, column, "NavajoWhite2");
-  table->setData(row++, column, "NavajoWhite3");
-  table->setData(row++, column, "NavajoWhite4");
-  table->setData(row++, column, "burlywood");
-  table->setData(row++, column, "burlywood2");
-  table->setData(row++, column, "burlywood3");
-  table->setData(row++, column, "burlywood4");
-  table->setData(row++, column, "tan2");
-  table->setData(row++, column, "tan3");
-  table->setData(row++, column, "tan4");
-  table->setData(row++, column, "sandy brown");
-  table->setData(row++, column, "sienna", "white");
-  table->setData(row++, column, "sienna2", "white");
-  table->setData(row++, column, "sienna3", "white");
-  table->setData(row++, column, "sienna4", "white");
-  table->setData(row++, column, "chocolate", "white");
-  table->setData(row++, column, "chocolate2", "white");
-  table->setData(row++, column, "chocolate3", "white");
-  table->setData(row++, column, "chocolate4", "white");
-  table->setData(row++, column, "saddle brown", "white");
-  table->setData(row++, column, "coral");
-  table->setData(row++, column, "coral2");
-  table->setData(row++, column, "coral3");
-  table->setData(row++, column, "coral4");
-  table->setData(row++, column, "light coral");
-  table->setData(row++, column, "rosy brown");
-  table->setData(row++, column, "RosyBrown1");
-  table->setData(row++, column, "RosyBrown2");
-  table->setData(row++, column, "RosyBrown3");
-  table->setData(row++, column, "RosyBrown4");
-  table->setData(row++, column, "brown", "white");
-  table->setData(row++, column, "brown2", "white");
-  table->setData(row++, column, "brown3", "white");
-  table->setData(row++, column, "brown4", "white");
-  table->setData(row++, column, "firebrick", "white");
-  table->setData(row++, column, "firebrick2", "white");
-  table->setData(row++, column, "firebrick3", "white");
-  table->setData(row++, column, "firebrick4", "white");
-  table->setData(row++, column, "dark red", "white");
-  table->setData(row++, column, "maroon", "white");
-  table->setData(row++, column, "maroon2", "white");
-  table->setData(row++, column, "maroon3", "white");
-  table->setData(row++, column, "maroon4", "white");
+  table->setData(row++, column, true, "thistle3");
+  table->setData(row++, column, true, "thistle4");
+  table->setData(row++, column, true, "plum");
+  table->setData(row++, column, true, "plum2");
+  table->setData(row++, column, true, "plum3");
+  table->setData(row++, column, true, "plum4");
+  table->setData(row++, column, true, "violet");
+  table->setData(row++, column, true, "orchid");
+  table->setData(row++, column, true, "orchid2");
+  table->setData(row++, column, true, "orchid3");
+  table->setData(row++, column, true, "orchid4");
+  table->setData(row++, column, true, "medium orchid");
+  table->setData(row++, column, true, "MediumOrchid1");
+  table->setData(row++, column, true, "MediumOrchid2");
+  table->setData(row++, column, true, "MediumOrchid3");
+  table->setData(row++, column, true, "MediumOrchid4");
+  table->setData(row++, column, true, "dark magenta", "white");
+  table->setData(row++, column, true, "purple", "white");
+  table->setData(row++, column, true, "purple2", "white");
+  table->setData(row++, column, true, "purple3", "white");
+  table->setData(row++, column, true, "purple4", "white");
+  table->setData(row++, column, true, "medium purple");
+  table->setData(row++, column, true, "MediumPurple1");
+  table->setData(row++, column, true, "MediumPurple2");
+  table->setData(row++, column, true, "MediumPurple3");
+  table->setData(row++, column, true, "MediumPurple4");
+  table->setData(row++, column, true, "dark orchid", "white");
+  table->setData(row++, column, true, "DarkOrchid1", "white");
+  table->setData(row++, column, true, "DarkOrchid2", "white");
+  table->setData(row++, column, true, "DarkOrchid3", "white");
+  table->setData(row++, column, true, "DarkOrchid4", "white");
+  table->setData(row++, column, true, "dark violet", "white");
+  table->setData(row++, column, true, "ivory");
+  table->setData(row++, column, true, "ivory2");
+  table->setData(row++, column, true, "ivory3");
+  table->setData(row++, column, true, "ivory4");
+  table->setData(row++, column, true, "beige");
+  table->setData(row++, column, true, "lightyellow");
+  table->setData(row++, column, true, "LightYellow2");
+  table->setData(row++, column, true, "LightYellow3");
+  table->setData(row++, column, true, "LightYellow4");
+  table->setData(row++, column, true, "pale goldenrod");
+  table->setData(row++, column, true, "cornsilk");
+  table->setData(row++, column, true, "cornsilk2");
+  table->setData(row++, column, true, "cornsilk3");
+  table->setData(row++, column, true, "cornsilk4");
+  table->setData(row++, column, true, "lemonchiffon");
+  table->setData(row++, column, true, "LemonChiffon2");
+  table->setData(row++, column, true, "LemonChiffon3");
+  table->setData(row++, column, true, "LemonChiffon4");
+  table->setData(row++, column, true, "light goldenrod yellow");
+  table->setData(row++, column, true, "moccasin");
+  table->setData(row++, column, true, "wheat");
+  table->setData(row++, column, true, "khaki");
+  table->setData(row++, column, true, "khaki2");
+  table->setData(row++, column, true, "khaki3");
+  table->setData(row++, column, true, "khaki4");
+  table->setData(row++, column, true, "dark khaki");
+  table->setData(row++, column, true, "gold");
+  table->setData(row++, column, true, "gold2");
+  table->setData(row++, column, true, "gold3");
+  table->setData(row++, column, true, "gold4");
+  table->setData(row++, column, true, "goldenrod");
+  table->setData(row++, column, true, "goldenrod");
+  table->setData(row++, column, true, "goldenrod2");
+  table->setData(row++, column, true, "goldenrod3");
+  table->setData(row++, column, true, "goldenrod4");
+  table->setData(row++, column, true, "dark goldenrod");
+  table->setData(row++, column, true, "yellow");
+  table->setData(row++, column, true, "yellow2");
+  table->setData(row++, column, true, "yellow3");
+  table->setData(row++, column, true, "yellow4");
+  table->setData(row++, column, true, "orange");
+  table->setData(row++, column, true, "orange2");
+  table->setData(row++, column, true, "orange3");
+  table->setData(row++, column, true, "orange4");
+  table->setData(row++, column, true, "dark orange");
+  table->setData(row++, column, true, "DarkOrange1");
+  table->setData(row++, column, true, "DarkOrange2");
+  table->setData(row++, column, true, "DarkOrange3");
+  table->setData(row++, column, true, "DarkOrange4");
+  table->setData(row++, column, true, "orange red", "white");
+  table->setData(row++, column, true, "OrangeRed2", "white");
+  table->setData(row++, column, true, "OrangeRed3", "white");
+  table->setData(row++, column, true, "OrangeRed4", "white");
+  table->setData(row++, column, true, "floral white");
+  table->setData(row++, column, true, "oldlace");
+  table->setData(row++, column, true, "antique white");
+  table->setData(row++, column, true, "AntiqueWhite1");
+  table->setData(row++, column, true, "AntiqueWhite2");
+  table->setData(row++, column, true, "AntiqueWhite3");
+  table->setData(row++, column, true, "AntiqueWhite4");
+  table->setData(row++, column, true, "peachpuff");
+  table->setData(row++, column, true, "peachpuff");
+  table->setData(row++, column, true, "peachpuff");
+  table->setData(row++, column, true, "peachpuff");
+  table->setData(row++, column, true, "peachpuff");
+  table->setData(row++, column, true, "bisque");
+  table->setData(row++, column, true, "bisque2");
+  table->setData(row++, column, true, "bisque3");
+  table->setData(row++, column, true, "bisque4");
+  table->setData(row++, column, true, "navajowhite");
+  table->setData(row++, column, true, "NavajoWhite2");
+  table->setData(row++, column, true, "NavajoWhite3");
+  table->setData(row++, column, true, "NavajoWhite4");
+  table->setData(row++, column, true, "burlywood");
+  table->setData(row++, column, true, "burlywood2");
+  table->setData(row++, column, true, "burlywood3");
+  table->setData(row++, column, true, "burlywood4");
+  table->setData(row++, column, true, "tan2");
+  table->setData(row++, column, true, "tan3");
+  table->setData(row++, column, true, "tan4");
+  table->setData(row++, column, true, "sandy brown");
+  table->setData(row++, column, true, "sienna", "white");
+  table->setData(row++, column, true, "sienna2", "white");
+  table->setData(row++, column, true, "sienna3", "white");
+  table->setData(row++, column, true, "sienna4", "white");
+  table->setData(row++, column, true, "chocolate", "white");
+  table->setData(row++, column, true, "chocolate2", "white");
+  table->setData(row++, column, true, "chocolate3", "white");
+  table->setData(row++, column, true, "chocolate4", "white");
+  table->setData(row++, column, true, "saddle brown", "white");
+  table->setData(row++, column, true, "coral");
+  table->setData(row++, column, true, "coral2");
+  table->setData(row++, column, true, "coral3");
+  table->setData(row++, column, true, "coral4");
+  table->setData(row++, column, true, "light coral");
+  table->setData(row++, column, true, "rosy brown");
+  table->setData(row++, column, true, "RosyBrown1");
+  table->setData(row++, column, true, "RosyBrown2");
+  table->setData(row++, column, true, "RosyBrown3");
+  table->setData(row++, column, true, "RosyBrown4");
+  table->setData(row++, column, true, "brown", "white");
+  table->setData(row++, column, true, "brown2", "white");
+  table->setData(row++, column, true, "brown3", "white");
+  table->setData(row++, column, true, "brown4", "white");
+  table->setData(row++, column, true, "firebrick", "white");
+  table->setData(row++, column, true, "firebrick2", "white");
+  table->setData(row++, column, true, "firebrick3", "white");
+  table->setData(row++, column, true, "firebrick4", "white");
+  table->setData(row++, column, true, "dark red", "white");
+  table->setData(row++, column, true, "maroon", "white");
+  table->setData(row++, column, true, "maroon2", "white");
+  table->setData(row++, column, true, "maroon3", "white");
+  table->setData(row++, column, true, "maroon4", "white");
 
   return frame;
 }
@@ -812,144 +830,143 @@ ExtendedColorDialog::initX11MonoFrame()
   frame->setLayout(layout);
 
   auto table = createColorTable(frame);
-  layout->addWidget(createBtnBox(), 2, 0);
 
   auto row = 0;
   auto column = 0;
-  table->setData(row++, column, "grey0", "white");
-  table->setData(row++, column, "grey1", "white");
-  table->setData(row++, column, "grey2", "white");
-  table->setData(row++, column, "grey3", "white");
-  table->setData(row++, column, "grey4", "white");
-  table->setData(row++, column, "grey5", "white");
-  table->setData(row++, column, "grey6", "white");
-  table->setData(row++, column, "grey7", "white");
-  table->setData(row++, column, "grey8", "white");
-  table->setData(row++, column, "grey9", "white");
-  table->setData(row++, column, "grey10", "white");
-  table->setData(row++, column, "grey11", "white");
-  table->setData(row++, column, "grey12", "white");
-  table->setData(row++, column, "grey13", "white");
-  table->setData(row++, column, "grey14", "white");
-  table->setData(row++, column, "grey15", "white");
-  table->setData(row++, column, "grey16", "white");
+  table->setData(row++, column, true, "grey0", "white");
+  table->setData(row++, column, true, "grey1", "white");
+  table->setData(row++, column, true, "grey2", "white");
+  table->setData(row++, column, true, "grey3", "white");
+  table->setData(row++, column, true, "grey4", "white");
+  table->setData(row++, column, true, "grey5", "white");
+  table->setData(row++, column, true, "grey6", "white");
+  table->setData(row++, column, true, "grey7", "white");
+  table->setData(row++, column, true, "grey8", "white");
+  table->setData(row++, column, true, "grey9", "white");
+  table->setData(row++, column, true, "grey10", "white");
+  table->setData(row++, column, true, "grey11", "white");
+  table->setData(row++, column, true, "grey12", "white");
+  table->setData(row++, column, true, "grey13", "white");
+  table->setData(row++, column, true, "grey14", "white");
+  table->setData(row++, column, true, "grey15", "white");
+  table->setData(row++, column, true, "grey16", "white");
 
   row = 0;
   column++;
-  table->setData(row++, column, "grey17", "white");
-  table->setData(row++, column, "grey18", "white");
-  table->setData(row++, column, "grey19", "white");
-  table->setData(row++, column, "grey20", "white");
-  table->setData(row++, column, "grey21", "white");
-  table->setData(row++, column, "grey22", "white");
-  table->setData(row++, column, "grey23", "white");
-  table->setData(row++, column, "grey24", "white");
-  table->setData(row++, column, "grey25", "white");
-  table->setData(row++, column, "grey26", "white");
-  table->setData(row++, column, "grey27", "white");
-  table->setData(row++, column, "grey28", "white");
-  table->setData(row++, column, "grey29", "white");
-  table->setData(row++, column, "grey30", "white");
-  table->setData(row++, column, "grey31", "white");
-  table->setData(row++, column, "grey32", "white");
-  table->setData(row++, column, "grey33", "white");
+  table->setData(row++, column, true, "grey17", "white");
+  table->setData(row++, column, true, "grey18", "white");
+  table->setData(row++, column, true, "grey19", "white");
+  table->setData(row++, column, true, "grey20", "white");
+  table->setData(row++, column, true, "grey21", "white");
+  table->setData(row++, column, true, "grey22", "white");
+  table->setData(row++, column, true, "grey23", "white");
+  table->setData(row++, column, true, "grey24", "white");
+  table->setData(row++, column, true, "grey25", "white");
+  table->setData(row++, column, true, "grey26", "white");
+  table->setData(row++, column, true, "grey27", "white");
+  table->setData(row++, column, true, "grey28", "white");
+  table->setData(row++, column, true, "grey29", "white");
+  table->setData(row++, column, true, "grey30", "white");
+  table->setData(row++, column, true, "grey31", "white");
+  table->setData(row++, column, true, "grey32", "white");
+  table->setData(row++, column, true, "grey33", "white");
 
   row = 0;
   column++;
-  table->setData(row++, column, "grey34", "white");
-  table->setData(row++, column, "grey35", "white");
-  table->setData(row++, column, "grey36", "white");
-  table->setData(row++, column, "grey37", "white");
-  table->setData(row++, column, "grey38", "white");
-  table->setData(row++, column, "grey39", "white");
-  table->setData(row++, column, "grey40");
-  table->setData(row++, column, "grey41");
-  table->setData(row++, column, "grey42");
-  table->setData(row++, column, "grey43");
-  table->setData(row++, column, "grey44");
-  table->setData(row++, column, "grey45");
-  table->setData(row++, column, "grey46");
-  table->setData(row++, column, "grey47");
-  table->setData(row++, column, "grey48");
-  table->setData(row++, column, "grey49");
-  table->setData(row++, column, "grey50");
+  table->setData(row++, column, true, "grey34", "white");
+  table->setData(row++, column, true, "grey35", "white");
+  table->setData(row++, column, true, "grey36", "white");
+  table->setData(row++, column, true, "grey37", "white");
+  table->setData(row++, column, true, "grey38", "white");
+  table->setData(row++, column, true, "grey39", "white");
+  table->setData(row++, column, true, "grey40");
+  table->setData(row++, column, true, "grey41");
+  table->setData(row++, column, true, "grey42");
+  table->setData(row++, column, true, "grey43");
+  table->setData(row++, column, true, "grey44");
+  table->setData(row++, column, true, "grey45");
+  table->setData(row++, column, true, "grey46");
+  table->setData(row++, column, true, "grey47");
+  table->setData(row++, column, true, "grey48");
+  table->setData(row++, column, true, "grey49");
+  table->setData(row++, column, true, "grey50");
 
   row = 0;
   column++;
-  table->setData(row++, column, "grey51");
-  table->setData(row++, column, "grey52");
-  table->setData(row++, column, "grey53");
-  table->setData(row++, column, "grey54");
-  table->setData(row++, column, "grey55");
-  table->setData(row++, column, "grey56");
-  table->setData(row++, column, "grey57");
-  table->setData(row++, column, "grey58");
-  table->setData(row++, column, "grey59");
-  table->setData(row++, column, "grey60");
-  table->setData(row++, column, "grey61");
-  table->setData(row++, column, "grey62");
-  table->setData(row++, column, "grey63");
-  table->setData(row++, column, "grey64");
-  table->setData(row++, column, "grey65");
-  table->setData(row++, column, "grey66");
-  table->setData(row++, column, "grey67");
+  table->setData(row++, column, true, "grey51");
+  table->setData(row++, column, true, "grey52");
+  table->setData(row++, column, true, "grey53");
+  table->setData(row++, column, true, "grey54");
+  table->setData(row++, column, true, "grey55");
+  table->setData(row++, column, true, "grey56");
+  table->setData(row++, column, true, "grey57");
+  table->setData(row++, column, true, "grey58");
+  table->setData(row++, column, true, "grey59");
+  table->setData(row++, column, true, "grey60");
+  table->setData(row++, column, true, "grey61");
+  table->setData(row++, column, true, "grey62");
+  table->setData(row++, column, true, "grey63");
+  table->setData(row++, column, true, "grey64");
+  table->setData(row++, column, true, "grey65");
+  table->setData(row++, column, true, "grey66");
+  table->setData(row++, column, true, "grey67");
 
   row = 0;
   column++;
-  table->setData(row++, column, "grey68");
-  table->setData(row++, column, "grey69");
-  table->setData(row++, column, "grey70");
-  table->setData(row++, column, "grey71");
-  table->setData(row++, column, "grey72");
-  table->setData(row++, column, "grey73");
-  table->setData(row++, column, "grey74");
-  table->setData(row++, column, "grey75");
-  table->setData(row++, column, "grey76");
-  table->setData(row++, column, "grey77");
-  table->setData(row++, column, "grey78");
-  table->setData(row++, column, "grey79");
-  table->setData(row++, column, "grey80");
-  table->setData(row++, column, "grey81");
-  table->setData(row++, column, "grey82");
-  table->setData(row++, column, "grey83");
-  table->setData(row++, column, "grey84");
+  table->setData(row++, column, true, "grey68");
+  table->setData(row++, column, true, "grey69");
+  table->setData(row++, column, true, "grey70");
+  table->setData(row++, column, true, "grey71");
+  table->setData(row++, column, true, "grey72");
+  table->setData(row++, column, true, "grey73");
+  table->setData(row++, column, true, "grey74");
+  table->setData(row++, column, true, "grey75");
+  table->setData(row++, column, true, "grey76");
+  table->setData(row++, column, true, "grey77");
+  table->setData(row++, column, true, "grey78");
+  table->setData(row++, column, true, "grey79");
+  table->setData(row++, column, true, "grey80");
+  table->setData(row++, column, true, "grey81");
+  table->setData(row++, column, true, "grey82");
+  table->setData(row++, column, true, "grey83");
+  table->setData(row++, column, true, "grey84");
 
   row = 0;
   column++;
-  table->setData(row++, column, "grey85");
-  table->setData(row++, column, "grey86");
-  table->setData(row++, column, "grey87");
-  table->setData(row++, column, "grey88");
-  table->setData(row++, column, "grey89");
-  table->setData(row++, column, "grey90");
-  table->setData(row++, column, "grey91");
-  table->setData(row++, column, "grey92");
-  table->setData(row++, column, "grey93");
-  table->setData(row++, column, "grey94");
-  table->setData(row++, column, "grey95");
-  table->setData(row++, column, "grey96");
-  table->setData(row++, column, "grey97");
-  table->setData(row++, column, "grey98");
-  table->setData(row++, column, "grey99");
-  table->setData(row++, column, "grey100");
+  table->setData(row++, column, true, "grey85");
+  table->setData(row++, column, true, "grey86");
+  table->setData(row++, column, true, "grey87");
+  table->setData(row++, column, true, "grey88");
+  table->setData(row++, column, true, "grey89");
+  table->setData(row++, column, true, "grey90");
+  table->setData(row++, column, true, "grey91");
+  table->setData(row++, column, true, "grey92");
+  table->setData(row++, column, true, "grey93");
+  table->setData(row++, column, true, "grey94");
+  table->setData(row++, column, true, "grey95");
+  table->setData(row++, column, true, "grey96");
+  table->setData(row++, column, true, "grey97");
+  table->setData(row++, column, true, "grey98");
+  table->setData(row++, column, true, "grey99");
+  table->setData(row++, column, true, "grey100");
 
   row = 0;
   column++;
-  table->setData(row++, column, "white");
-  table->setData(row++, column, "snow");
-  table->setData(row++, column, "ghost white");
-  table->setData(row++, column, "white smoke");
-  table->setData(row++, column, "snow2");
-  table->setData(row++, column, "snow3");
-  table->setData(row++, column, "snow4");
-  table->setData(row++, column, "gainsboro");
-  table->setData(row++, column, "light gray");
-  table->setData(row++, column, "dark gray");
-  table->setData(row++, column, "light slate gray", "white");
-  table->setData(row++, column, "slate gray", "white");
-  table->setData(row++, column, "gray", "white");
-  table->setData(row++, column, "dim gray", "white");
-  table->setData(row++, column, "black", "white");
+  table->setData(row++, column, true, "white");
+  table->setData(row++, column, true, "snow");
+  table->setData(row++, column, true, "ghost white");
+  table->setData(row++, column, true, "white smoke");
+  table->setData(row++, column, true, "snow2");
+  table->setData(row++, column, true, "snow3");
+  table->setData(row++, column, true, "snow4");
+  table->setData(row++, column, true, "gainsboro");
+  table->setData(row++, column, true, "light gray");
+  table->setData(row++, column, true, "dark gray");
+  table->setData(row++, column, true, "light slate gray", "white");
+  table->setData(row++, column, true, "slate gray", "white");
+  table->setData(row++, column, true, "gray", "white");
+  table->setData(row++, column, true, "dim gray", "white");
+  table->setData(row++, column, true, "black", "white");
 
   row = 0;
   column++;
@@ -964,14 +981,15 @@ ExtendedColorDialog::color() const
 }
 
 void
-ExtendedColorDialog::setColor(const QColor& color)
+ExtendedColorDialog::setColor(const QColor& color, const QString& name)
 {
   m_color = color;
+  m_name = name;
   m_colorDlg->setCurrentColor(color);
   for (int i = 1; i < m_tabs->count(); i++) {
     auto frame = qobject_cast<ColorDragFrame*>(m_tabs->widget(i));
     if (frame) {
-      frame->getDisplay()->setCurrentColor(color);
+      frame->display()->setCurrentColor(color, name);
     }
   }
 }
@@ -983,14 +1001,15 @@ ExtendedColorDialog::secondaryColor()
 }
 
 void
-ExtendedColorDialog::setSecondaryColor(const QColor& color)
+ExtendedColorDialog::setSecondaryColor(const QColor& color, const QString& name)
 {
   m_dropColor = color;
+  m_dropName = name;
   m_colorDlg->setCurrentColor(m_color);
   for (int i = 1; i < m_tabs->count(); i++) {
     auto frame = qobject_cast<ColorDragFrame*>(m_tabs->widget(i));
     if (frame) {
-      frame->getDisplay()->setSecondaryColor(m_dropColor);
+      frame->display()->setSecondaryColor(color, name);
     }
   }
 }
@@ -1081,6 +1100,12 @@ ExtendedColorDialog::sizeHint() const
   return QSize(900, 1500);
 }
 
+QString
+ExtendedColorDialog::secondaryName() const
+{
+  return m_dropName;
+}
+
 void
 ExtendedColorDialog::acceptColor()
 {
@@ -1127,11 +1152,13 @@ ColorDropDisplay::ColorDropDisplay(const QColor& color,
 }
 
 void
-ColorDropDisplay::setCurrentColor(const QColor& color)
+ColorDropDisplay::setCurrentColor(const QColor& color, const QString& name)
 {
   m_color = color;
+  m_name = name;
   if (!m_dropColorSet) {
     m_dropColor = color;
+    m_dropName = name;
     m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
     m_dropColorSet = true;
   }
@@ -1140,12 +1167,14 @@ ColorDropDisplay::setCurrentColor(const QColor& color)
 }
 
 void
-ColorDropDisplay::setSecondaryColor(const QColor& color)
+ColorDropDisplay::setSecondaryColor(const QColor& color, const QString& name)
 {
   m_dropColor = color;
+  m_dropName = name;
   if (!m_colorSet) {
     // if primary color is not yet set set it to this color.
     m_color = color;
+    m_name = name;
     m_left->setStyleSheet(colorToStyle(m_color, Left));
     m_colorSet = true;
   }
@@ -1156,7 +1185,7 @@ ColorDropDisplay::setSecondaryColor(const QColor& color)
 void
 ColorDropDisplay::dragEnterEvent(QDragEnterEvent* event)
 {
-  if (event->mimeData()->hasColor())
+  if (event->mimeData()->hasFormat("colordata"))
     event->acceptProposedAction();
   else
     event->ignore();
@@ -1165,9 +1194,18 @@ ColorDropDisplay::dragEnterEvent(QDragEnterEvent* event)
 void
 ColorDropDisplay::dropEvent(QDropEvent* event)
 {
-  if (event->mimeData()->hasColor()) {
-    QColor color = event->mimeData()->colorData().value<QColor>();
-    setSecondaryColor(color);
+  if (event->mimeData()->hasFormat("colordata")) {
+    auto mimeData = event->mimeData();
+    if (mimeData) {
+      ColorDragData data;
+      auto array = mimeData->data("colordata");
+      QDataStream ds(&array, QIODevice::ReadWrite);
+      ds.setVersion(QDataStream::Qt_5_15);
+      ds >> data;
+      auto name = QString(data.name);
+      auto color = QColor(data.r, data.g, data.b);
+      setSecondaryColor(color, name);
+    }
   }
 }
 
@@ -1175,11 +1213,7 @@ QString
 ColorDropDisplay::colorToStyle(const QColor& color, Side side)
 {
   if (color.isValid()) {
-    auto red = QStringLiteral("%1").arg(color.red(), 2, 16, QLatin1Char('0'));
-    auto green =
-      QStringLiteral("%1").arg(color.green(), 2, 16, QLatin1Char('0'));
-    auto blue = QStringLiteral("%1").arg(color.blue(), 2, 16, QLatin1Char('0'));
-    auto value = QString("#%1%2%3").arg(red, green, blue);
+    QString value = color.name();
     if (side == Left) {
       auto val = DISPLAYLABELLEFT.arg(value);
       return val;
@@ -1190,6 +1224,18 @@ ColorDropDisplay::colorToStyle(const QColor& color, Side side)
   }
   auto val = DISPLAYLABELRIGHT.arg("white");
   return val;
+}
+
+QString
+ColorDropDisplay::dropName() const
+{
+  return m_dropName;
+}
+
+QString
+ColorDropDisplay::name() const
+{
+  return m_name;
 }
 
 QColor
@@ -1216,7 +1262,8 @@ QString
 ColorDragTable::name(const QModelIndex& index)
 {
   auto data = m_model->data(index, Qt::DisplayRole);
-  return data.toString();
+  auto name = data.toString();
+  return name;
 }
 
 QColor
@@ -1236,13 +1283,22 @@ ColorDragTable::background(const QModelIndex& index)
 void
 ColorDragTable::setData(int row,
                         int column,
+                        bool x11,
                         const QString& back,
                         const QString& fore)
 {
-  auto background = QColorConstants::Svg::color(back);
-  QColor foreground;
+  QColor background, foreground;
+  if (x11) {
+    background = QColorConstants::X11::color(back);
+  } else {
+    background = QColorConstants::Svg::color(back);
+  }
   if (!fore.isEmpty()) {
-    foreground = QColorConstants::Svg::color(fore);
+    if (x11) {
+      foreground = QColorConstants::X11::color(fore);
+    } else {
+      foreground = QColorConstants::Svg::color(fore);
+    }
   }
   m_model->setColorData(row, column, back, background, foreground);
   auto index = m_model->index(row, column);
@@ -1259,6 +1315,7 @@ ColorDragTable::mousePressEvent(QMouseEvent* event)
     if (index.isValid()) {
       m_dragStartPosition = pos;
       m_color = background(index);
+      m_name = name(index);
       auto w = columnWidth(index.column());
       auto h = rowHeight(index.row());
       m_size = QSize(w, h);
@@ -1280,14 +1337,24 @@ ColorDragTable::mouseMoveEvent(QMouseEvent* event)
     return;
 
   if (m_color.isValid()) {
-    auto index = indexAt(mousePos);
-    QDrag* drag = new QDrag(this);
+    auto drag = new QDrag(this);
     m_pixmap = QPixmap(m_size);
     m_pixmap.fill(m_color);
     drag->setPixmap(m_pixmap);
+
+    ColorDragData data;
+    data.r = m_color.red();
+    data.g = m_color.green();
+    data.b = m_color.blue();
+    data.name = m_name;
+    QByteArray array;
+    QDataStream ds(&array, QIODevice::ReadWrite);
+    ds.setVersion(QDataStream::Qt_5_15);
+    ds << data;
+
     m_pixmap = QPixmap();
-    QMimeData* mimeData = new QMimeData;
-    mimeData->setColorData(m_color);
+    auto mimeData = new QMimeData();
+    mimeData->setData("colordata", array);
     drag->setMimeData(mimeData);
     drag->setHotSpot(
       QPoint(drag->pixmap().width() / 2, drag->pixmap().height()));
@@ -1312,15 +1379,15 @@ ColorDragTable::dragMoveEvent(QDragMoveEvent* /*event*/)
 }
 
 ColorDropDisplay*
-ColorDragTable::label() const
+ColorDragTable::display() const
 {
-  return m_label;
+  return m_display;
 }
 
 void
 ColorDragTable::setLabel(ColorDropDisplay* label)
 {
-  m_label = label;
+  m_display = label;
 }
 
 ColorDragModel::ColorDragModel(int rows, int columns)
@@ -1453,19 +1520,33 @@ ColorDragFrame::setTable(ColorDragTable* table)
 }
 
 ColorDropDisplay*
-ColorDragFrame::getDisplay() const
+ColorDragFrame::display() const
 {
-  return display;
+  return m_display;
 }
 
 void
 ColorDragFrame::setDisplay(ColorDropDisplay* value)
 {
-  display = value;
+  m_display = value;
 }
 
 QGridLayout*
 ColorDragFrame::layout() const
 {
   return qobject_cast<QGridLayout*>(QFrame::layout());
+}
+
+QDataStream&
+operator<<(QDataStream& out, const ColorDragData& data)
+{
+  out << data.r << data.g << data.b << data.name;
+  return out;
+}
+
+QDataStream&
+operator>>(QDataStream& in, ColorDragData& data)
+{
+  in >> data.r >> data.g >> data.b >> data.name;
+  return in;
 }

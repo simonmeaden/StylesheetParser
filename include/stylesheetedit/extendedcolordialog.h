@@ -3,6 +3,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QBuffer>
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QDialog>
@@ -35,11 +36,11 @@ class ColorDropDisplay : public QFrame
 
 public:
   ColorDropDisplay(const QColor& color,
-                 const QColor& dropColor,
-                 QWidget* parent = nullptr);
+                   const QColor& dropColor,
+                   QWidget* parent = nullptr);
 
-  void setCurrentColor(const QColor& color);
-  void setSecondaryColor(const QColor& color);
+  void setCurrentColor(const QColor& color, const QString& name);
+  void setSecondaryColor(const QColor& color, const QString& name);
 
   static const QString DISPLAYLABELRIGHT;
   static const QString DISPLAYLABELLEFT;
@@ -47,6 +48,8 @@ public:
 
   QColor color() const;
   QColor dropColor() const;
+  QString name() const;
+  QString dropName() const;
 
 protected:
   void dragEnterEvent(QDragEnterEvent* event) override;
@@ -55,10 +58,13 @@ protected:
   QString colorToStyle(const QColor& color, Side side = Right);
 
 private:
+  //  int COUNT=0;
   QLabel* m_left;
   QLabel* m_right;
   QColor m_color;
+  QString m_name;
   QColor m_dropColor;
+  QString m_dropName;
   bool m_colorSet, m_dropColorSet;
 };
 
@@ -108,6 +114,20 @@ private:
   int m_columns = 0;
 };
 
+struct ColorDragData
+{
+  int r;
+  int g;
+  int b;
+  QString name;
+};
+Q_DECLARE_METATYPE(ColorDragData)
+
+QDataStream&
+operator<<(QDataStream& out, const ColorDragData& a);
+QDataStream&
+operator>>(QDataStream& in, ColorDragData& a);
+
 class ColorDragTable : public QTableView
 {
   Q_OBJECT
@@ -119,11 +139,12 @@ public:
   QColor background(const QModelIndex& index);
   void setData(int row,
                int column,
+               bool x11,
                const QString& back,
                const QString& fore = QString());
 
   void setLabel(ColorDropDisplay* label);
-  ColorDropDisplay* label() const;
+  ColorDropDisplay* display() const;
 
 protected:
   void mousePressEvent(QMouseEvent* event) override;
@@ -134,10 +155,11 @@ protected:
 private:
   QPoint m_dragStartPosition;
   QColor m_color;
+  QString m_name;
   ColorDragModel* m_model;
   QSize m_size;
   QPixmap m_pixmap;
-  ColorDropDisplay* m_label;
+  ColorDropDisplay* m_display;
 };
 
 class ColorDragFrame : public QFrame
@@ -145,21 +167,20 @@ class ColorDragFrame : public QFrame
   Q_OBJECT
 public:
   ColorDragFrame(QWidget* parent)
-    : QFrame(parent) {
+    : QFrame(parent)
+  {}
 
-  }
+  ColorDragTable* table() const;
+  void setTable(ColorDragTable* table);
 
-  ColorDragTable *table() const;
-  void setTable(ColorDragTable *table);
+  ColorDropDisplay* display() const;
+  void setDisplay(ColorDropDisplay* value);
 
-  ColorDropDisplay *getDisplay() const;
-  void setDisplay(ColorDropDisplay *value);
-
-  QGridLayout*layout() const;
+  QGridLayout* layout() const;
 
 private:
   ColorDragTable* m_table;
-  ColorDropDisplay* display;
+  ColorDropDisplay* m_display;
 };
 
 class ExtendedColorDialog : public QDialog
@@ -178,8 +199,12 @@ class ExtendedColorDialog : public QDialog
 public:
   ExtendedColorDialog(QWidget* parent = nullptr);
   ExtendedColorDialog(const QColor& initialColor, QWidget* parent = nullptr);
+  ExtendedColorDialog(const QString& initialColor, QWidget* parent = nullptr);
   ExtendedColorDialog(const QColor& initialColor,
                       const QColor& secondaryColor,
+                      QWidget* parent = nullptr);
+  ExtendedColorDialog(const QString& initialColor,
+                      const QString& secondaryColor,
                       QWidget* parent = nullptr);
 
   //! Returns the selected color as a QColor object.
@@ -194,7 +219,7 @@ public:
   QColor color() const;
   //! Sets the initial color as a QColor object.
   //! \sa setSecondaryColor()
-  void setColor(const QColor& color);
+  void setColor(const QColor& color, const QString& name = QString());
   //! Returns the selected secondary color as a QColor object.
   //!
   //! The secondary color allows the user to display and
@@ -206,7 +231,7 @@ public:
   //! The secondary color allows the user to display and
   //! compare two colors.
   //! \sa setColor()
-  void setSecondaryColor(const QColor& color);
+  void setSecondaryColor(const QColor& color, const QString& name = QString());
 
   //! Returns the selected color as a stylesheet rgb() string.
   //!
@@ -242,6 +267,13 @@ public:
   //! name will be returned.
   //! If 'Cancel' has been pressed then an empty string is returned.
   QString name() const;
+  //! Returns the secondary color as a stylesheet name string.
+  //!
+  //! If no color has been selected then the color will be tested
+  //! against all possible X11 name strings and if one matches this
+  //! name will be returned.
+  //! If 'Cancel' has been pressed then an empty string is returned.
+  QString secondaryName() const;
 
   //! Returns the selected color as a #ffffff style string.
   //!
@@ -267,38 +299,25 @@ protected:
 
 private:
   QTabWidget* m_tabs;
-  //  ColorDragTable *m_svgTable, *m_x11Color1Tbl, *m_x11Color2Tbl,
-  //  *m_x11MonoTbl;
-  QColor m_color, m_dropColor;
+  QColor m_color;
+  QColor m_dropColor;
   QString m_name;
+  QString m_dropName;
   QColorDialog* m_colorDlg;
-  //  ColorDropLabel *m_x11Color1Lbl, *m_x11Color2Lbl, *m_x11MonoLbl,
-  //    *m_svgColor1Lbl;
   Tabs m_currentTab;
 
   void acceptColor();
   void acceptStandardColor();
   void initGui();
-  QFrame* initSvgFrame();
+  QFrame* initSvgFrame1();
+  QFrame* initSvgFrame2();
   QFrame* initX11ColorFrame1();
   QFrame* initX11ColorFrame2();
   QFrame* initX11MonoFrame();
   QDialogButtonBox* createBtnBox();
   ColorDropDisplay* createColorDisplay();
-  ColorDragTable* createColorTable(ColorDragFrame *frame);
-  //  void setSvgItem(int row,
-  //                  int column,
-  //                  const QString& back,
-  //                  const QString& fore = QString("black"));
-  //  void setX11Item(ColorDragTable* table,
-  //                  int row,
-  //                  int column,
-  //                  const QString& back,
-  //                  const QString& fore = QString(Qt::black));
+  ColorDragTable* createColorTable(ColorDragFrame* frame);
   void colorClicked(const QModelIndex& index);
-  //  void x11Color1Clicked(const QModelIndex& index);
-  //  void selectX11_2Color(const QModelIndex& index);
-  //  void selectX11_Mono(const QModelIndex& index);
 
   void tabChanged(int index);
 
@@ -310,6 +329,9 @@ private:
   static const QString HSLACOLOR;
   static const QString HSVCOLOR;
   static const QString HSVACOLOR;
+  void setCurrentColorsFromNamedTab();
+  void setCurrentColorsToNamedTab(int index);
+  QColor getSvgOrX11Color(const QString& initialColor);
 };
 
 #endif // SVGCOLORNAMEDIALOG_H

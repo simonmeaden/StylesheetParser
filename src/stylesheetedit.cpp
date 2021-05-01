@@ -46,6 +46,7 @@ StylesheetEdit::StylesheetEdit(QWidget* parent)
   qRegisterMetaType<NodeType>("NodeType");
   qRegisterMetaType<NodeState>("NodeCheck");
   qRegisterMetaType<QTextCharFormat>("QTextCharFormat");
+  qRegisterMetaTypeStreamOperators<ColorDragData>("ColorDragData");
 
   m_editor->setup(m_bookmarkArea, m_linenumberArea);
 

@@ -39,7 +39,7 @@ public:
                    const QColor& dropColor,
                    QWidget* parent = nullptr);
 
-  void setCurrentColor(const QColor& color, const QString& name);
+  void setPrimaryColor(const QColor& color, const QString& name);
   void setSecondaryColor(const QColor& color, const QString& name);
 
   static const QString DISPLAYLABELRIGHT;
@@ -51,6 +51,10 @@ public:
   QString name() const;
   QString dropName() const;
 
+signals:
+  void primaryColorChanged(const QColor& color, const QString& name);
+  void secondaryColorChanged(const QColor& color, const QString& name);
+
 protected:
   void dragEnterEvent(QDragEnterEvent* event) override;
   void dropEvent(QDropEvent* event) override;
@@ -58,7 +62,6 @@ protected:
   QString colorToStyle(const QColor& color, Side side = Right);
 
 private:
-  //  int COUNT=0;
   QLabel* m_left;
   QLabel* m_right;
   QColor m_color;
@@ -143,9 +146,6 @@ public:
                const QString& back,
                const QString& fore = QString());
 
-  void setLabel(ColorDropDisplay* label);
-  ColorDropDisplay* display() const;
-
 protected:
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
@@ -159,28 +159,6 @@ private:
   ColorDragModel* m_model;
   QSize m_size;
   QPixmap m_pixmap;
-  ColorDropDisplay* m_display;
-};
-
-class ColorDragFrame : public QFrame
-{
-  Q_OBJECT
-public:
-  ColorDragFrame(QWidget* parent)
-    : QFrame(parent)
-  {}
-
-  ColorDragTable* table() const;
-  void setTable(ColorDragTable* table);
-
-  ColorDropDisplay* display() const;
-  void setDisplay(ColorDropDisplay* value);
-
-  QGridLayout* layout() const;
-
-private:
-  ColorDragTable* m_table;
-  ColorDropDisplay* m_display;
 };
 
 class ExtendedColorDialog : public QDialog
@@ -219,7 +197,7 @@ public:
   QColor color() const;
   //! Sets the initial color as a QColor object.
   //! \sa setSecondaryColor()
-  void setColor(const QColor& color, const QString& name = QString());
+  void setPrimaryColor(const QColor& color, const QString& name = QString());
   //! Returns the selected secondary color as a QColor object.
   //!
   //! The secondary color allows the user to display and
@@ -284,15 +262,17 @@ public:
   //! an empty string is returned.
   QString hash(int alpha = false) const;
 
-signals:
-  //! This signal is emitted just after the user has clicked OK to
-  //! select a color to use. The chosen color is specified by color.
-  void colorSelected(const QColor& color);
+  static QString svgOrX11Name(const QColor& color);
+  static QColor svgOrX11Color(const QString& initialColor);
 
-  //! This signal is emitted whenever the current color changes in the dialog.
+signals:
+  //! This signal is emitted whenever the primary color changes in the dialog.
   //! The current color is specified by color.
-  //! \note Notifier signal for property currentColor.
-  void currentColorChanged(const QColor& color);
+  void primaryColorChanged(const QColor& color, const QString& name);
+  //! This signal is emitted whenever the secondary color changes in the dialog.
+  //! The current color is specified by color.
+  void secondaryColorChanged(const QColor& color, const QString& name);
+
 
 protected:
   QSize sizeHint() const override;
@@ -304,22 +284,24 @@ private:
   QString m_name;
   QString m_dropName;
   QColorDialog* m_colorDlg;
+  ColorDropDisplay* m_display;
   Tabs m_currentTab;
 
-  void acceptColor();
-  void acceptStandardColor();
+//  void acceptColor();
+  void acceptChanges();
   void initGui();
-  QFrame* initSvgFrame1();
-  QFrame* initSvgFrame2();
-  QFrame* initX11ColorFrame1();
-  QFrame* initX11ColorFrame2();
-  QFrame* initX11MonoFrame();
+  ColorDragTable* initSvgFrame1();
+  ColorDragTable* initSvgFrame2();
+  ColorDragTable* initX11ColorFrame1();
+  ColorDragTable* initX11ColorFrame2();
+  ColorDragTable* initX11MonoFrame();
   QDialogButtonBox* createBtnBox();
   ColorDropDisplay* createColorDisplay();
-  ColorDragTable* createColorTable(ColorDragFrame* frame);
+  ColorDragTable* createColorTable();
   void colorClicked(const QModelIndex& index);
-
-  void tabChanged(int index);
+  void primaryColorHasChanged(const QColor& color, const QString &name);
+  void dialogColorHasChanged(const QColor& color);
+  void secondaryColorHasChanged(const QColor& color, const QString &name);
 
   static const QString HASHACOLOR;
   static const QString HASHCOLOR;
@@ -329,9 +311,8 @@ private:
   static const QString HSLACOLOR;
   static const QString HSVCOLOR;
   static const QString HSVACOLOR;
-  void setCurrentColorsFromNamedTab();
-  void setCurrentColorsToNamedTab(int index);
-  QColor getSvgOrX11Color(const QString& initialColor);
 };
+
+
 
 #endif // SVGCOLORNAMEDIALOG_H

@@ -52,23 +52,7 @@ ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
   , m_dropColor(QColor(Qt::white))
 {
   initGui();
-  setColor(initialColor, "white");
-}
-
-QColor
-ExtendedColorDialog::getSvgOrX11Color(const QString& initialColor)
-{
-  auto color = QColorConstants::Svg::color(initialColor);
-  if (color.isValid()) {
-    return color;
-  } else {
-    color = QColorConstants::X11::color(initialColor);
-    if (color.isValid()) {
-      return color;
-    } else {
-      return Qt::white;
-    }
-  }
+  setPrimaryColor(initialColor, "white");
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
@@ -76,8 +60,8 @@ ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
   : QDialog(parent)
 {
   initGui();
-  auto color = getSvgOrX11Color(initialColor);
-  setColor(color, initialColor);
+  auto color = svgOrX11Color(initialColor);
+  setPrimaryColor(color, initialColor);
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
@@ -88,7 +72,7 @@ ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
   , m_dropColor(secondaryColor)
 {
   initGui();
-  setColor(m_color);
+  setPrimaryColor(m_color);
   setSecondaryColor(m_dropColor);
 }
 
@@ -97,10 +81,10 @@ ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
                                          QWidget* parent)
 {
   initGui();
-  auto color = getSvgOrX11Color(initialColor);
-  setColor(color, initialColor);
+  auto color = svgOrX11Color(initialColor);
+  setPrimaryColor(color, initialColor);
   initGui();
-  color = getSvgOrX11Color(secondaryColor);
+  color = svgOrX11Color(secondaryColor);
   if (color == Qt::white) {
     setSecondaryColor(color, "white");
   } else {
@@ -116,7 +100,8 @@ ExtendedColorDialog::initGui()
   m_tabs = new QTabWidget(this);
   auto layout = new QGridLayout;
   layout->addWidget(m_tabs, 0, 0);
-  layout->addWidget(createBtnBox(), 1, 0);
+  layout->addWidget((m_display = createColorDisplay()), 1, 0);
+  layout->addWidget(createBtnBox(), 2, 0);
   setLayout(layout);
 
   m_colorDlg = new QColorDialog(m_color, this);
@@ -127,28 +112,16 @@ ExtendedColorDialog::initGui()
   connect(m_colorDlg,
           &QColorDialog::currentColorChanged,
           this,
-          &ExtendedColorDialog::currentColorChanged);
+          &ExtendedColorDialog::dialogColorHasChanged);
 
-  auto svgColors1 = initSvgFrame1();
-  m_tabs->addTab(svgColors1, "SVG Color Names 1");
-
-  auto svgColors2 = initSvgFrame2();
-  m_tabs->addTab(svgColors2, "SVG Color Names 2");
-
-  auto x11Colors1 = initX11ColorFrame1();
-  m_tabs->addTab(x11Colors1, "X11 Colors 1");
-  auto x11Colors2 = initX11ColorFrame2();
-  m_tabs->addTab(x11Colors2, "X11 Colors 2");
-  auto x11Mono = initX11MonoFrame();
-  m_tabs->addTab(x11Mono, "X11 Mono Shades");
+  m_tabs->addTab(initSvgFrame1(), "SVG Color Names 1");
+  m_tabs->addTab(initSvgFrame2(), "SVG Color Names 2");
+  m_tabs->addTab(initX11ColorFrame1(), "X11 Colors 1");
+  m_tabs->addTab(initX11ColorFrame2(), "X11 Colors 2");
+  m_tabs->addTab(initX11MonoFrame(), "X11 Mono Shades");
 
   m_currentTab = SvgTab;
   m_tabs->setCurrentIndex(int(m_currentTab));
-
-  connect(m_tabs,
-          &QTabWidget::currentChanged,
-          this,
-          &ExtendedColorDialog::tabChanged);
 }
 
 void
@@ -164,60 +137,35 @@ ExtendedColorDialog::colorClicked(const QModelIndex& index)
                                  "qproperty-currentItemBackground: %1;"
                                  "}")
                            .arg(m_color.name()));
-    table->display()->setCurrentColor(m_color, m_name);
-    emit colorSelected(m_color);
+    m_display->setPrimaryColor(m_color, m_name);
   }
 }
 
 void
-ExtendedColorDialog::setCurrentColorsFromNamedTab()
+ExtendedColorDialog::primaryColorHasChanged(const QColor& color,
+                                            const QString& name)
 {
-  auto widget = m_tabs->widget(int(m_currentTab));
-  auto frame = qobject_cast<ColorDragFrame*>(widget);
-  auto display = frame->display();
-  if (display) {
-    m_color = display->color();
-    m_name = display->name();
-    m_dropColor = display->dropColor();
-    m_dropName = display->dropName();
-  }
+  // receives color/name from display.
+  m_color = color;
+  m_name = name;
+  emit primaryColorChanged(m_color, m_name);
+}
+
+void ExtendedColorDialog::dialogColorHasChanged(const QColor &color)
+{
+  m_color = color;
+  m_name = ExtendedColorDialog::svgOrX11Name(color);
+  m_display->setPrimaryColor(m_color, m_name);
 }
 
 void
-ExtendedColorDialog::setCurrentColorsToNamedTab(int index)
+ExtendedColorDialog::secondaryColorHasChanged(const QColor& color,
+                                              const QString& name)
 {
-  auto widget = m_tabs->widget(index);
-  if (widget) {
-    auto frame = qobject_cast<ColorDragFrame*>(widget);
-    if (frame) {
-      auto display = frame->display();
-      if (display) {
-        display->setCurrentColor(m_color, m_name);
-        display->setSecondaryColor(m_dropColor, m_dropName);
-      }
-    }
-  }
-}
-
-void
-ExtendedColorDialog::tabChanged(int index)
-{
-  if (index == ColorDialog) {
-    if (m_currentTab != ColorDialog) {
-      setCurrentColorsFromNamedTab();
-    } else {
-      m_color = m_colorDlg->currentColor();
-    }
-    m_colorDlg->setCurrentColor(m_color);
-  } else {
-    if (m_currentTab == ColorDialog) {
-      m_color = m_colorDlg->currentColor();
-    } else {
-      setCurrentColorsFromNamedTab();
-    }
-    setCurrentColorsToNamedTab(index);
-  }
-  m_currentTab = Tabs(index);
+  // receives color/name from display.
+  m_dropColor = color;
+  m_dropName = name;
+  emit primaryColorChanged(m_dropColor, m_dropName);
 }
 
 QDialogButtonBox*
@@ -228,7 +176,7 @@ ExtendedColorDialog::createBtnBox()
   connect(btnbox,
           &QDialogButtonBox::accepted,
           this,
-          &ExtendedColorDialog::acceptStandardColor);
+          &ExtendedColorDialog::acceptChanges);
   connect(btnbox, &QDialogButtonBox::rejected, this, &QDialog::reject);
   return btnbox;
 }
@@ -236,20 +184,24 @@ ExtendedColorDialog::createBtnBox()
 ColorDropDisplay*
 ExtendedColorDialog::createColorDisplay()
 {
-  auto lbl = new ColorDropDisplay(m_color, m_dropColor, this);
-  lbl->setMinimumSize(QSize(300, 90));
-  lbl->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  return lbl;
+  auto display = new ColorDropDisplay(m_color, m_dropColor, this);
+  display->setMinimumSize(QSize(300, 90));
+  display->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  connect(display,
+          &ColorDropDisplay::primaryColorChanged,
+          this,
+          &ExtendedColorDialog::primaryColorHasChanged);
+  connect(display,
+          &ColorDropDisplay::secondaryColorChanged,
+          this,
+          &ExtendedColorDialog::secondaryColorHasChanged);
+  return display;
 }
 
 ColorDragTable*
-ExtendedColorDialog::createColorTable(ColorDragFrame* frame)
+ExtendedColorDialog::createColorTable()
 {
   auto table = new ColorDragTable(17, 7, this);
-  auto display = createColorDisplay();
-  frame->setDisplay(display);
-  frame->setTable(table);
-  table->setLabel(display);
   table->setSelectionMode(QTableView::SingleSelection);
   table->setSelectionBehavior(QTableView::SelectItems);
   table->setDragDropMode(QTableView::DragOnly);
@@ -260,22 +212,15 @@ ExtendedColorDialog::createColorTable(ColorDragFrame* frame)
   table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   connect(
     table, &ColorDragTable::clicked, this, &ExtendedColorDialog::colorClicked);
-  frame->layout()->addWidget(table, 0, 0);
-  frame->layout()->addWidget(display, 1, 0);
   return table;
 }
 
-QFrame*
+ColorDragTable*
 ExtendedColorDialog::initSvgFrame1()
 {
-  auto frame = new ColorDragFrame(this);
-  auto layout = new QGridLayout;
-  frame->setLayout(layout);
-
-  auto table = createColorTable(frame);
+  auto table = createColorTable();
 
   int row = 0, column = 0;
-  // blues
   table->setData(row++, column, false, "aliceblue");
   table->setData(row++, column, false, "azure");
   table->setData(row++, column, false, "lightcyan");
@@ -354,17 +299,13 @@ ExtendedColorDialog::initSvgFrame1()
   table->setData(row++, column, false, "dimgray", "white");
   table->setData(row++, column, false, "black", "white");
 
-  return frame;
+  return table;
 }
 
-QFrame*
+ColorDragTable*
 ExtendedColorDialog::initSvgFrame2()
 {
-  auto frame = new ColorDragFrame(this);
-  auto layout = new QGridLayout;
-  frame->setLayout(layout);
-
-  auto table = createColorTable(frame);
+  auto table = createColorTable();
 
   int row = 0, column = 0;
 
@@ -452,17 +393,13 @@ ExtendedColorDialog::initSvgFrame2()
   table->setData(row++, column, false, "darkred", "white");
   table->setData(row++, column, false, "maroon", "white");
 
-  return frame;
+  return table;
 }
 
-QFrame*
+ColorDragTable*
 ExtendedColorDialog::initX11ColorFrame1()
 {
-  auto frame = new ColorDragFrame(this);
-  auto layout = new QGridLayout;
-  frame->setLayout(layout);
-
-  auto table = createColorTable(frame);
+  auto table = createColorTable();
 
   int row = 0, column = 0;
   table->setData(row++, column, true, "mint cream");
@@ -571,17 +508,13 @@ ExtendedColorDialog::initX11ColorFrame1()
   table->setData(row++, column, true, "olive drab", "white");
   table->setData(row++, column, true, "dark olive green", "white");
 
-  return frame;
+  return table;
 }
 
-QFrame*
+ColorDragTable*
 ExtendedColorDialog::initX11ColorFrame2()
 {
-  auto frame = new ColorDragFrame(this);
-  auto layout = new QGridLayout;
-  frame->setLayout(layout);
-
-  auto table = createColorTable(frame);
+  auto table = createColorTable();
 
   int row = 0, column = 0;
   table->setData(row++, column, true, "cyan");
@@ -819,17 +752,13 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "maroon3", "white");
   table->setData(row++, column, true, "maroon4", "white");
 
-  return frame;
+  return table;
 }
 
-QFrame*
+ColorDragTable*
 ExtendedColorDialog::initX11MonoFrame()
 {
-  auto frame = new ColorDragFrame(this);
-  auto layout = new QGridLayout;
-  frame->setLayout(layout);
-
-  auto table = createColorTable(frame);
+  auto table = createColorTable();
 
   auto row = 0;
   auto column = 0;
@@ -971,7 +900,7 @@ ExtendedColorDialog::initX11MonoFrame()
   row = 0;
   column++;
 
-  return frame;
+  return table;
 }
 
 QColor
@@ -981,16 +910,13 @@ ExtendedColorDialog::color() const
 }
 
 void
-ExtendedColorDialog::setColor(const QColor& color, const QString& name)
+ExtendedColorDialog::setPrimaryColor(const QColor& color, const QString& name)
 {
   m_color = color;
   m_name = name;
   m_colorDlg->setCurrentColor(color);
-  for (int i = 1; i < m_tabs->count(); i++) {
-    auto frame = qobject_cast<ColorDragFrame*>(m_tabs->widget(i));
-    if (frame) {
-      frame->display()->setCurrentColor(color, name);
-    }
+  if (m_display) {
+    m_display->setPrimaryColor(color, name);
   }
 }
 
@@ -1006,11 +932,8 @@ ExtendedColorDialog::setSecondaryColor(const QColor& color, const QString& name)
   m_dropColor = color;
   m_dropName = name;
   m_colorDlg->setCurrentColor(m_color);
-  for (int i = 1; i < m_tabs->count(); i++) {
-    auto frame = qobject_cast<ColorDragFrame*>(m_tabs->widget(i));
-    if (frame) {
-      frame->display()->setSecondaryColor(color, name);
-    }
+  if (m_display) {
+    m_display->setSecondaryColor(color, name);
   }
 }
 
@@ -1094,6 +1017,36 @@ ExtendedColorDialog::hash(int alpha) const
   return QString();
 }
 
+QString
+ExtendedColorDialog::svgOrX11Name(const QColor& color)
+{
+  auto name = QColorConstants::Svg::name(color);
+  if (!name.isEmpty()) {
+    return name;
+  } else {
+    name = QColorConstants::X11::name(color);
+    if (!name.isEmpty()) {
+      return name;
+    }
+  }
+  return QString();
+}
+
+QColor
+ExtendedColorDialog::svgOrX11Color(const QString& initialColor)
+{
+  auto color = QColorConstants::Svg::color(initialColor);
+  if (color.isValid()) {
+    return color;
+  } else {
+    color = QColorConstants::X11::color(initialColor);
+    if (color.isValid()) {
+      return color;
+    }
+  }
+  return Qt::white;
+}
+
 QSize
 ExtendedColorDialog::sizeHint() const
 {
@@ -1106,18 +1059,18 @@ ExtendedColorDialog::secondaryName() const
   return m_dropName;
 }
 
-void
-ExtendedColorDialog::acceptColor()
-{
-  m_color = m_colorDlg->currentColor();
-  accept();
-}
+//void
+//ExtendedColorDialog::acceptColor()
+//{
+//  m_color = m_colorDlg->currentColor();
+//  accept();
+//}
 
 void
-ExtendedColorDialog::acceptStandardColor()
+ExtendedColorDialog::acceptChanges()
 {
   if (m_color.isValid()) {
-    emit currentColorChanged(m_color);
+    emit primaryColorChanged(m_color, m_name);
     accept();
   } else {
     reject();
@@ -1152,18 +1105,13 @@ ColorDropDisplay::ColorDropDisplay(const QColor& color,
 }
 
 void
-ColorDropDisplay::setCurrentColor(const QColor& color, const QString& name)
+ColorDropDisplay::setPrimaryColor(const QColor& color, const QString& name)
 {
   m_color = color;
   m_name = name;
-  if (!m_dropColorSet) {
-    m_dropColor = color;
-    m_dropName = name;
-    m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
-    m_dropColorSet = true;
-  }
   m_left->setStyleSheet(colorToStyle(m_color, Left));
   m_colorSet = true;
+  emit primaryColorChanged(color, name);
 }
 
 void
@@ -1171,21 +1119,16 @@ ColorDropDisplay::setSecondaryColor(const QColor& color, const QString& name)
 {
   m_dropColor = color;
   m_dropName = name;
-  if (!m_colorSet) {
-    // if primary color is not yet set set it to this color.
-    m_color = color;
-    m_name = name;
-    m_left->setStyleSheet(colorToStyle(m_color, Left));
-    m_colorSet = true;
-  }
   m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
   m_dropColorSet = true;
+  emit secondaryColorChanged(color, name);
 }
 
 void
 ColorDropDisplay::dragEnterEvent(QDragEnterEvent* event)
 {
-  if (event->mimeData()->hasFormat("colordata"))
+  auto md = event->mimeData();
+  if (md->hasFormat("colordata") || md->hasColor())
     event->acceptProposedAction();
   else
     event->ignore();
@@ -1194,7 +1137,9 @@ ColorDropDisplay::dragEnterEvent(QDragEnterEvent* event)
 void
 ColorDropDisplay::dropEvent(QDropEvent* event)
 {
-  if (event->mimeData()->hasFormat("colordata")) {
+  auto pos = event->pos();
+  auto md = event->mimeData();
+  if (md->hasFormat("colordata")) {
     auto mimeData = event->mimeData();
     if (mimeData) {
       ColorDragData data;
@@ -1204,7 +1149,20 @@ ColorDropDisplay::dropEvent(QDropEvent* event)
       ds >> data;
       auto name = QString(data.name);
       auto color = QColor(data.r, data.g, data.b);
-      setSecondaryColor(color, name);
+      if (m_left->geometry().contains(pos))
+        setPrimaryColor(color, QString());
+      else if (m_right->geometry().contains(pos))
+        setSecondaryColor(color, name);
+    }
+  } else if (md->hasColor()) {
+    auto vColor = md->colorData();
+    if (vColor.isValid()) {
+      auto color = vColor.value<QColor>();
+      auto name = ExtendedColorDialog::svgOrX11Name(color);
+      if (m_left->geometry().contains(pos))
+        setPrimaryColor(color, QString());
+      else if (m_right->geometry().contains(pos))
+        setSecondaryColor(color, name);
     }
   }
 }
@@ -1346,7 +1304,10 @@ ColorDragTable::mouseMoveEvent(QMouseEvent* event)
     data.r = m_color.red();
     data.g = m_color.green();
     data.b = m_color.blue();
-    data.name = m_name;
+    if (!m_name.isEmpty())
+      data.name = m_name;
+    else
+      data.name = ExtendedColorDialog::svgOrX11Name(m_color);
     QByteArray array;
     QDataStream ds(&array, QIODevice::ReadWrite);
     ds.setVersion(QDataStream::Qt_5_15);
@@ -1376,18 +1337,6 @@ ColorDragTable::dragMoveEvent(QDragMoveEvent* /*event*/)
 {
   // does nothing but it blocks the default qtableview
   // drag operations which we don't want.
-}
-
-ColorDropDisplay*
-ColorDragTable::display() const
-{
-  return m_display;
-}
-
-void
-ColorDragTable::setLabel(ColorDropDisplay* label)
-{
-  m_display = label;
 }
 
 ColorDragModel::ColorDragModel(int rows, int columns)
@@ -1505,36 +1454,6 @@ QModelIndex
 ColorDragModel::parent(const QModelIndex& /*child*/) const
 {
   return QModelIndex();
-}
-
-ColorDragTable*
-ColorDragFrame::table() const
-{
-  return m_table;
-}
-
-void
-ColorDragFrame::setTable(ColorDragTable* table)
-{
-  m_table = table;
-}
-
-ColorDropDisplay*
-ColorDragFrame::display() const
-{
-  return m_display;
-}
-
-void
-ColorDragFrame::setDisplay(ColorDropDisplay* value)
-{
-  m_display = value;
-}
-
-QGridLayout*
-ColorDragFrame::layout() const
-{
-  return qobject_cast<QGridLayout*>(QFrame::layout());
 }
 
 QDataStream&

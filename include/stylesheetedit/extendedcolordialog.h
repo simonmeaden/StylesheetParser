@@ -301,7 +301,8 @@ private:
   //  void acceptColor();
   void acceptChanges();
   void initGui();
-  ColorDragTable* initSvgFrame1();
+  ColorDragTable* initSvgBlue();
+  ColorDragTable *initSvgGreen();
   ColorDragTable* initSvgFrame2();
   ColorDragTable* initX11ColorFrame1();
   ColorDragTable* initX11ColorFrame2();

@@ -34,26 +34,6 @@ const QMap<QString, QColor>
 initaliseMap()
 {
   QMap<QString, QColor> map;
-  map.insert("Color0", QColorConstants::Svg::black);
-  map.insert("Color1", QColorConstants::Svg::white);
-  //       map.insert("Black", QColorConstants::Svg::Black);
-  //       map.insert("White", QColorConstants::Svg::White);
-  //       map.insert("DarkGray", QColorConstants::Svg::DarkGray);
-  //       map.insert("Gray", QColorConstants::Svg::Gray);
-  //       map.insert("LightGray", QColorConstants::Svg::LightGray);
-  //       map.insert("Red", QColorConstants::Svg::Red);
-  //       map.insert("Green", QColorConstants::Svg::Green);
-  //       map.insert("Blue", QColorConstants::Svg::Blue);
-  //       map.insert("Cyan", QColorConstants::Svg::Cyan);
-  //       map.insert("Magenta", QColorConstants::Svg::Magenta);
-  //       map.insert("yellow", QColorConstants::Svg::yellow);
-  //       map.insert("darkred", QColorConstants::Svg::darkred);
-  //       map.insert("darkgreen", QColorConstants::Svg::darkgreen);
-  //       map.insert("darkblue", QColorConstants::Svg::darkblue);
-  //       map.insert("darkcyan", QColorConstants::Svg::darkcyan);
-  //       map.insert("darkmagenta", QColorConstants::Svg::darkmagenta);
-  //       map.insert("DarkYellow", QColorConstants::Svg::DarkYellow);
-  //       map.insert("transparent", QColorConstants::Svg::Transparent);
   map.insert("aliceblue", QColorConstants::Svg::aliceblue);
   map.insert("antiquewhite", QColorConstants::Svg::antiquewhite);
   map.insert("aqua", QColorConstants::Svg::aqua);

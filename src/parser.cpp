@@ -1572,6 +1572,24 @@ Parser::handleMouseClicked(const QPoint& pos)
             QString message;
             while (status) {
               switch (status->state()) {
+                case GoodValue: {
+                  if (QColor::isValidColor(status->name())) {
+                    message = tr("Color value is good: %1").arg(status->name());
+                    suggestionsMenu->clear();
+                    auto widgetact = getWidgetAction(
+                      m_datastore->invalidIcon(), message, suggestionsMenu);
+                    suggestionsMenu->addAction(widgetact);
+                    suggestionsMenu->addSeparator();
+                    auto act = new QAction(m_datastore->addColonIcon(),
+                                           tr("Call ColorDialog."));
+                    updateColorDialogMenu(act,
+                                          property,
+                                          status->name(),
+                                          status->offset(),
+                                          section->position,
+                                          &suggestionsMenu);                  }
+                  break;
+                }
                 case BadValue: {
                   if (status->isInRect(pos)) {
                     for (auto i = 0; i < status->sectionCount(); i++) {
@@ -1839,13 +1857,10 @@ Parser::handleSuggestions(QAction* act)
     switch (type) {
       case ColorDialog: {
         auto property = qobject_cast<PropertyNode*>(node);
-        //        const QColorDialog::ColorDialogOptions options =
-        //          QColorDialog::ShowAlphaChannel |
-        //          QColorDialog::DontUseNativeDialog;
-        //        auto color =
-        //          QColorDialog::getColor(Qt::black, m_editor, "Choose Color",
-        //          options);
         auto colorDlg = new ExtendedColorDialog(m_editor);
+        if (QColor::isValidColor(oldName)) {
+          colorDlg->setPrimaryColor(QColor(oldName), oldName);
+        }
         if (colorDlg->exec() == QDialog::Accepted) {
           auto color = colorDlg->primaryColor();
           if (color.isValid()) {

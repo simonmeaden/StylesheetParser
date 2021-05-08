@@ -51,7 +51,7 @@ ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
                                          QWidget* parent)
   : QDialog(parent)
   , m_color(initialColor)
-  , m_dropColor(QColor(Qt::white))
+  , m_dropColor(Qt::white)
 {
   initGui();
   setPrimaryColor(initialColor, "white");
@@ -64,6 +64,7 @@ ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
   initGui();
   auto color = svgOrX11Color(initialColor);
   setPrimaryColor(color, initialColor);
+  setSecondaryColor(color, initialColor);
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
@@ -81,6 +82,7 @@ ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
 ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
                                          const QString& secondaryColor,
                                          QWidget* parent)
+  : QDialog(parent)
 {
   initGui();
   auto color = svgOrX11Color(initialColor);
@@ -111,20 +113,18 @@ ExtendedColorDialog::initGui()
                          QColorDialog::DontUseNativeDialog |
                          QColorDialog::NoButtons);
   m_colorDlg->setCurrentColor("#ffffffff");
-  m_tabs->addTab(m_colorDlg, "Color Dialog");
+  m_tabs->addTab(m_colorDlg, "Color Chooser");
   connect(m_colorDlg,
           &QColorDialog::currentColorChanged,
           this,
           &ExtendedColorDialog::dialogColorHasChanged);
 
-  m_tabs->addTab(initSvgFrame1(), "SVG Color Names 1");
-  m_tabs->addTab(initSvgFrame2(), "SVG Color Names 2");
-  m_tabs->addTab(initX11ColorFrame1(), "X11 Colors 1");
-  m_tabs->addTab(initX11ColorFrame2(), "X11 Colors 2");
-  m_tabs->addTab(initX11MonoFrame(), "X11 Mono Shades");
-
-  m_currentTab = SvgTab;
-  m_tabs->setCurrentIndex(int(m_currentTab));
+  m_tabs->addTab(initSvgBlue(), "SVG Blue");
+  m_tabs->addTab(initSvgGreen(), "SVG Green");
+  m_tabs->addTab(initSvgFrame2(), "SVG 2");
+  m_tabs->addTab(initX11ColorFrame1(), "X11 1");
+  m_tabs->addTab(initX11ColorFrame2(), "X11 2");
+  m_tabs->addTab(initX11MonoFrame(), "X11 Mono");
 }
 
 void
@@ -134,12 +134,17 @@ ExtendedColorDialog::colorClicked(const QModelIndex& index)
   if (index.isValid()) {
     m_color = table->background(index);
     m_name = table->name(index);
-    table->setStyleSheet(QString("QTableView { gridline-color: white; }"
-                                 "QTableView::item:selected { "
-                                 "gridline-color: red; "
-                                 "qproperty-currentItemBackground: %1;"
-                                 "}")
-                           .arg(m_color.name()));
+    //    table->setStyleSheet(QString("QTableView { gridline-color: white; }"
+    //                                 "QTableView::item:selected { "
+    //                                 "gridline-color: red; "
+    //                                 "qproperty-currentItemBackground: %1;"
+    //                                 "}"
+    //                                 "QTableView::item:focus { "
+    //                                 "gridline-color: red; "
+    //                                 "qproperty-currentItemBackground: %1;"
+    //                                 "}"
+    // )
+    //                           .arg(m_color.name()));
     m_display->setPrimaryColor(m_color, m_name);
   }
 }
@@ -206,21 +211,108 @@ ColorDragTable*
 ExtendedColorDialog::createColorTable()
 {
   auto table = new ColorDragTable(17, 7, this);
-  table->setSelectionMode(QTableView::SingleSelection);
-  table->setSelectionBehavior(QTableView::SelectItems);
+  table->setSelectionMode(QTableView::NoSelection);
+  //  table->setSelectionBehavior(QTableView::SelectItems);
   table->setDragDropMode(QTableView::DragOnly);
   table->horizontalHeader()->setVisible(false);
   table->verticalHeader()->setVisible(false);
   table->horizontalHeader()->setSectionResizeMode(
     QHeaderView::ResizeToContents);
   table->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  table->setStyleSheet("QTableView { gridline-color: white; }");
   connect(
     table, &ColorDragTable::clicked, this, &ExtendedColorDialog::colorClicked);
   return table;
 }
 
 ColorDragTable*
-ExtendedColorDialog::initSvgFrame1()
+ExtendedColorDialog::initSvgBlue()
+{
+  auto table = createColorTable();
+
+  int row = 0, column = 0;
+  table->setData(row++, column, false, "aliceblue");
+  table->setData(row++, column, false, "azure");
+  table->setData(row++, column, false, "lightcyan");
+  table->setData(row++, column, false, "paleturquoise");
+  table->setData(row++, column, false, "powderblue");
+  table->setData(row++, column, false, "lightblue");
+  table->setData(row++, column, false, "lightskyblue");
+  table->setData(row++, column, false, "skyblue");
+  table->setData(row++, column, false, "cornflowerblue");
+  table->setData(row++, column, false, "steelblue");
+  table->setData(row++, column, false, "dodgerblue");
+  table->setData(row++, column, false, "royalblue");
+  table->setData(row++, column, false, "deepskyblue");
+  table->setData(row++, column, false, "mediumslateblue");
+  table->setData(row++, column, false, "slateblue");
+  table->setData(row++, column, false, "indigo", "white");
+  table->setData(row++, column, false, "darkslateblue", "white");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, false, "mediumblue", "white");
+  table->setData(row++, column, false, "darkblue", "white");
+  table->setData(row++, column, false, "navy", "white");
+  table->setData(row++, column, false, "blue", "white");
+  table->setData(row++, column, false, "midnightblue", "white");
+  table->setData(row++, column, false, "honeydew");
+  table->setData(row++, column, false, "limegreen");
+  table->setData(row++, column, false, "darkseagreen");
+  table->setData(row++, column, false, "palegreen");
+  table->setData(row++, column, false, "lightgreen");
+  table->setData(row++, column, false, "springgreen");
+  table->setData(row++, column, false, "lime");
+  table->setData(row++, column, false, "forestgreen", "white");
+  table->setData(row++, column, false, "green", "white");
+  table->setData(row++, column, false, "darkgreen", "white");
+  table->setData(row++, column, false, "aquamarine");
+  table->setData(row++, column, false, "mediumaquamarine");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, false, "mediumseagreen");
+  table->setData(row++, column, false, "mediumspringgreen");
+  table->setData(row++, column, false, "seagreen");
+  table->setData(row++, column, false, "greenyellow");
+  table->setData(row++, column, false, "lawngreen");
+  table->setData(row++, column, false, "chartreuse");
+  table->setData(row++, column, false, "yellowgreen");
+  table->setData(row++, column, false, "olivedrab", "white");
+  table->setData(row++, column, false, "olive", "white");
+  table->setData(row++, column, false, "darkolivegreen", "white");
+  table->setData(row++, column, false, "cyan");
+  table->setData(row++, column, false, "aqua");
+  table->setData(row++, column, false, "turquoise");
+  table->setData(row++, column, false, "mediumturquoise");
+  table->setData(row++, column, false, "darkturquoise");
+  table->setData(row++, column, false, "lightseagreen");
+  table->setData(row++, column, false, "cadetblue");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, false, "darkcyan");
+  table->setData(row++, column, false, "teal");
+  table->setData(row++, column, false, "snow");
+  table->setData(row++, column, false, "white");
+  table->setData(row++, column, false, "whitesmoke");
+  table->setData(row++, column, false, "mintcream");
+  table->setData(row++, column, false, "ghostwhite");
+  table->setData(row++, column, false, "gainsboro");
+  table->setData(row++, column, false, "lightgray");
+  table->setData(row++, column, false, "silver");
+  table->setData(row++, column, false, "darkgray");
+  table->setData(row++, column, false, "lightslategray", "white");
+  table->setData(row++, column, false, "slategray", "white");
+  table->setData(row++, column, false, "darkslategray", "white");
+  table->setData(row++, column, false, "gray", "white");
+  table->setData(row++, column, false, "dimgray", "white");
+  table->setData(row++, column, false, "black", "white");
+
+  return table;
+}
+
+ColorDragTable *ExtendedColorDialog::initSvgGreen()
 {
   auto table = createColorTable();
 
@@ -919,9 +1011,9 @@ ExtendedColorDialog::setPrimaryColor(const QColor& color, const QString& name)
   m_color = color;
   m_name = name;
   m_colorDlg->setCurrentColor(color);
-  if (m_display) {
-    m_display->setPrimaryColor(color, name);
-  }
+  //  if (m_display) {
+  //    m_display->setPrimaryColor(color, name);
+  //  }
 }
 
 QColor
@@ -1074,7 +1166,7 @@ ExtendedColorDialog::isDark(const QColor& color)
 QSize
 ExtendedColorDialog::sizeHint() const
 {
-  return QSize(900, 1500);
+  return QSize(900, 1200);
 }
 
 QString
@@ -1182,7 +1274,7 @@ ColorDropDisplay::dropEvent(QDropEvent* event)
       auto name = QString(data.name);
       auto color = QColor(data.r, data.g, data.b);
       if (m_left->geometry().contains(pos))
-        setPrimaryColor(color, QString());
+        setPrimaryColor(color, name);
       else if (m_right->geometry().contains(pos))
         setSecondaryColor(color, name);
     }

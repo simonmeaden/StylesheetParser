@@ -23,9 +23,11 @@
 #include <QApplication>
 #include <QTextCharFormat>
 #include <Qt>
+#include <QtDebug>
 
 #include "parserstate.h"
 #include "stylesheetedit/mainwindow.h"
+
 
 int
 main(int argc, char* argv[])

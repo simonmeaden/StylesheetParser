@@ -210,7 +210,7 @@ static const QMap<QString, QColor> COLORMAP = initaliseMap();
 //! Returns the color associated with the name string, if any name exists,
 //! otherwise an invalid QColor is returned.
 //! \sa name(const QColor&)
-QColor
+static QColor
 color(const QString& name)
 {
   return COLORMAP.value(name);
@@ -219,10 +219,16 @@ color(const QString& name)
 //! Returns the first name string associated with this color, if any match,
 //! otherwise an empty string is returned.
 //! \sa color(const QString&)
-QString
+static QString
 name(const QColor& color)
 {
-  return COLORMAP.key(color);
+  for (auto k : COLORMAP.keys()) {
+    auto c = COLORMAP.value(k);
+    if (c==color) {
+      return k;
+    }
+  }
+  return QString();
 }
 
 } // namespace Svg
@@ -230,7 +236,7 @@ name(const QColor& color)
 namespace X11 {
 // clang-format off
 #if defined(Q_COMPILER_CONSTEXPR) & defined(Q_COMPILER_UNIFORM_INIT)
-constexpr Q_DECL_UNUSED QColor snow                 { QColor::Rgb, 0xff * 0x101, 255 * 0x101, 250 * 0x101, 255 * 0x101};
+constexpr Q_DECL_UNUSED QColor snow                 { QColor::Rgb, 0xff * 0x101, 255 * 0x101, 250 * 0x101, 250 * 0x101};
 constexpr Q_DECL_UNUSED QColor ghostwhite           { QColor::Rgb, 0xff * 0x101, 248 * 0x101, 248 * 0x101, 255 * 0x101};
 constexpr Q_DECL_UNUSED QColor whitesmoke           { QColor::Rgb, 0xff * 0x101, 245 * 0x101, 245 * 0x101, 255 * 0x101};
 constexpr Q_DECL_UNUSED QColor gainsboro            { QColor::Rgb, 0xff * 0x101, 220 * 0x101, 220 * 0x101, 220 * 0x101};
@@ -3037,24 +3043,12 @@ static const QMap<QString, QColor> COLORMAP = initaliseMap();
 static const QStringList SINGLENAMES = initaliseSingle();
 static const QStringList ALLNAMES = initaliseAll();
 
-const QStringList
-singleNames()
-{
-  return SINGLENAMES;
-}
-
-const QStringList
-allNames()
-{
-  return ALLNAMES;
-}
-
 } // end of anonymous namespace
 
 //! Returns the color associated with the name string, if any name exists,
 //! otherwise an invalid QColor is returned.
 //! \sa name(const QColor&)
-QColor
+static QColor
 color(const QString& name)
 {
   return COLORMAP.value(name);
@@ -3063,17 +3057,23 @@ color(const QString& name)
 //! Returns the first name string associated with this color, if any match,
 //! otherwise an empty string is returned.
 //! \sa color(const QString&)
-QString
+static QString
 name(const QColor& color)
 {
-  return COLORMAP.key(color);
+  for (auto k : COLORMAP.keys()) {
+    auto c = COLORMAP.value(k);
+    if (c==color) {
+      return k;
+    }
+  }
+  return QString();
 }
 
 //! Returns a list of all the names, without repeats due to titled case names.
 //! \note There are some repeated names, for instance 'maroon' and 'maroon1'
 //! are in fact repeats, but were left in as they are part of a 1-4 list of
 //! similar colours. \sa allNames()
-QStringList
+static QStringList
 singleNames()
 {
   return SINGLENAMES;
@@ -3081,7 +3081,7 @@ singleNames()
 
 //! Returns a list of all the names, including repeats.
 //! \sa singleNames()
-QStringList
+static QStringList
 allNames()
 {
   return ALLNAMES;

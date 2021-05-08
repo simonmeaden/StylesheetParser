@@ -22,6 +22,7 @@
 #include "stylesheetedit/mainwindow.h"
 #include "bookmarkarea.h"
 
+#include "stylesheetedit/x11colors.h"
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>

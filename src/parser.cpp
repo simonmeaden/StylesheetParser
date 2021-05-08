@@ -1847,9 +1847,13 @@ Parser::handleSuggestions(QAction* act)
         //          options);
         auto colorDlg = new ExtendedColorDialog(m_editor);
         if (colorDlg->exec() == QDialog::Accepted) {
-          auto color = colorDlg->color();
+          auto color = colorDlg->primaryColor();
           if (color.isValid()) {
-            auto value = color.name(QColor::HexArgb);
+            QString value;
+            if (color.alpha() == 255)
+              value = color.name(QColor::HexRgb);
+            else
+              value = color.name(QColor::HexArgb);
             // copy start offset
             auto cursor = m_datastore->getCursorForPosition(offset);
             // this moves offset to end on new text.

@@ -7,7 +7,8 @@
 
 const QString ColorDropDisplay::DISPLAYLABELRIGHT =
   "QLabel {"
-  "background-color: %1;"
+  "color: %1;"
+  "background-color: %2;"
   "border: 0px;"
   "border-top-left-radius: 0px;"
   "border-bottom-left-radius: 0px;"
@@ -16,7 +17,8 @@ const QString ColorDropDisplay::DISPLAYLABELRIGHT =
   "}";
 const QString ColorDropDisplay::DISPLAYLABELLEFT =
   "QLabel {"
-  "background-color: %1;"
+  "color: %1;"
+  "background-color: %2;"
   "border: 0px;"
   "border-top-left-radius: 25px;"
   "border-bottom-left-radius: 25px;"
@@ -108,6 +110,7 @@ ExtendedColorDialog::initGui()
   m_colorDlg->setOptions(QColorDialog::ShowAlphaChannel |
                          QColorDialog::DontUseNativeDialog |
                          QColorDialog::NoButtons);
+  m_colorDlg->setCurrentColor("#ffffffff");
   m_tabs->addTab(m_colorDlg, "Color Dialog");
   connect(m_colorDlg,
           &QColorDialog::currentColorChanged,
@@ -151,7 +154,8 @@ ExtendedColorDialog::primaryColorHasChanged(const QColor& color,
   emit primaryColorChanged(m_color, m_name);
 }
 
-void ExtendedColorDialog::dialogColorHasChanged(const QColor &color)
+void
+ExtendedColorDialog::dialogColorHasChanged(const QColor& color)
 {
   m_color = color;
   m_name = ExtendedColorDialog::svgOrX11Name(color);
@@ -904,7 +908,7 @@ ExtendedColorDialog::initX11MonoFrame()
 }
 
 QColor
-ExtendedColorDialog::color() const
+ExtendedColorDialog::primaryColor() const
 {
   return m_color;
 }
@@ -1047,6 +1051,26 @@ ExtendedColorDialog::svgOrX11Color(const QString& initialColor)
   return Qt::white;
 }
 
+bool
+ExtendedColorDialog::isDark(const QColor& color)
+{
+  auto Pr = .299;
+  auto Pg = .587;
+  auto Pb = .114;
+  auto r = color.redF();
+  auto g = color.greenF();
+  auto b = color.blueF();
+
+  // Calculate the Perceived brightness 0 - 1.0.
+  // the darker it is the lower the value
+  auto p = qSqrt(r * r * Pr + g * g * Pg + b * b * Pb);
+
+  if (p < 0.5) {
+    return true;
+  }
+  return false;
+}
+
 QSize
 ExtendedColorDialog::sizeHint() const
 {
@@ -1059,18 +1083,10 @@ ExtendedColorDialog::secondaryName() const
   return m_dropName;
 }
 
-//void
-//ExtendedColorDialog::acceptColor()
-//{
-//  m_color = m_colorDlg->currentColor();
-//  accept();
-//}
-
 void
 ExtendedColorDialog::acceptChanges()
 {
   if (m_color.isValid()) {
-    emit primaryColorChanged(m_color, m_name);
     accept();
   } else {
     reject();
@@ -1097,9 +1113,11 @@ ColorDropDisplay::ColorDropDisplay(const QColor& color,
   layout->setSpacing(0);
   setLayout(layout);
   m_left = new QLabel(this);
+  m_left->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
   m_left->setStyleSheet(colorToStyle(m_color, Left));
   layout->addWidget(m_left);
   m_right = new QLabel(this);
+  m_right->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
   m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
   layout->addWidget(m_right);
 }
@@ -1109,6 +1127,12 @@ ColorDropDisplay::setPrimaryColor(const QColor& color, const QString& name)
 {
   m_color = color;
   m_name = name;
+  QString displayText;
+  if (!m_name.isEmpty())
+    displayText = m_name + " " + m_color.name(QColor::HexRgb);
+  else
+    displayText = m_color.name(QColor::HexRgb);
+  m_left->setText(displayText);
   m_left->setStyleSheet(colorToStyle(m_color, Left));
   m_colorSet = true;
   emit primaryColorChanged(color, name);
@@ -1119,6 +1143,14 @@ ColorDropDisplay::setSecondaryColor(const QColor& color, const QString& name)
 {
   m_dropColor = color;
   m_dropName = name;
+  QString displayText;
+  if (!m_dropName.isEmpty()) {
+    displayText = m_name + " " + m_color.name(QColor::HexRgb);
+    m_right->setText(displayText);
+  } else {
+    displayText = m_color.name(QColor::HexRgb);
+    m_right->setText(displayText);
+  }
   m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
   m_dropColorSet = true;
   emit secondaryColorChanged(color, name);
@@ -1170,13 +1202,19 @@ ColorDropDisplay::dropEvent(QDropEvent* event)
 QString
 ColorDropDisplay::colorToStyle(const QColor& color, Side side)
 {
+  auto isDark = ExtendedColorDialog::isDark(color);
+  QString textColor;
+  if (isDark)
+    textColor = "white";
+  else
+    textColor = "black";
   if (color.isValid()) {
     QString value = color.name();
     if (side == Left) {
-      auto val = DISPLAYLABELLEFT.arg(value);
+      auto val = DISPLAYLABELLEFT.arg(textColor, value);
       return val;
     } else {
-      auto val = DISPLAYLABELRIGHT.arg(value);
+      auto val = DISPLAYLABELRIGHT.arg(textColor, value);
       return val;
     }
   }

@@ -22,6 +22,7 @@
 #include <QStringList>
 #include <QTabWidget>
 #include <QTableWidget>
+#include <QtMath>
 
 #include <bits/functional_hash.h>
 
@@ -194,7 +195,7 @@ public:
   //! \sa hsl()
   //! \sa name()
   //! \sa hash()
-  QColor color() const;
+  QColor primaryColor() const;
   //! Sets the initial color as a QColor object.
   //! \sa setSecondaryColor()
   void setPrimaryColor(const QColor& color, const QString& name = QString());
@@ -262,8 +263,19 @@ public:
   //! an empty string is returned.
   QString hash(int alpha = false) const;
 
+  //! Returns the Svg or X11 name for the color if one exists.
+  //! The Svg name is returned in preference to the X11 name if it exists.
   static QString svgOrX11Name(const QColor& color);
+  //! Returns the Svg or X11 color for the name string
+  //! the name is tested against the Svg colors first.
   static QColor svgOrX11Color(const QString& initialColor);
+
+  // This is based on the alternative HSP color model suggested by Darel Rex
+  // Finley. http://alienryderflex.com/hsp.html public domain by Darel
+  // Rex Finley, 2006
+  //! Returns true if the color is dark, otherwise return false.
+  //!
+  static bool isDark(const QColor& color);
 
 signals:
   //! This signal is emitted whenever the primary color changes in the dialog.
@@ -272,7 +284,6 @@ signals:
   //! This signal is emitted whenever the secondary color changes in the dialog.
   //! The current color is specified by color.
   void secondaryColorChanged(const QColor& color, const QString& name);
-
 
 protected:
   QSize sizeHint() const override;
@@ -287,7 +298,7 @@ private:
   ColorDropDisplay* m_display;
   Tabs m_currentTab;
 
-//  void acceptColor();
+  //  void acceptColor();
   void acceptChanges();
   void initGui();
   ColorDragTable* initSvgFrame1();
@@ -299,9 +310,9 @@ private:
   ColorDropDisplay* createColorDisplay();
   ColorDragTable* createColorTable();
   void colorClicked(const QModelIndex& index);
-  void primaryColorHasChanged(const QColor& color, const QString &name);
+  void primaryColorHasChanged(const QColor& color, const QString& name);
   void dialogColorHasChanged(const QColor& color);
-  void secondaryColorHasChanged(const QColor& color, const QString &name);
+  void secondaryColorHasChanged(const QColor& color, const QString& name);
 
   static const QString HASHACOLOR;
   static const QString HASHCOLOR;
@@ -312,7 +323,5 @@ private:
   static const QString HSVCOLOR;
   static const QString HSVACOLOR;
 };
-
-
 
 #endif // SVGCOLORNAMEDIALOG_H

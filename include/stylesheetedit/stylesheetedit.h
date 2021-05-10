@@ -22,19 +22,19 @@
 #ifndef STYLESHEETEDIT_H
 #define STYLESHEETEDIT_H
 
-#include <QObject>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMessageBox>
+#include <QObject>
 #include <QPainter>
 #include <QPlainTextEdit>
+#include <QSettings>
 #include <QTextBlock>
 #include <QTextCursor>
-#include <QToolTip>
 #include <QTextStream>
-#include <QSettings>
+#include <QToolTip>
 
 #include "common.h"
 
@@ -43,7 +43,6 @@ class StylesheetEditorPrivate;
 class BookmarkArea;
 class BookmarkData;
 class StylesheetEditor;
-
 
 class StylesheetEdit : public QWidget
 {
@@ -54,9 +53,10 @@ public:
   //! load colour configuration from file.
   //!
   //! If filename is empty it will look at it's default location
-  //! which is based on QStandardPaths::writeableLocation(QStandardPaths::ConfigLocation).
-  //! This is generally "<home>.config/QtProject/qtcreator/stylesheetedit" for
-  //! Linux, "%APPDATA%/QtProject/ctcreator/stylesheetedit" for Windows similar
+  //! which is based on
+  //! QStandardPaths::writeableLocation(QStandardPaths::ConfigLocation). This is
+  //! generally "<home>.config/QtProject/qtcreator/stylesheetedit" for Linux,
+  //! "%APPDATA%/QtProject/ctcreator/stylesheetedit" for Windows similar
   //! locations for other supported OS's.
   //!
   //! To use a application specific location you can specify it here.
@@ -65,9 +65,10 @@ public:
   //! save colour configuration to file.
   //!
   //! If filename is empty it will look at it's default location
-  //! which is based on QStandardPaths::writeableLocation(QStandardPaths::ConfigLocation).
-  //! This is generally "<home>.config/QtProject/qtcreator/stylesheetedit" for
-  //! Linux, "%APPDATA%/QtProject/ctcreator/stylesheetedit" for Windows similar
+  //! which is based on
+  //! QStandardPaths::writeableLocation(QStandardPaths::ConfigLocation). This is
+  //! generally "<home>.config/QtProject/qtcreator/stylesheetedit" for Linux,
+  //! "%APPDATA%/QtProject/ctcreator/stylesheetedit" for Windows similar
   //! locations for other supported OS's.
   //!
   //! To use a application specific location you can specify it here.
@@ -249,9 +250,12 @@ public:
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter end curly
   //! brace (}) format
-  void setEndBraceFormat(QBrush color, QBrush back, QFont font,
-                         QBrush underline = QBrush(),
-                         QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setEndBraceFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
   void setBadEndBraceFormat(
     QBrush color,
     QBrush back,
@@ -260,9 +264,12 @@ public:
     QTextCharFormat::UnderlineStyle style = QTextCharFormat::WaveUnderline);
   //! Sets a new foreground/background/fontweight for the highlighter brace
   //! match format
-  void setBraceMatchFormat(QBrush color, QBrush back, QFont font,
-                           QBrush underline = QBrush(),
-                           QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
+  void setBraceMatchFormat(
+    QBrush color,
+    QBrush back,
+    QFont font,
+    QBrush underline = QBrush(),
+    QTextCharFormat::UnderlineStyle style = QTextCharFormat::NoUnderline);
 
   //! Returns the bookmarks with associated text, if any.
   //!

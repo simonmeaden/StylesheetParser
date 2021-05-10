@@ -1859,10 +1859,10 @@ Parser::handleSuggestions(QAction* act)
         auto property = qobject_cast<PropertyNode*>(node);
         auto colorDlg = new ExtendedColorDialog(m_editor);
         if (QColor::isValidColor(oldName)) {
-          colorDlg->setPrimaryColor(QColor(oldName), oldName);
+          colorDlg->setColor(ColorType::Primary, QColor(oldName), oldName);
         }
         if (colorDlg->exec() == QDialog::Accepted) {
-          auto color = colorDlg->primaryColor();
+          auto color = colorDlg->color(ColorType::Primary);
           if (color.isValid()) {
             QString value;
             if (color.alpha() == 255)

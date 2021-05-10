@@ -25,6 +25,37 @@
 #include <QColor>
 #include <QMap>
 #include <QString>
+#include <QtMath>
+
+// clang-format off
+/*!
+   \file x11colors.h
+   \brief An extension of the QColorConstants namespace which supplies extra functions
+          to the standard Svg namespace and adds an extra X11 namespace that matches
+          the Svg color set with an set that matches the X11 rgb.txt colors.
+   \since 5.7.0
+   \license The MIT License
+   \copyright © 2020 - 2021 Simon Meaden. All rights reserved.
+
+   The Svg color set evolved from the X11 rgb.txt  color set, with many of the names
+   being the same. However some of the names generate a similar, but different color.
+   The X11 set is also larger and offers a more extended set of color name options.
+
+   The extended functions, namely name(QColor) and color(QString) which exist as
+   QColorConstants::Svg::name(), QColorConstants::Svg::color().QColorConstants::X11::name()
+   and QColorConstants::X11::color() variants return a QColor object or a name string
+   respectively.
+
+   There are also two helper functions in the QColorConstants namespace. svgOrX11Name(QColor)
+   which returns a QString and svgOrX11Color(QString) which returns a QColor. Both of
+   these functions test against the Svg set first, returning Svg values by preference
+   before testing against the X11 set.
+
+   \note I admit that QColorConstants is not the best place for these functions, but I
+   am unsure exactly where the best place is.
+
+*/
+// clang-format on
 
 namespace QColorConstants {
 namespace Svg {
@@ -204,7 +235,7 @@ name(const QColor& color)
 {
   for (auto k : COLORMAP.keys()) {
     auto c = COLORMAP.value(k);
-    if (c==color) {
+    if (c == color) {
       return k;
     }
   }
@@ -287,6 +318,7 @@ constexpr Q_DECL_UNUSED QColor forestgreen          { QColor::Rgb, 0xff * 0x101,
 constexpr Q_DECL_UNUSED QColor olivedrab            { QColor::Rgb, 0xff * 0x101, 107 * 0x101, 142 * 0x101, 35 * 0x101};
 constexpr Q_DECL_UNUSED QColor darkkhaki            { QColor::Rgb, 0xff * 0x101, 189 * 0x101, 183 * 0x101, 107 * 0x101};
 constexpr Q_DECL_UNUSED QColor khaki                { QColor::Rgb, 0xff * 0x101, 240 * 0x101, 230 * 0x101, 140 * 0x101};
+constexpr Q_DECL_UNUSED QColor floralwhite          { QColor::Rgb, 0xff * 0x101, 255 * 0x101, 250 * 0x101, 240 * 0x101};
 constexpr Q_DECL_UNUSED QColor antiquewhite         { QColor::Rgb, 0xff * 0x101, 250 * 0x101, 235 * 0x101, 215 * 0x101};
 constexpr Q_DECL_UNUSED QColor palegoldenrod        { QColor::Rgb, 0xff * 0x101, 238 * 0x101, 232 * 0x101, 170 * 0x101};
 constexpr Q_DECL_UNUSED QColor lightgoldenrodyellow { QColor::Rgb, 0xff * 0x101, 250 * 0x101, 250 * 0x101, 210 * 0x101};
@@ -706,6 +738,7 @@ const QColor GhostWhite = ghostwhite;
 const QColor WhiteSmoke = whitesmoke;
 const QColor Gainsboro = gainsboro;
 const QColor NavajoWhite = navajowhite;
+const QColor FloralWhite = floralwhite;
 const QColor LemonChiffon = lemonchiffon;
 const QColor MintCream = mintcream;
 const QColor AliceBlue = aliceblue;
@@ -1101,7 +1134,7 @@ initaliseMap()
   map.insert("ForestGreen", forestgreen);
   map.insert("olive drab", olivedrab);
   map.insert("OliveDrab", olivedrab);
-  map.insert("darkkhaki", darkkhaki);
+  map.insert("dark khaki", darkkhaki);
   map.insert("DarkKhaki", darkkhaki);
   map.insert("khaki", khaki);
   map.insert("pale goldenrod", palegoldenrod);
@@ -1187,6 +1220,8 @@ initaliseMap()
   map.insert("seashell2", seashell2);
   map.insert("seashell3", seashell3);
   map.insert("seashell4", seashell4);
+  map.insert("floral white", floralwhite);
+  map.insert("FloralWhite", floralwhite);
   map.insert("antique white", antiquewhite);
   map.insert("AntiqueWhite1", AntiqueWhite1);
   map.insert("AntiqueWhite2", AntiqueWhite2);
@@ -1848,6 +1883,8 @@ initaliseSingle()
        << "seashell2"
        << "seashell3"
        << "seashell4"
+       << "floral white"
+       << "FloralWhite"
        << "AntiqueWhite1"
        << "AntiqueWhite2"
        << "AntiqueWhite3"
@@ -3042,7 +3079,7 @@ name(const QColor& color)
 {
   for (auto k : COLORMAP.keys()) {
     auto c = COLORMAP.value(k);
-    if (c==color) {
+    if (c == color) {
       return k;
     }
   }
@@ -3068,6 +3105,85 @@ allNames()
 }
 
 } // namespace X11
+
+namespace {
+static constexpr double Pr = 0.299;
+static constexpr double Pg = 0.587;
+static constexpr double Pb = 0.114;
+}
+//! Returns the Svg or X11 name for the color if one exists.
+//! The Svg name is returned in preference to the X11 name if it exists.
+static QString
+svgOrX11Name(const QColor& color)
+{
+  auto name = QColorConstants::Svg::name(color);
+  if (!name.isEmpty()) {
+    return name;
+  } else {
+    name = QColorConstants::X11::name(color);
+    if (!name.isEmpty()) {
+      return name;
+    }
+  }
+  return QString();
+}
+
+//! Returns the Svg or X11 color for the name string
+//! the name is tested against the Svg colors first.
+static QColor
+svgOrX11Color(const QString& initialColor)
+{
+  auto color = QColorConstants::Svg::color(initialColor);
+  if (color.isValid()) {
+    return color;
+  } else {
+    color = QColorConstants::X11::color(initialColor);
+    if (color.isValid()) {
+      return color;
+    }
+  }
+  return Qt::white;
+}
+
+//! Returns the perceived brightness of the color.
+//!
+//! This can be used to select a text color that shows up well with the
+//! specified color.
+//! Darker colors return lower values in a range between 0 and 1.0, with
+//! black at 0 and white at 1.0.
+//!
+//! This is based on the alternative HSP color model suggested by Darel Rex
+//! Finley. http://alienryderflex.com/hsp.html public domain by Darel
+//! Rex Finley, 2006
+
+static double
+perceivedBrightness(const QColor& color)
+{
+  auto r = color.redF();
+  auto g = color.greenF();
+  auto b = color.blueF();
+  return qSqrt(r * r * Pr + g * g * Pg + b * b * Pb);
+}
+
+//! Returns true if the color is a darker shade, otherwise return false.
+//!
+//! This can be used to select a text color that shows up well with the
+//! specified color.
+//!
+//! This is based on the alternative HSP color model suggested by Darel Rex
+//! Finley. http://alienryderflex.com/hsp.html public domain by Darel
+//! Rex Finley, 2006
+static bool
+isDark(const QColor& color)
+{
+  auto p = perceivedBrightness(color);
+
+  if (p < 0.5) {
+    return true;
+  }
+  return false;
+}
+
 } // namespacce QColorConstants
 
 #endif // X11COLORS_H

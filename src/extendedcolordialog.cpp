@@ -41,8 +41,8 @@ const QString ExtendedColorDialog::HSVACOLOR = "hsva(%1, %2, %3,%4%)";
 
 ExtendedColorDialog::ExtendedColorDialog(QWidget* parent)
   : QDialog(parent)
-  , m_color(QColor(Qt::white))
-  , m_dropColor(QColor(Qt::white))
+  , m_primaryColor(QColor(Qt::white))
+  , m_secondaryColor(QColor(Qt::white))
 {
   initGui();
 }
@@ -50,11 +50,11 @@ ExtendedColorDialog::ExtendedColorDialog(QWidget* parent)
 ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
                                          QWidget* parent)
   : QDialog(parent)
-  , m_color(initialColor)
-  , m_dropColor(Qt::white)
+  , m_primaryColor(initialColor)
+  , m_secondaryColor(Qt::white)
 {
   initGui();
-  setPrimaryColor(initialColor, "white");
+  setColor(ColorType::Primary, initialColor, "white");
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
@@ -62,21 +62,19 @@ ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
   : QDialog(parent)
 {
   initGui();
-  auto color = svgOrX11Color(initialColor);
-  setPrimaryColor(color, initialColor);
-  setSecondaryColor(color, initialColor);
+  auto color = QColorConstants::svgOrX11Color(initialColor);
+  setColor(ColorType::Primary, color, initialColor);
+  setColor(ColorType::Secondary, color, initialColor);
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QColor& initialColor,
                                          const QColor& secondaryColor,
                                          QWidget* parent)
   : QDialog(parent)
-  , m_color(initialColor)
-  , m_dropColor(secondaryColor)
 {
   initGui();
-  setPrimaryColor(m_color);
-  setSecondaryColor(m_dropColor);
+  setColor(ColorType::Primary, initialColor);
+  setColor(ColorType::Secondary, secondaryColor);
 }
 
 ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
@@ -85,14 +83,14 @@ ExtendedColorDialog::ExtendedColorDialog(const QString& initialColor,
   : QDialog(parent)
 {
   initGui();
-  auto color = svgOrX11Color(initialColor);
-  setPrimaryColor(color, initialColor);
+  auto color = QColorConstants::svgOrX11Color(initialColor);
+  setColor(ColorType::Primary, color, initialColor);
   initGui();
-  color = svgOrX11Color(secondaryColor);
+  color = QColorConstants::svgOrX11Color(secondaryColor);
   if (color == Qt::white) {
-    setSecondaryColor(color, "white");
+    setColor(ColorType::Secondary, color, "white");
   } else {
-    setSecondaryColor(color, initialColor);
+    setColor(ColorType::Secondary, color, initialColor);
   }
 }
 
@@ -108,23 +106,30 @@ ExtendedColorDialog::initGui()
   layout->addWidget(createBtnBox(), 2, 0);
   setLayout(layout);
 
-  m_colorDlg = new QColorDialog(m_color, this);
+  m_colorDlg = new QColorDialog(m_primaryColor, this);
+  m_tabs->setTabToolTip(0, tr("Standard colour dialog"));
   m_colorDlg->setOptions(QColorDialog::ShowAlphaChannel |
                          QColorDialog::DontUseNativeDialog |
                          QColorDialog::NoButtons);
-  m_colorDlg->setCurrentColor("#ffffffff");
-  m_tabs->addTab(m_colorDlg, "Color Chooser");
+  m_colorDlg->setCurrentColor(QColor(0, 0, 0, 0));
+  m_tabs->addTab(m_colorDlg, "Chooser");
   connect(m_colorDlg,
           &QColorDialog::currentColorChanged,
           this,
           &ExtendedColorDialog::dialogColorHasChanged);
 
-  m_tabs->addTab(initSvgBlue(), "SVG Blue");
-  m_tabs->addTab(initSvgGreen(), "SVG Green");
-  m_tabs->addTab(initSvgFrame2(), "SVG 2");
-  m_tabs->addTab(initX11ColorFrame1(), "X11 1");
-  m_tabs->addTab(initX11ColorFrame2(), "X11 2");
+  m_tabs->addTab(initSvgBlueGreen(), "SVG B/G");
+  m_tabs->setTabToolTip(1, tr("SVG blue and green Colour shades"));
+  m_tabs->addTab(initSvgRedYellowBrown(), "SVG R/Y/Brn");
+  m_tabs->setTabToolTip(2, tr("SVG red, yellow and brown colour shades"));
+  m_tabs->addTab(initX11BlueGreen(), "X11 Blue/Green");
+  m_tabs->setTabToolTip(3, tr("X11 blue and green Colour shades"));
+  m_tabs->addTab(initX11Red(), "X11 Red/Violet");
+  m_tabs->setTabToolTip(4, tr("X11 red, yellow and brown colour shades"));
+  m_tabs->addTab(initX11YellowBrown(), "X11 Yellow/Brown");
+  m_tabs->setTabToolTip(5, tr("X11 red, yellow and brown colour shades"));
   m_tabs->addTab(initX11MonoFrame(), "X11 Mono");
+  m_tabs->setTabToolTip(6, tr("X11 monochrome colour shades"));
 }
 
 void
@@ -132,20 +137,9 @@ ExtendedColorDialog::colorClicked(const QModelIndex& index)
 {
   auto table = qobject_cast<ColorDragTable*>(sender());
   if (index.isValid()) {
-    m_color = table->background(index);
-    m_name = table->name(index);
-    //    table->setStyleSheet(QString("QTableView { gridline-color: white; }"
-    //                                 "QTableView::item:selected { "
-    //                                 "gridline-color: red; "
-    //                                 "qproperty-currentItemBackground: %1;"
-    //                                 "}"
-    //                                 "QTableView::item:focus { "
-    //                                 "gridline-color: red; "
-    //                                 "qproperty-currentItemBackground: %1;"
-    //                                 "}"
-    // )
-    //                           .arg(m_color.name()));
-    m_display->setPrimaryColor(m_color, m_name);
+    m_primaryColor = table->background(index);
+    m_primaryName = table->name(index);
+    m_display->setPrimaryColor(m_primaryColor, m_primaryName);
   }
 }
 
@@ -154,17 +148,17 @@ ExtendedColorDialog::primaryColorHasChanged(const QColor& color,
                                             const QString& name)
 {
   // receives color/name from display.
-  m_color = color;
-  m_name = name;
-  emit primaryColorChanged(m_color, m_name);
+  m_primaryColor = color;
+  m_primaryName = name;
+  emit primaryColorChanged(m_primaryColor, m_primaryName);
 }
 
 void
 ExtendedColorDialog::dialogColorHasChanged(const QColor& color)
 {
-  m_color = color;
-  m_name = ExtendedColorDialog::svgOrX11Name(color);
-  m_display->setPrimaryColor(m_color, m_name);
+  m_primaryColor = color;
+  m_primaryName = QColorConstants::svgOrX11Name(color);
+  m_display->setPrimaryColor(m_primaryColor, m_primaryName);
 }
 
 void
@@ -172,9 +166,9 @@ ExtendedColorDialog::secondaryColorHasChanged(const QColor& color,
                                               const QString& name)
 {
   // receives color/name from display.
-  m_dropColor = color;
-  m_dropName = name;
-  emit primaryColorChanged(m_dropColor, m_dropName);
+  m_secondaryColor = color;
+  m_secondaryName = name;
+  emit primaryColorChanged(m_secondaryColor, m_secondaryName);
 }
 
 QDialogButtonBox*
@@ -193,7 +187,7 @@ ExtendedColorDialog::createBtnBox()
 ColorDropDisplay*
 ExtendedColorDialog::createColorDisplay()
 {
-  auto display = new ColorDropDisplay(m_color, m_dropColor, this);
+  auto display = new ColorDropDisplay(m_primaryColor, m_secondaryColor, this);
   display->setMinimumSize(QSize(300, 90));
   display->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   connect(display,
@@ -201,16 +195,25 @@ ExtendedColorDialog::createColorDisplay()
           this,
           &ExtendedColorDialog::primaryColorHasChanged);
   connect(display,
+          &ColorDropDisplay::primaryTextColorChanged,
+          this,
+          &ExtendedColorDialog::primaryTextColorHasChanged);
+  connect(display,
           &ColorDropDisplay::secondaryColorChanged,
           this,
           &ExtendedColorDialog::secondaryColorHasChanged);
+  connect(display,
+          &ColorDropDisplay::secondaryTextColorChanged,
+          this,
+          &ExtendedColorDialog::secondaryTextColorHasChanged);
   return display;
 }
 
 ColorDragTable*
-ExtendedColorDialog::createColorTable()
+ExtendedColorDialog::createColorTable(int columns)
 {
-  auto table = new ColorDragTable(17, 7, this);
+  auto table = new ColorDragTable(17, columns, this);
+  table->setContextMenuPolicy(Qt::CustomContextMenu);
   table->setSelectionMode(QTableView::NoSelection);
   //  table->setSelectionBehavior(QTableView::SelectItems);
   table->setDragDropMode(QTableView::DragOnly);
@@ -222,11 +225,122 @@ ExtendedColorDialog::createColorTable()
   table->setStyleSheet("QTableView { gridline-color: white; }");
   connect(
     table, &ColorDragTable::clicked, this, &ExtendedColorDialog::colorClicked);
+  connect(table,
+          &QTableView::customContextMenuRequested,
+          this,
+          &ExtendedColorDialog::customMenuRequested);
   return table;
 }
 
+void
+ExtendedColorDialog::customMenuRequested(QPoint pos)
+{
+  auto table = qobject_cast<ColorDragTable*>(sender());
+  if (table) {
+    auto index = table->indexAt(pos);
+
+    auto menu = new QMenu(this);
+    auto act = new QAction(tr("Set Primary Colour"), this);
+    act->setData(index);
+    connect(act,
+            &QAction::triggered,
+            this,
+            &ExtendedColorDialog::primaryColorMenuClicked);
+    menu->addAction(act);
+    act = new QAction(tr("Set Primary Text Colour"), this);
+    act->setData(index);
+    connect(act,
+            &QAction::triggered,
+            this,
+            &ExtendedColorDialog::primaryTextColorMenuClicked);
+    menu->addAction(act);
+    act = new QAction(tr("Set Secondary Colour"), this);
+    act->setData(index);
+    connect(act,
+            &QAction::triggered,
+            this,
+            &ExtendedColorDialog::secondaryColorMenuClicked);
+    menu->addAction(act);
+    act = new QAction(tr("Set Secondary Text Colour"), this);
+    act->setData(index);
+    connect(act,
+            &QAction::triggered,
+            this,
+            &ExtendedColorDialog::secondaryTextColorMenuClicked);
+    menu->addAction(act);
+    menu->popup(table->viewport()->mapToGlobal(pos));
+  }
+}
+
+void
+ExtendedColorDialog::primaryTextColorHasChanged(const QColor& color,
+                                                const QString& name)
+{
+  m_primaryTextColor = color;
+  m_primaryTextName = name;
+  emit primaryTextColorChanged(color, name);
+}
+
+void
+ExtendedColorDialog::secondaryTextColorHasChanged(const QColor& color,
+                                                  const QString& name)
+{
+  m_secondaryTextColor = color;
+  m_secondaryTextName = name;
+  emit secondaryTextColorChanged(color, name);
+}
+
+void
+ExtendedColorDialog::primaryColorMenuClicked()
+{
+  auto act = dynamic_cast<QAction*>(sender());
+  auto index = act->data().value<QModelIndex>();
+  if (index.isValid()) {
+    m_primaryColor = index.data(Qt::BackgroundRole).value<QColor>();
+    m_primaryName = QColorConstants::svgOrX11Name(m_primaryColor);
+    m_display->setPrimaryColor(m_primaryColor, m_primaryName);
+  }
+}
+
+void
+ExtendedColorDialog::secondaryColorMenuClicked()
+{
+  auto act = dynamic_cast<QAction*>(sender());
+  auto index = act->data().value<QModelIndex>();
+  if (index.isValid()) {
+    m_secondaryColor = index.data(Qt::BackgroundRole).value<QColor>();
+    m_secondaryName = QColorConstants::svgOrX11Name(m_secondaryColor);
+    m_display->setSecondaryColor(m_secondaryColor, m_secondaryName);
+  }
+}
+
+void
+ExtendedColorDialog::primaryTextColorMenuClicked()
+{
+  auto act = dynamic_cast<QAction*>(sender());
+  auto index = act->data().value<QModelIndex>();
+  if (index.isValid()) {
+    m_primaryTextColor = index.data(Qt::BackgroundRole).value<QColor>();
+    m_primaryTextName = QColorConstants::svgOrX11Name(m_primaryTextColor);
+    m_display->setPrimaryTextColor(m_primaryTextColor, m_primaryTextName);
+  }
+}
+
+void
+ExtendedColorDialog::secondaryTextColorMenuClicked()
+{
+  auto act = dynamic_cast<QAction*>(sender());
+  auto index = act->data().value<QModelIndex>();
+  if (index.isValid()) {
+    m_secondaryTextColor = index.data(Qt::BackgroundRole).value<QColor>();
+    m_secondaryTextName =
+      QColorConstants::svgOrX11Name(m_secondaryTextColor);
+    m_display->setSecondaryTextColor(m_secondaryTextColor, m_secondaryTextName);
+  }
+}
+
 ColorDragTable*
-ExtendedColorDialog::initSvgBlue()
+ExtendedColorDialog::initSvgBlueGreen()
 {
   auto table = createColorTable();
 
@@ -246,41 +360,18 @@ ExtendedColorDialog::initSvgBlue()
   table->setData(row++, column, false, "deepskyblue");
   table->setData(row++, column, false, "mediumslateblue");
   table->setData(row++, column, false, "slateblue");
-  table->setData(row++, column, false, "indigo", "white");
-  table->setData(row++, column, false, "darkslateblue", "white");
+  table->setData(row++, column, false, "indigo");
+  table->setData(row++, column, false, "darkslateblue");
 
   row = 0;
   column++;
-  table->setData(row++, column, false, "mediumblue", "white");
-  table->setData(row++, column, false, "darkblue", "white");
-  table->setData(row++, column, false, "navy", "white");
-  table->setData(row++, column, false, "blue", "white");
-  table->setData(row++, column, false, "midnightblue", "white");
-  table->setData(row++, column, false, "honeydew");
-  table->setData(row++, column, false, "limegreen");
-  table->setData(row++, column, false, "darkseagreen");
-  table->setData(row++, column, false, "palegreen");
-  table->setData(row++, column, false, "lightgreen");
-  table->setData(row++, column, false, "springgreen");
-  table->setData(row++, column, false, "lime");
-  table->setData(row++, column, false, "forestgreen", "white");
-  table->setData(row++, column, false, "green", "white");
-  table->setData(row++, column, false, "darkgreen", "white");
+  table->setData(row++, column, false, "mediumblue");
+  table->setData(row++, column, false, "darkblue");
+  table->setData(row++, column, false, "navy");
+  table->setData(row++, column, false, "blue");
+  table->setData(row++, column, false, "midnightblue");
   table->setData(row++, column, false, "aquamarine");
   table->setData(row++, column, false, "mediumaquamarine");
-
-  row = 0;
-  column++;
-  table->setData(row++, column, false, "mediumseagreen");
-  table->setData(row++, column, false, "mediumspringgreen");
-  table->setData(row++, column, false, "seagreen");
-  table->setData(row++, column, false, "greenyellow");
-  table->setData(row++, column, false, "lawngreen");
-  table->setData(row++, column, false, "chartreuse");
-  table->setData(row++, column, false, "yellowgreen");
-  table->setData(row++, column, false, "olivedrab", "white");
-  table->setData(row++, column, false, "olive", "white");
-  table->setData(row++, column, false, "darkolivegreen", "white");
   table->setData(row++, column, false, "cyan");
   table->setData(row++, column, false, "aqua");
   table->setData(row++, column, false, "turquoise");
@@ -288,60 +379,12 @@ ExtendedColorDialog::initSvgBlue()
   table->setData(row++, column, false, "darkturquoise");
   table->setData(row++, column, false, "lightseagreen");
   table->setData(row++, column, false, "cadetblue");
-
-  row = 0;
-  column++;
   table->setData(row++, column, false, "darkcyan");
   table->setData(row++, column, false, "teal");
-  table->setData(row++, column, false, "snow");
-  table->setData(row++, column, false, "white");
-  table->setData(row++, column, false, "whitesmoke");
-  table->setData(row++, column, false, "mintcream");
-  table->setData(row++, column, false, "ghostwhite");
-  table->setData(row++, column, false, "gainsboro");
-  table->setData(row++, column, false, "lightgray");
-  table->setData(row++, column, false, "silver");
-  table->setData(row++, column, false, "darkgray");
-  table->setData(row++, column, false, "lightslategray", "white");
-  table->setData(row++, column, false, "slategray", "white");
-  table->setData(row++, column, false, "darkslategray", "white");
-  table->setData(row++, column, false, "gray", "white");
-  table->setData(row++, column, false, "dimgray", "white");
-  table->setData(row++, column, false, "black", "white");
-
-  return table;
-}
-
-ColorDragTable *ExtendedColorDialog::initSvgGreen()
-{
-  auto table = createColorTable();
-
-  int row = 0, column = 0;
-  table->setData(row++, column, false, "aliceblue");
-  table->setData(row++, column, false, "azure");
-  table->setData(row++, column, false, "lightcyan");
-  table->setData(row++, column, false, "paleturquoise");
-  table->setData(row++, column, false, "powderblue");
-  table->setData(row++, column, false, "lightblue");
-  table->setData(row++, column, false, "lightskyblue");
-  table->setData(row++, column, false, "skyblue");
-  table->setData(row++, column, false, "cornflowerblue");
-  table->setData(row++, column, false, "steelblue");
-  table->setData(row++, column, false, "dodgerblue");
-  table->setData(row++, column, false, "royalblue");
-  table->setData(row++, column, false, "deepskyblue");
-  table->setData(row++, column, false, "mediumslateblue");
-  table->setData(row++, column, false, "slateblue");
-  table->setData(row++, column, false, "indigo", "white");
-  table->setData(row++, column, false, "darkslateblue", "white");
+  table->setData(row++, column, false, "darkslategray");
 
   row = 0;
   column++;
-  table->setData(row++, column, false, "mediumblue", "white");
-  table->setData(row++, column, false, "darkblue", "white");
-  table->setData(row++, column, false, "navy", "white");
-  table->setData(row++, column, false, "blue", "white");
-  table->setData(row++, column, false, "midnightblue", "white");
   table->setData(row++, column, false, "honeydew");
   table->setData(row++, column, false, "limegreen");
   table->setData(row++, column, false, "darkseagreen");
@@ -349,57 +392,30 @@ ColorDragTable *ExtendedColorDialog::initSvgGreen()
   table->setData(row++, column, false, "lightgreen");
   table->setData(row++, column, false, "springgreen");
   table->setData(row++, column, false, "lime");
-  table->setData(row++, column, false, "forestgreen", "white");
-  table->setData(row++, column, false, "green", "white");
-  table->setData(row++, column, false, "darkgreen", "white");
+  table->setData(row++, column, false, "forestgreen");
+  table->setData(row++, column, false, "green");
+  table->setData(row++, column, false, "darkgreen");
   table->setData(row++, column, false, "aquamarine");
   table->setData(row++, column, false, "mediumaquamarine");
-
-  row = 0;
-  column++;
   table->setData(row++, column, false, "mediumseagreen");
   table->setData(row++, column, false, "mediumspringgreen");
   table->setData(row++, column, false, "seagreen");
   table->setData(row++, column, false, "greenyellow");
   table->setData(row++, column, false, "lawngreen");
-  table->setData(row++, column, false, "chartreuse");
-  table->setData(row++, column, false, "yellowgreen");
-  table->setData(row++, column, false, "olivedrab", "white");
-  table->setData(row++, column, false, "olive", "white");
-  table->setData(row++, column, false, "darkolivegreen", "white");
-  table->setData(row++, column, false, "cyan");
-  table->setData(row++, column, false, "aqua");
-  table->setData(row++, column, false, "turquoise");
-  table->setData(row++, column, false, "mediumturquoise");
-  table->setData(row++, column, false, "darkturquoise");
-  table->setData(row++, column, false, "lightseagreen");
-  table->setData(row++, column, false, "cadetblue");
 
   row = 0;
   column++;
-  table->setData(row++, column, false, "darkcyan");
-  table->setData(row++, column, false, "teal");
-  table->setData(row++, column, false, "snow");
-  table->setData(row++, column, false, "white");
-  table->setData(row++, column, false, "whitesmoke");
-  table->setData(row++, column, false, "mintcream");
-  table->setData(row++, column, false, "ghostwhite");
-  table->setData(row++, column, false, "gainsboro");
-  table->setData(row++, column, false, "lightgray");
-  table->setData(row++, column, false, "silver");
-  table->setData(row++, column, false, "darkgray");
-  table->setData(row++, column, false, "lightslategray", "white");
-  table->setData(row++, column, false, "slategray", "white");
-  table->setData(row++, column, false, "darkslategray", "white");
-  table->setData(row++, column, false, "gray", "white");
-  table->setData(row++, column, false, "dimgray", "white");
-  table->setData(row++, column, false, "black", "white");
+  table->setData(row++, column, false, "chartreuse");
+  table->setData(row++, column, false, "yellowgreen");
+  table->setData(row++, column, false, "olivedrab");
+  table->setData(row++, column, false, "olive");
+  table->setData(row++, column, false, "darkolivegreen");
 
   return table;
 }
 
 ColorDragTable*
-ExtendedColorDialog::initSvgFrame2()
+ExtendedColorDialog::initSvgRedYellowBrown()
 {
   auto table = createColorTable();
 
@@ -412,10 +428,10 @@ ExtendedColorDialog::initSvgFrame2()
   table->setData(row++, column, false, "darksalmon");
   table->setData(row++, column, false, "salmon");
   table->setData(row++, column, false, "tomato");
-  table->setData(row++, column, false, "red", "white");
+  table->setData(row++, column, false, "red");
   table->setData(row++, column, false, "pink");
-  table->setData(row++, column, false, "crimson", "white");
-  table->setData(row++, column, false, "indianred", "white");
+  table->setData(row++, column, false, "crimson");
+  table->setData(row++, column, false, "indianred");
   table->setData(row++, column, false, "lavender");
   table->setData(row++, column, false, "hotpink");
   table->setData(row++, column, false, "lightpink");
@@ -432,12 +448,12 @@ ExtendedColorDialog::initSvgFrame2()
   table->setData(row++, column, false, "violet");
   table->setData(row++, column, false, "orchid");
   table->setData(row++, column, false, "mediumorchid");
-  table->setData(row++, column, false, "darkmagenta", "white");
-  table->setData(row++, column, false, "purple", "white");
+  table->setData(row++, column, false, "darkmagenta");
+  table->setData(row++, column, false, "purple");
   table->setData(row++, column, false, "mediumpurple");
-  table->setData(row++, column, false, "darkorchid", "white");
-  table->setData(row++, column, false, "darkviolet", "white");
-  table->setData(row++, column, false, "blueviolet", "white");
+  table->setData(row++, column, false, "darkorchid");
+  table->setData(row++, column, false, "darkviolet");
+  table->setData(row++, column, false, "blueviolet");
   table->setData(row++, column, false, "ivory");
   table->setData(row++, column, false, "beige");
   table->setData(row++, column, false, "lightyellow");
@@ -460,7 +476,7 @@ ExtendedColorDialog::initSvgFrame2()
   table->setData(row++, column, false, "yellow");
   table->setData(row++, column, false, "orange");
   table->setData(row++, column, false, "darkorange");
-  table->setData(row++, column, false, "orangered", "white");
+  table->setData(row++, column, false, "orangered");
   table->setData(row++, column, false, "oldlace");
 
   row = 0;
@@ -474,26 +490,26 @@ ExtendedColorDialog::initSvgFrame2()
   table->setData(row++, column, false, "burlywood");
   table->setData(row++, column, false, "tan");
   table->setData(row++, column, false, "sandybrown");
-  table->setData(row++, column, false, "peru", "white");
-  table->setData(row++, column, false, "sienna", "white");
-  table->setData(row++, column, false, "chocolate", "white");
-  table->setData(row++, column, false, "saddlebrown", "white");
+  table->setData(row++, column, false, "peru");
+  table->setData(row++, column, false, "sienna");
+  table->setData(row++, column, false, "chocolate");
+  table->setData(row++, column, false, "saddlebrown");
   table->setData(row++, column, false, "coral");
   table->setData(row++, column, false, "lightcoral");
   table->setData(row++, column, false, "rosybrown");
-  table->setData(row++, column, false, "brown", "white");
+  table->setData(row++, column, false, "brown");
 
   row = 0;
   column++;
-  table->setData(row++, column, false, "firebrick", "white");
-  table->setData(row++, column, false, "darkred", "white");
-  table->setData(row++, column, false, "maroon", "white");
+  table->setData(row++, column, false, "firebrick");
+  table->setData(row++, column, false, "darkred");
+  table->setData(row++, column, false, "maroon");
 
   return table;
 }
 
 ColorDragTable*
-ExtendedColorDialog::initX11ColorFrame1()
+ExtendedColorDialog::initX11BlueGreen()
 {
   auto table = createColorTable();
 
@@ -530,16 +546,16 @@ ExtendedColorDialog::initX11ColorFrame1()
   table->setData(row++, column, true, "LightSteelBlue2");
   table->setData(row++, column, true, "LightSteelBlue3");
   table->setData(row++, column, true, "LightSteelBlue4");
-  table->setData(row++, column, true, "dark slate gray", "white");
-  table->setData(row++, column, true, "DarkSlateGray1", "white");
-  table->setData(row++, column, true, "DarkSlateGray2", "white");
-  table->setData(row++, column, true, "DarkSlateGray3", "white");
-  table->setData(row++, column, true, "DarkSlateGray4", "white");
+  table->setData(row++, column, true, "dark slate gray");
+  table->setData(row++, column, true, "DarkSlateGray1");
+  table->setData(row++, column, true, "DarkSlateGray2");
+  table->setData(row++, column, true, "DarkSlateGray3");
+  table->setData(row++, column, true, "DarkSlateGray4");
+  table->setData(row++, column, true, "light sky blue");
+  table->setData(row++, column, true, "LightSkyBlue1");
 
   row = 0;
   column++;
-  table->setData(row++, column, true, "light sky blue");
-  table->setData(row++, column, true, "LightSkyBlue1");
   table->setData(row++, column, true, "LightSkyBlue2");
   table->setData(row++, column, true, "LightSkyBlue3");
   table->setData(row++, column, true, "LightSkyBlue4");
@@ -552,44 +568,56 @@ ExtendedColorDialog::initX11ColorFrame1()
   table->setData(row++, column, true, "SteelBlue3");
   table->setData(row++, column, true, "steel blue");
   table->setData(row++, column, true, "SteelBlue4");
-
-  row = 0;
-  column++;
   table->setData(row++, column, true, "royal blue");
   table->setData(row++, column, true, "RoyalBlue1");
   table->setData(row++, column, true, "RoyalBlue2");
   table->setData(row++, column, true, "RoyalBlue3");
   table->setData(row++, column, true, "RoyalBlue4");
-  table->setData(row++, column, true, "blue", "white");
-  table->setData(row++, column, true, "medium blue", "white");
-  table->setData(row++, column, true, "dark blue", "white");
-  table->setData(row++, column, true, "navy", "white");
-  table->setData(row++, column, true, "midnight blue", "white");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, true, "blue");
+  table->setData(row++, column, true, "medium blue");
+  table->setData(row++, column, true, "dark blue");
+  table->setData(row++, column, true, "navy");
+  table->setData(row++, column, true, "midnight blue");
   table->setData(row++, column, true, "medium slate blue");
   table->setData(row++, column, true, "slate blue");
-  table->setData(row++, column, true, "dark slate blue", "white");
+  table->setData(row++, column, true, "dark slate blue");
   table->setData(row++, column, true, "dodger blue");
   table->setData(row++, column, true, "DodgerBlue2");
   table->setData(row++, column, true, "DodgerBlue3");
   table->setData(row++, column, true, "DodgerBlue4");
+  table->setData(row++, column, true, "cyan");
+  table->setData(row++, column, true, "cyan2");
+  table->setData(row++, column, true, "cyan3");
+  table->setData(row++, column, true, "cyan4");
+  table->setData(row++, column, true, "turquoise");
 
   row = 0;
   column++;
+  table->setData(row++, column, true, "turquoise1");
+  table->setData(row++, column, true, "turquoise2");
+  table->setData(row++, column, true, "turquoise3");
+  table->setData(row++, column, true, "turquoise4");
+  table->setData(row++, column, true, "dark turquoise");
+  table->setData(row++, column, true, "light sea green");
+  table->setData(row++, column, true, "dark cyan");
   table->setData(row++, column, true, "lime green");
   table->setData(row++, column, true, "dark sea green");
   table->setData(row++, column, true, "pale green");
   table->setData(row++, column, true, "light green");
   table->setData(row++, column, true, "spring green");
-  table->setData(row++, column, true, "forest green", "white");
-  table->setData(row++, column, true, "green", "white");
-  table->setData(row++, column, true, "dark green", "white");
+  table->setData(row++, column, true, "forest green");
+  table->setData(row++, column, true, "green");
+  table->setData(row++, column, true, "dark green");
   table->setData(row++, column, true, "medium sea green");
   table->setData(row++, column, true, "sea green");
-  table->setData(row++, column, true, "aquamarine");
-  table->setData(row++, column, true, "aquamarine2");
 
   row = 0;
   column++;
+  table->setData(row++, column, true, "aquamarine");
+  table->setData(row++, column, true, "aquamarine2");
   table->setData(row++, column, true, "aquamarine3");
   table->setData(row++, column, true, "aquamarine4");
   table->setData(row++, column, true, "medium aquamarine");
@@ -601,38 +629,23 @@ ExtendedColorDialog::initX11ColorFrame1()
   table->setData(row++, column, true, "chartreuse3");
   table->setData(row++, column, true, "chartreuse4");
   table->setData(row++, column, true, "yellow green");
-  table->setData(row++, column, true, "olive drab", "white");
-  table->setData(row++, column, true, "dark olive green", "white");
+  table->setData(row++, column, true, "olive drab");
+  table->setData(row++, column, true, "dark olive green");
 
   return table;
 }
 
 ColorDragTable*
-ExtendedColorDialog::initX11ColorFrame2()
+ExtendedColorDialog::initX11Red()
 {
-  auto table = createColorTable();
+  auto table = createColorTable(10);
 
   int row = 0, column = 0;
-  table->setData(row++, column, true, "cyan");
-  table->setData(row++, column, true, "cyan2");
-  table->setData(row++, column, true, "cyan3");
-  table->setData(row++, column, true, "cyan4");
-  table->setData(row++, column, true, "turquoise");
-  table->setData(row++, column, true, "turquoise1");
-  table->setData(row++, column, true, "turquoise2");
-  table->setData(row++, column, true, "turquoise3");
-  table->setData(row++, column, true, "turquoise4");
-  table->setData(row++, column, true, "dark turquoise");
-  table->setData(row++, column, true, "light sea green");
-  table->setData(row++, column, true, "dark cyan");
   table->setData(row++, column, true, "seashell1");
   table->setData(row++, column, true, "seashell2");
   table->setData(row++, column, true, "seashell3");
   table->setData(row++, column, true, "seashell4");
   table->setData(row++, column, true, "lavender");
-
-  row = 0;
-  column++;
   table->setData(row++, column, true, "LavenderBlush1");
   table->setData(row++, column, true, "LavenderBlush2");
   table->setData(row++, column, true, "LavenderBlush3");
@@ -645,6 +658,9 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "LightSalmon2");
   table->setData(row++, column, true, "LightSalmon3");
   table->setData(row++, column, true, "LightSalmon4");
+
+  row = 0;
+  column++;
   table->setData(row++, column, true, "dark salmon");
   table->setData(row++, column, true, "salmon1");
   table->setData(row++, column, true, "salmon2");
@@ -653,23 +669,49 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "tomato1");
   table->setData(row++, column, true, "tomato2");
   table->setData(row++, column, true, "tomato3");
-
-  row = 0;
-  column++;
   table->setData(row++, column, true, "tomato4");
-  table->setData(row++, column, true, "red1", "white");
-  table->setData(row++, column, true, "red2", "white");
-  table->setData(row++, column, true, "red3", "white");
-  table->setData(row++, column, true, "red4", "white");
+  table->setData(row++, column, true, "red1");
+  table->setData(row++, column, true, "red2");
+  table->setData(row++, column, true, "red3");
+  table->setData(row++, column, true, "red4");
   table->setData(row++, column, true, "pink1");
   table->setData(row++, column, true, "pink2");
   table->setData(row++, column, true, "pink3");
   table->setData(row++, column, true, "pink4");
-  table->setData(row++, column, true, "indian red", "white");
-  table->setData(row++, column, true, "IndianRed1", "white");
-  table->setData(row++, column, true, "IndianRed2", "white");
-  table->setData(row++, column, true, "IndianRed3", "white");
-  table->setData(row++, column, true, "IndianRed4", "white");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, true, "indian red");
+  table->setData(row++, column, true, "IndianRed1");
+  table->setData(row++, column, true, "IndianRed2");
+  table->setData(row++, column, true, "IndianRed3");
+  table->setData(row++, column, true, "IndianRed4");
+  table->setData(row++, column, true, "coral");
+  table->setData(row++, column, true, "coral2");
+  table->setData(row++, column, true, "coral3");
+  table->setData(row++, column, true, "coral4");
+  table->setData(row++, column, true, "light coral");
+  table->setData(row++, column, true, "rosy brown");
+  table->setData(row++, column, true, "RosyBrown1");
+  table->setData(row++, column, true, "RosyBrown2");
+  table->setData(row++, column, true, "RosyBrown3");
+  table->setData(row++, column, true, "RosyBrown4");
+  table->setData(row++, column, true, "brown");
+  table->setData(row++, column, true, "brown2");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, true, "brown3");
+  table->setData(row++, column, true, "brown4");
+  table->setData(row++, column, true, "firebrick");
+  table->setData(row++, column, true, "firebrick2");
+  table->setData(row++, column, true, "firebrick3");
+  table->setData(row++, column, true, "firebrick4");
+  table->setData(row++, column, true, "dark red");
+  table->setData(row++, column, true, "maroon");
+  table->setData(row++, column, true, "maroon2");
+  table->setData(row++, column, true, "maroon3");
+  table->setData(row++, column, true, "maroon4");
   table->setData(row++, column, true, "hot pink");
   table->setData(row++, column, true, "HotPink1");
   table->setData(row++, column, true, "HotPink2");
@@ -696,12 +738,12 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "magenta2");
   table->setData(row++, column, true, "magenta3");
   table->setData(row++, column, true, "magenta4");
-  table->setData(row++, column, true, "medium violet red");
-  table->setData(row++, column, true, "thistle");
-  table->setData(row++, column, true, "thistle2");
 
   row = 0;
   column++;
+  table->setData(row++, column, true, "medium violet red");
+  table->setData(row++, column, true, "thistle");
+  table->setData(row++, column, true, "thistle2");
   table->setData(row++, column, true, "thistle3");
   table->setData(row++, column, true, "thistle4");
   table->setData(row++, column, true, "plum");
@@ -716,30 +758,47 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "medium orchid");
   table->setData(row++, column, true, "MediumOrchid1");
   table->setData(row++, column, true, "MediumOrchid2");
+
+  row = 0;
+  column++;
   table->setData(row++, column, true, "MediumOrchid3");
   table->setData(row++, column, true, "MediumOrchid4");
-  table->setData(row++, column, true, "dark magenta", "white");
-  table->setData(row++, column, true, "purple", "white");
-  table->setData(row++, column, true, "purple2", "white");
-  table->setData(row++, column, true, "purple3", "white");
-  table->setData(row++, column, true, "purple4", "white");
+  table->setData(row++, column, true, "dark magenta");
+  table->setData(row++, column, true, "purple");
+  table->setData(row++, column, true, "purple2");
+  table->setData(row++, column, true, "purple3");
+  table->setData(row++, column, true, "purple4");
   table->setData(row++, column, true, "medium purple");
   table->setData(row++, column, true, "MediumPurple1");
   table->setData(row++, column, true, "MediumPurple2");
   table->setData(row++, column, true, "MediumPurple3");
   table->setData(row++, column, true, "MediumPurple4");
-  table->setData(row++, column, true, "dark orchid", "white");
-  table->setData(row++, column, true, "DarkOrchid1", "white");
-  table->setData(row++, column, true, "DarkOrchid2", "white");
-  table->setData(row++, column, true, "DarkOrchid3", "white");
-  table->setData(row++, column, true, "DarkOrchid4", "white");
-  table->setData(row++, column, true, "dark violet", "white");
+  table->setData(row++, column, true, "dark orchid");
+  table->setData(row++, column, true, "DarkOrchid1");
+  table->setData(row++, column, true, "DarkOrchid2");
+  table->setData(row++, column, true, "DarkOrchid3");
+  table->setData(row++, column, true, "DarkOrchid4");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, true, "dark violet");
+
+  return table;
+}
+
+ColorDragTable*
+ExtendedColorDialog::initX11YellowBrown()
+{
+  auto table = createColorTable();
+
+  int row = 0, column = 0;
+
   table->setData(row++, column, true, "ivory");
   table->setData(row++, column, true, "ivory2");
   table->setData(row++, column, true, "ivory3");
   table->setData(row++, column, true, "ivory4");
   table->setData(row++, column, true, "beige");
-  table->setData(row++, column, true, "lightyellow");
+  table->setData(row++, column, true, "light yellow");
   table->setData(row++, column, true, "LightYellow2");
   table->setData(row++, column, true, "LightYellow3");
   table->setData(row++, column, true, "LightYellow4");
@@ -748,9 +807,12 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "cornsilk2");
   table->setData(row++, column, true, "cornsilk3");
   table->setData(row++, column, true, "cornsilk4");
-  table->setData(row++, column, true, "lemonchiffon");
+  table->setData(row++, column, true, "lemon chiffon");
   table->setData(row++, column, true, "LemonChiffon2");
   table->setData(row++, column, true, "LemonChiffon3");
+
+  row = 0;
+  column++;
   table->setData(row++, column, true, "LemonChiffon4");
   table->setData(row++, column, true, "light goldenrod yellow");
   table->setData(row++, column, true, "moccasin");
@@ -768,6 +830,9 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "goldenrod");
   table->setData(row++, column, true, "goldenrod2");
   table->setData(row++, column, true, "goldenrod3");
+
+  row = 0;
+  column++;
   table->setData(row++, column, true, "goldenrod4");
   table->setData(row++, column, true, "dark goldenrod");
   table->setData(row++, column, true, "yellow");
@@ -783,27 +848,31 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "DarkOrange2");
   table->setData(row++, column, true, "DarkOrange3");
   table->setData(row++, column, true, "DarkOrange4");
-  table->setData(row++, column, true, "orange red", "white");
-  table->setData(row++, column, true, "OrangeRed2", "white");
-  table->setData(row++, column, true, "OrangeRed3", "white");
-  table->setData(row++, column, true, "OrangeRed4", "white");
+  table->setData(row++, column, true, "orange red");
+  table->setData(row++, column, true, "OrangeRed2");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, true, "OrangeRed3");
+  table->setData(row++, column, true, "OrangeRed4");
   table->setData(row++, column, true, "floral white");
-  table->setData(row++, column, true, "oldlace");
   table->setData(row++, column, true, "antique white");
   table->setData(row++, column, true, "AntiqueWhite1");
   table->setData(row++, column, true, "AntiqueWhite2");
   table->setData(row++, column, true, "AntiqueWhite3");
   table->setData(row++, column, true, "AntiqueWhite4");
-  table->setData(row++, column, true, "peachpuff");
-  table->setData(row++, column, true, "peachpuff");
-  table->setData(row++, column, true, "peachpuff");
-  table->setData(row++, column, true, "peachpuff");
-  table->setData(row++, column, true, "peachpuff");
+  table->setData(row++, column, true, "peach puff");
+  table->setData(row++, column, true, "PeachPuff2");
+  table->setData(row++, column, true, "PeachPuff3");
+  table->setData(row++, column, true, "PeachPuff4");
   table->setData(row++, column, true, "bisque");
   table->setData(row++, column, true, "bisque2");
   table->setData(row++, column, true, "bisque3");
   table->setData(row++, column, true, "bisque4");
-  table->setData(row++, column, true, "navajowhite");
+  table->setData(row++, column, true, "navajo white");
+
+  row = 0;
+  column++;
   table->setData(row++, column, true, "NavajoWhite2");
   table->setData(row++, column, true, "NavajoWhite3");
   table->setData(row++, column, true, "NavajoWhite4");
@@ -815,38 +884,18 @@ ExtendedColorDialog::initX11ColorFrame2()
   table->setData(row++, column, true, "tan3");
   table->setData(row++, column, true, "tan4");
   table->setData(row++, column, true, "sandy brown");
-  table->setData(row++, column, true, "sienna", "white");
-  table->setData(row++, column, true, "sienna2", "white");
-  table->setData(row++, column, true, "sienna3", "white");
-  table->setData(row++, column, true, "sienna4", "white");
-  table->setData(row++, column, true, "chocolate", "white");
-  table->setData(row++, column, true, "chocolate2", "white");
-  table->setData(row++, column, true, "chocolate3", "white");
-  table->setData(row++, column, true, "chocolate4", "white");
-  table->setData(row++, column, true, "saddle brown", "white");
-  table->setData(row++, column, true, "coral");
-  table->setData(row++, column, true, "coral2");
-  table->setData(row++, column, true, "coral3");
-  table->setData(row++, column, true, "coral4");
-  table->setData(row++, column, true, "light coral");
-  table->setData(row++, column, true, "rosy brown");
-  table->setData(row++, column, true, "RosyBrown1");
-  table->setData(row++, column, true, "RosyBrown2");
-  table->setData(row++, column, true, "RosyBrown3");
-  table->setData(row++, column, true, "RosyBrown4");
-  table->setData(row++, column, true, "brown", "white");
-  table->setData(row++, column, true, "brown2", "white");
-  table->setData(row++, column, true, "brown3", "white");
-  table->setData(row++, column, true, "brown4", "white");
-  table->setData(row++, column, true, "firebrick", "white");
-  table->setData(row++, column, true, "firebrick2", "white");
-  table->setData(row++, column, true, "firebrick3", "white");
-  table->setData(row++, column, true, "firebrick4", "white");
-  table->setData(row++, column, true, "dark red", "white");
-  table->setData(row++, column, true, "maroon", "white");
-  table->setData(row++, column, true, "maroon2", "white");
-  table->setData(row++, column, true, "maroon3", "white");
-  table->setData(row++, column, true, "maroon4", "white");
+  table->setData(row++, column, true, "sienna");
+  table->setData(row++, column, true, "sienna2");
+  table->setData(row++, column, true, "sienna3");
+  table->setData(row++, column, true, "sienna4");
+
+  row = 0;
+  column++;
+  table->setData(row++, column, true, "chocolate");
+  table->setData(row++, column, true, "chocolate2");
+  table->setData(row++, column, true, "chocolate3");
+  table->setData(row++, column, true, "chocolate4");
+  table->setData(row++, column, true, "saddle brown");
 
   return table;
 }
@@ -858,52 +907,52 @@ ExtendedColorDialog::initX11MonoFrame()
 
   auto row = 0;
   auto column = 0;
-  table->setData(row++, column, true, "grey0", "white");
-  table->setData(row++, column, true, "grey1", "white");
-  table->setData(row++, column, true, "grey2", "white");
-  table->setData(row++, column, true, "grey3", "white");
-  table->setData(row++, column, true, "grey4", "white");
-  table->setData(row++, column, true, "grey5", "white");
-  table->setData(row++, column, true, "grey6", "white");
-  table->setData(row++, column, true, "grey7", "white");
-  table->setData(row++, column, true, "grey8", "white");
-  table->setData(row++, column, true, "grey9", "white");
-  table->setData(row++, column, true, "grey10", "white");
-  table->setData(row++, column, true, "grey11", "white");
-  table->setData(row++, column, true, "grey12", "white");
-  table->setData(row++, column, true, "grey13", "white");
-  table->setData(row++, column, true, "grey14", "white");
-  table->setData(row++, column, true, "grey15", "white");
-  table->setData(row++, column, true, "grey16", "white");
+  table->setData(row++, column, true, "grey0");
+  table->setData(row++, column, true, "grey1");
+  table->setData(row++, column, true, "grey2");
+  table->setData(row++, column, true, "grey3");
+  table->setData(row++, column, true, "grey4");
+  table->setData(row++, column, true, "grey5");
+  table->setData(row++, column, true, "grey6");
+  table->setData(row++, column, true, "grey7");
+  table->setData(row++, column, true, "grey8");
+  table->setData(row++, column, true, "grey9");
+  table->setData(row++, column, true, "grey10");
+  table->setData(row++, column, true, "grey11");
+  table->setData(row++, column, true, "grey12");
+  table->setData(row++, column, true, "grey13");
+  table->setData(row++, column, true, "grey14");
+  table->setData(row++, column, true, "grey15");
+  table->setData(row++, column, true, "grey16");
 
   row = 0;
   column++;
-  table->setData(row++, column, true, "grey17", "white");
-  table->setData(row++, column, true, "grey18", "white");
-  table->setData(row++, column, true, "grey19", "white");
-  table->setData(row++, column, true, "grey20", "white");
-  table->setData(row++, column, true, "grey21", "white");
-  table->setData(row++, column, true, "grey22", "white");
-  table->setData(row++, column, true, "grey23", "white");
-  table->setData(row++, column, true, "grey24", "white");
-  table->setData(row++, column, true, "grey25", "white");
-  table->setData(row++, column, true, "grey26", "white");
-  table->setData(row++, column, true, "grey27", "white");
-  table->setData(row++, column, true, "grey28", "white");
-  table->setData(row++, column, true, "grey29", "white");
-  table->setData(row++, column, true, "grey30", "white");
-  table->setData(row++, column, true, "grey31", "white");
-  table->setData(row++, column, true, "grey32", "white");
-  table->setData(row++, column, true, "grey33", "white");
+  table->setData(row++, column, true, "grey17");
+  table->setData(row++, column, true, "grey18");
+  table->setData(row++, column, true, "grey19");
+  table->setData(row++, column, true, "grey20");
+  table->setData(row++, column, true, "grey21");
+  table->setData(row++, column, true, "grey22");
+  table->setData(row++, column, true, "grey23");
+  table->setData(row++, column, true, "grey24");
+  table->setData(row++, column, true, "grey25");
+  table->setData(row++, column, true, "grey26");
+  table->setData(row++, column, true, "grey27");
+  table->setData(row++, column, true, "grey28");
+  table->setData(row++, column, true, "grey29");
+  table->setData(row++, column, true, "grey30");
+  table->setData(row++, column, true, "grey31");
+  table->setData(row++, column, true, "grey32");
+  table->setData(row++, column, true, "grey33");
 
   row = 0;
   column++;
-  table->setData(row++, column, true, "grey34", "white");
-  table->setData(row++, column, true, "grey35", "white");
-  table->setData(row++, column, true, "grey36", "white");
-  table->setData(row++, column, true, "grey37", "white");
-  table->setData(row++, column, true, "grey38", "white");
-  table->setData(row++, column, true, "grey39", "white");
+  table->setData(row++, column, true, "grey34");
+  table->setData(row++, column, true, "grey35");
+  table->setData(row++, column, true, "grey36");
+  table->setData(row++, column, true, "grey37");
+  table->setData(row++, column, true, "grey38");
+  table->setData(row++, column, true, "grey39");
   table->setData(row++, column, true, "grey40");
   table->setData(row++, column, true, "grey41");
   table->setData(row++, column, true, "grey42");
@@ -987,181 +1036,221 @@ ExtendedColorDialog::initX11MonoFrame()
   table->setData(row++, column, true, "gainsboro");
   table->setData(row++, column, true, "light gray");
   table->setData(row++, column, true, "dark gray");
-  table->setData(row++, column, true, "light slate gray", "white");
-  table->setData(row++, column, true, "slate gray", "white");
-  table->setData(row++, column, true, "gray", "white");
-  table->setData(row++, column, true, "dim gray", "white");
-  table->setData(row++, column, true, "black", "white");
-
-  row = 0;
-  column++;
+  table->setData(row++, column, true, "light slate gray");
+  table->setData(row++, column, true, "slate gray");
+  table->setData(row++, column, true, "gray");
+  table->setData(row++, column, true, "dim gray");
+  table->setData(row++, column, true, "black");
 
   return table;
 }
 
 QColor
-ExtendedColorDialog::primaryColor() const
+ExtendedColorDialog::color(ColorType type) const
 {
-  return m_color;
-}
-
-void
-ExtendedColorDialog::setPrimaryColor(const QColor& color, const QString& name)
-{
-  m_color = color;
-  m_name = name;
-  m_colorDlg->setCurrentColor(color);
-  //  if (m_display) {
-  //    m_display->setPrimaryColor(color, name);
-  //  }
+  if (type == Secondary)
+    return m_secondaryColor;
+  return m_primaryColor;
 }
 
 QColor
-ExtendedColorDialog::secondaryColor()
+ExtendedColorDialog::textColor(ColorType type) const
 {
-  return m_dropColor;
+  if (type == Secondary)
+    return m_secondaryTextColor;
+  return m_primaryTextColor;
 }
 
 void
-ExtendedColorDialog::setSecondaryColor(const QColor& color, const QString& name)
+ExtendedColorDialog::setColor(ColorType type,
+                              const QColor& color,
+                              const QString& name)
 {
-  m_dropColor = color;
-  m_dropName = name;
-  m_colorDlg->setCurrentColor(m_color);
-  if (m_display) {
+  if (type == Secondary) {
+    m_secondaryColor = color;
+    m_secondaryName = name;
     m_display->setSecondaryColor(color, name);
+  } else {
+    m_primaryColor = color;
+    m_primaryName = name;
+    m_colorDlg->setCurrentColor(color);
+    m_display->setPrimaryColor(color, name);
+  }
+}
+
+void
+ExtendedColorDialog::setTextColor(ColorType type,
+                                  const QColor& color,
+                                  const QString& name)
+{
+  if (type == Secondary) {
+    m_secondaryTextColor = color;
+    m_secondaryTextName = name;
+    m_display->setSecondaryTextColor(color, name);
+  } else {
+    m_primaryTextColor = color;
+    m_primaryTextName = name;
+    m_display->setPrimaryTextColor(color, name);
   }
 }
 
 QString
-ExtendedColorDialog::rgb(int alpha) const
+ExtendedColorDialog::rgb(ColorType type, int alpha) const
 {
   QString name;
-  if (alpha >= 0 && alpha <= 100) {
-    name = ExtendedColorDialog::RGBACOLOR.arg(m_color.red())
-             .arg(m_color.green())
-             .arg(m_color.blue())
-             .arg(alpha);
+  QColor color = (type == Primary ? m_primaryColor : m_secondaryColor);
+  int a = (alpha == -1 ? 100 : alpha);
+  bool showAlpha = (alpha == -1 ? false : true);
+  if (showAlpha) {
+    name = ExtendedColorDialog::RGBACOLOR.arg(color.red())
+             .arg(color.green())
+             .arg(color.blue())
+             .arg(a);
   } else {
-    name = ExtendedColorDialog::RGBCOLOR.arg(m_color.red())
-             .arg(m_color.green())
-             .arg(m_color.blue());
+    name = ExtendedColorDialog::RGBCOLOR.arg(color.red())
+             .arg(color.green())
+             .arg(color.blue());
   }
-  if (name.isEmpty() && m_color.isValid())
-    return hash(alpha);
-  return name;
-}
-
-QString
-ExtendedColorDialog::hsv(int alpha) const
-{
-  QString name;
-  if (alpha >= 0 && alpha <= 100) {
-    name = ExtendedColorDialog::HSVACOLOR.arg(m_color.hsvHue())
-             .arg(m_color.hsvSaturation())
-             .arg(m_color.value())
-             .arg(alpha);
-  } else {
-    name = ExtendedColorDialog::HSVCOLOR.arg(m_color.hsvHue())
-             .arg(m_color.hsvSaturation())
-             .arg(m_color.value());
-  }
-  if (name.isEmpty() && m_color.isValid())
-    return hash(alpha);
-  return name;
-}
-
-QString
-ExtendedColorDialog::hsl(int alpha) const
-{
-  QString name;
-  if (alpha >= 0 && alpha <= 100) {
-    name = ExtendedColorDialog::HSVACOLOR.arg(m_color.hslHue())
-             .arg(m_color.hslSaturation())
-             .arg(m_color.value())
-             .arg(alpha);
-  } else {
-    name = ExtendedColorDialog::HSVCOLOR.arg(m_color.hslHue())
-             .arg(m_color.hslSaturation())
-             .arg(m_color.value());
-  }
-  if (name.isEmpty() && m_color.isValid())
-    return hash(alpha);
-  return name;
-}
-
-QString
-ExtendedColorDialog::name() const
-{
-  if (m_name.isEmpty()) {
-    QString name = QColorConstants::X11::name(m_color);
-    if (name.isEmpty()) {
-      return hash();
+  if (name.isEmpty() && color.isValid()) {
+    if (showAlpha) {
+      return hash(type, alpha);
+    } else {
+      return hash(type);
     }
   }
-  return m_name;
+  return name;
 }
 
 QString
-ExtendedColorDialog::hash(int alpha) const
+ExtendedColorDialog::hsv(ColorType type, int alpha) const
 {
-  if (m_color.isValid()) {
-    if (alpha >= 0 && alpha <= 100)
-      return m_color.name(QColor::HexArgb);
-    return m_color.name(QColor::HexRgb);
-  }
-  return QString();
-}
-
-QString
-ExtendedColorDialog::svgOrX11Name(const QColor& color)
-{
-  auto name = QColorConstants::Svg::name(color);
-  if (!name.isEmpty()) {
-    return name;
+  QString name;
+  QColor color = (type == Primary ? m_primaryColor : m_secondaryColor);
+  int a = (alpha == -1 ? 100 : alpha);
+  bool showAlpha = (alpha == -1 ? false : true);
+  if (showAlpha) {
+    name = ExtendedColorDialog::HSVACOLOR.arg(color.hsvHue())
+             .arg(color.hsvSaturation())
+             .arg(color.value())
+             .arg(a);
   } else {
-    name = QColorConstants::X11::name(color);
-    if (!name.isEmpty()) {
-      return name;
+    name = ExtendedColorDialog::HSVCOLOR.arg(color.hsvHue())
+             .arg(color.hsvSaturation())
+             .arg(color.value());
+  }
+  if (name.isEmpty() && color.isValid()) {
+    if (showAlpha) {
+      return hash(type, alpha);
+    } else {
+      return hash(type);
     }
   }
-  return QString();
+  return name;
 }
 
-QColor
-ExtendedColorDialog::svgOrX11Color(const QString& initialColor)
+QString
+ExtendedColorDialog::hsl(ColorType type, int alpha) const
 {
-  auto color = QColorConstants::Svg::color(initialColor);
+  QString name;
+  QColor color = (type == Primary ? m_primaryColor : m_secondaryColor);
+  int a = (alpha == -1 ? 100 : alpha);
+  bool showAlpha = (alpha == -1 ? false : true);
+  if (showAlpha) {
+    name = ExtendedColorDialog::HSVACOLOR.arg(color.hslHue())
+             .arg(color.hslSaturation())
+             .arg(color.value())
+             .arg(a);
+  } else {
+    name = ExtendedColorDialog::HSVCOLOR.arg(color.hslHue())
+             .arg(color.hslSaturation())
+             .arg(color.value());
+  }
+  if (name.isEmpty() && color.isValid()) {
+    if (showAlpha) {
+      return hash(type, alpha);
+    } else {
+      return hash(type);
+    }
+  }
+  return name;
+}
+
+QString
+ExtendedColorDialog::name(ColorType type) const
+{
+  QString name = (type == Primary ? m_primaryName : m_secondaryName);
+  QColor color = (type == Primary ? m_primaryColor : m_secondaryColor);
   if (color.isValid()) {
-    return color;
-  } else {
-    color = QColorConstants::X11::color(initialColor);
-    if (color.isValid()) {
-      return color;
+    if (name.isEmpty()) {
+      QString name = QColorConstants::X11::name(color);
+      if (name.isEmpty()) {
+        return hash(Primary);
+      }
     }
+    return name;
   }
-  return Qt::white;
+  return QString();
 }
 
-bool
-ExtendedColorDialog::isDark(const QColor& color)
+QString
+ExtendedColorDialog::hash(ColorType type, int alpha) const
 {
-  auto Pr = .299;
-  auto Pg = .587;
-  auto Pb = .114;
-  auto r = color.redF();
-  auto g = color.greenF();
-  auto b = color.blueF();
-
-  // Calculate the Perceived brightness 0 - 1.0.
-  // the darker it is the lower the value
-  auto p = qSqrt(r * r * Pr + g * g * Pg + b * b * Pb);
-
-  if (p < 0.5) {
-    return true;
+  QColor color = (type == Primary ? m_primaryColor : m_secondaryColor);
+  bool showAlpha = (alpha == -1 ? false : true);
+  if (color.isValid()) {
+    if (showAlpha)
+      return color.name(QColor::HexArgb);
+    return color.name(QColor::HexRgb);
   }
-  return false;
+  return QString();
 }
+
+//QString
+//ExtendedColorDialog::svgOrX11Name(const QColor& color)
+//{
+//  auto name = QColorConstants::Svg::name(color);
+//  if (!name.isEmpty()) {
+//    return name;
+//  } else {
+//    name = QColorConstants::X11::name(color);
+//    if (!name.isEmpty()) {
+//      return name;
+//    }
+//  }
+//  return QString();
+//}
+
+//QColor
+//ExtendedColorDialog::svgOrX11Color(const QString& initialColor)
+//{
+//  auto color = QColorConstants::Svg::color(initialColor);
+//  if (color.isValid()) {
+//    return color;
+//  } else {
+//    color = QColorConstants::X11::color(initialColor);
+//    if (color.isValid()) {
+//      return color;
+//    }
+//  }
+//  return Qt::white;
+//}
+
+//bool
+//ExtendedColorDialog::isDark(const QColor& color)
+//{
+//  auto r = color.redF();
+//  auto g = color.greenF();
+//  auto b = color.blueF();
+
+//  // Calculate the Perceived brightness 0 - 1.0.
+//  // the darker it is the lower the value
+//  auto p = qSqrt(r * r * Pr + g * g * Pg + b * b * Pb);
+
+//  if (p < 0.5) {
+//    return true;
+//  }
+//  return false;
+//}
 
 QSize
 ExtendedColorDialog::sizeHint() const
@@ -1169,16 +1258,10 @@ ExtendedColorDialog::sizeHint() const
   return QSize(900, 1200);
 }
 
-QString
-ExtendedColorDialog::secondaryName() const
-{
-  return m_dropName;
-}
-
 void
 ExtendedColorDialog::acceptChanges()
 {
-  if (m_color.isValid()) {
+  if (m_primaryColor.isValid()) {
     accept();
   } else {
     reject();
@@ -1189,8 +1272,8 @@ ColorDropDisplay::ColorDropDisplay(const QColor& color,
                                    const QColor& dropColor,
                                    QWidget* parent)
   : QFrame(parent)
-  , m_color(color)
-  , m_dropColor(dropColor)
+  , m_primaryColor(color)
+  , m_secondaryColor(dropColor)
   , m_colorSet(false)
   , m_dropColorSet(false)
 {
@@ -1206,46 +1289,86 @@ ColorDropDisplay::ColorDropDisplay(const QColor& color,
   setLayout(layout);
   m_left = new QLabel(this);
   m_left->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-  m_left->setStyleSheet(colorToStyle(m_color, Left));
+  m_left->setStyleSheet(primaryColorToStyle());
   layout->addWidget(m_left);
   m_right = new QLabel(this);
   m_right->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-  m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
+  m_right->setStyleSheet(secondaryColorToStyle());
   layout->addWidget(m_right);
+}
+
+QString
+ColorDropDisplay::calculateTextString(ColorType type)
+{
+  QColor color = (type == Primary ? m_primaryColor : m_secondaryColor);
+  QColor tColor = (type == Primary ? m_primaryTextColor : m_secondaryTextColor);
+  QString name = (type == Primary ? m_primaryName : m_secondaryName);
+  QString tName = (type == Primary ? m_primaryTextName : m_secondaryTextName);
+  QString displayText, cStr, bStr;
+  if (color.isValid()) {
+    if (tColor.isValid()) {
+      if (tName.isEmpty())
+        cStr = "color: " + tColor.name(QColor::HexRgb);
+      else
+        cStr = "color: " + tColor.name(QColor::HexRgb) + "(" + tName + ")";
+    }
+    if (name.isEmpty())
+      bStr = "background: " + color.name(QColor::HexRgb);
+    else
+      bStr = "background: " + color.name(QColor::HexRgb) + "(" + name + ")";
+    if (!cStr.isEmpty() && !bStr.isEmpty())
+      displayText = cStr + "<br>" + bStr;
+    else if (!cStr.isEmpty())
+      displayText = cStr;
+    else if (!bStr.isEmpty())
+      displayText = bStr;
+  }
+  return displayText;
 }
 
 void
 ColorDropDisplay::setPrimaryColor(const QColor& color, const QString& name)
 {
-  m_color = color;
-  m_name = name;
-  QString displayText;
-  if (!m_name.isEmpty())
-    displayText = m_name + " " + m_color.name(QColor::HexRgb);
-  else
-    displayText = m_color.name(QColor::HexRgb);
-  m_left->setText(displayText);
-  m_left->setStyleSheet(colorToStyle(m_color, Left));
+  m_primaryColor = color;
+  m_primaryName = name;
+  m_left->setText(calculateTextString(Primary));
+  m_left->setStyleSheet(primaryColorToStyle());
   m_colorSet = true;
   emit primaryColorChanged(color, name);
 }
 
 void
+ColorDropDisplay::setPrimaryTextColor(const QColor& color, const QString& name)
+{
+  m_primaryTextColor = color;
+  m_primaryTextName = name;
+  m_left->setText(calculateTextString(Primary));
+  m_left->setStyleSheet(primaryColorToStyle());
+  m_colorSet = true;
+  emit primaryTextColorChanged(color, name);
+}
+
+void
 ColorDropDisplay::setSecondaryColor(const QColor& color, const QString& name)
 {
-  m_dropColor = color;
-  m_dropName = name;
-  QString displayText;
-  if (!m_dropName.isEmpty()) {
-    displayText = m_name + " " + m_color.name(QColor::HexRgb);
-    m_right->setText(displayText);
-  } else {
-    displayText = m_color.name(QColor::HexRgb);
-    m_right->setText(displayText);
-  }
-  m_right->setStyleSheet(colorToStyle(m_dropColor, Right));
+  m_secondaryColor = color;
+  m_secondaryName = name;
+  m_right->setText(calculateTextString(Secondary));
+  m_right->setStyleSheet(secondaryColorToStyle());
   m_dropColorSet = true;
   emit secondaryColorChanged(color, name);
+}
+
+void
+ColorDropDisplay::setSecondaryTextColor(const QColor& color,
+                                        const QString& name)
+{
+  m_secondaryTextColor = color;
+  m_secondaryTextName = name;
+  m_right->setText(calculateTextString(Secondary));
+  m_right->setStyleSheet(secondaryColorToStyle());
+  m_dropColorSet = true;
+  emit secondaryTextColorChanged(color, name);
 }
 
 void
@@ -1282,7 +1405,7 @@ ColorDropDisplay::dropEvent(QDropEvent* event)
     auto vColor = md->colorData();
     if (vColor.isValid()) {
       auto color = vColor.value<QColor>();
-      auto name = ExtendedColorDialog::svgOrX11Name(color);
+      auto name = QColorConstants::svgOrX11Name(color);
       if (m_left->geometry().contains(pos))
         setPrimaryColor(color, QString());
       else if (m_right->geometry().contains(pos))
@@ -1292,50 +1415,71 @@ ColorDropDisplay::dropEvent(QDropEvent* event)
 }
 
 QString
-ColorDropDisplay::colorToStyle(const QColor& color, Side side)
+ColorDropDisplay::primaryColorToStyle(/*const QColor& backColor,
+                                      const QColor& foreColor*/)
 {
-  auto isDark = ExtendedColorDialog::isDark(color);
-  QString textColor;
-  if (isDark)
-    textColor = "white";
-  else
-    textColor = "black";
-  if (color.isValid()) {
-    QString value = color.name();
-    if (side == Left) {
-      auto val = DISPLAYLABELLEFT.arg(textColor, value);
-      return val;
+  if (m_primaryColor.isValid()) {
+    QString textColor;
+    if (m_primaryTextColor.isValid()) {
+      textColor = m_primaryTextColor.name(QColor::HexRgb);
     } else {
-      auto val = DISPLAYLABELRIGHT.arg(textColor, value);
-      return val;
+      if (QColorConstants::isDark(m_primaryColor))
+        textColor = "white";
+      else
+        textColor = "black";
     }
+    auto val =
+      DISPLAYLABELLEFT.arg(textColor, m_primaryColor.name(QColor::HexRgb));
+    return val;
   }
-  auto val = DISPLAYLABELRIGHT.arg("white");
+  auto val = DISPLAYLABELLEFT.arg("white", "white");
   return val;
 }
 
 QString
-ColorDropDisplay::dropName() const
+ColorDropDisplay::secondaryColorToStyle(/*const QColor& backColor,
+                                        const QColor& foreColor*/)
 {
-  return m_dropName;
+  if (m_secondaryColor.isValid()) {
+    QString textColor;
+    if (m_secondaryTextColor.isValid()) {
+      textColor = m_secondaryTextColor.name(QColor::HexRgb);
+    } else {
+      if (QColorConstants::isDark(m_secondaryColor))
+        textColor = "white";
+      else
+        textColor = "black";
+    }
+    auto val =
+      DISPLAYLABELRIGHT.arg(textColor, m_secondaryColor.name(QColor::HexRgb));
+    return val;
+  }
+  auto val = DISPLAYLABELRIGHT.arg("white", "white");
+  return val;
 }
 
 QString
-ColorDropDisplay::name() const
+ColorDropDisplay::secondaryName() const
 {
-  return m_name;
+  return m_secondaryName;
+}
+
+QString
+ColorDropDisplay::primaryName() const
+{
+  return m_primaryName;
 }
 
 QColor
-ColorDropDisplay::dropColor() const
+ColorDropDisplay::secondaryColor() const
 {
-  return m_dropColor;
+  return m_secondaryColor;
 }
 
 QColor
-ColorDropDisplay::color() const
+ColorDropDisplay::primaryColor() const
 {
-  return m_color;
+  return m_primaryColor;
 }
 
 ColorDragTable::ColorDragTable(int rows, int columns, QWidget* parent)
@@ -1369,11 +1513,7 @@ ColorDragTable::background(const QModelIndex& index)
 }
 
 void
-ColorDragTable::setData(int row,
-                        int column,
-                        bool x11,
-                        const QString& back,
-                        const QString& fore)
+ColorDragTable::setData(int row, int column, bool x11, const QString& back)
 {
   QColor background, foreground;
   if (x11) {
@@ -1381,17 +1521,14 @@ ColorDragTable::setData(int row,
   } else {
     background = QColorConstants::Svg::color(back);
   }
-  if (!fore.isEmpty()) {
-    if (x11) {
-      foreground = QColorConstants::X11::color(fore);
-    } else {
-      foreground = QColorConstants::Svg::color(fore);
-    }
-  }
+  if (QColorConstants::isDark(background))
+    foreground = Qt::white;
+  else
+    foreground = Qt::black;
   m_model->setColorData(row, column, back, background, foreground);
   auto index = m_model->index(row, column);
   if (index.isValid())
-    emit dataChanged(index, index);
+    dataChanged(index, index);
 }
 
 void
@@ -1437,7 +1574,7 @@ ColorDragTable::mouseMoveEvent(QMouseEvent* event)
     if (!m_name.isEmpty())
       data.name = m_name;
     else
-      data.name = ExtendedColorDialog::svgOrX11Name(m_color);
+      data.name = QColorConstants::svgOrX11Name(m_color);
     QByteArray array;
     QDataStream ds(&array, QIODevice::ReadWrite);
     ds.setVersion(QDataStream::Qt_5_15);
